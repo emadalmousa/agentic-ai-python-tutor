@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agentic AI Python Tutor – Pitch</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <span class="slide-counter" id="counter">Slide 1 / 7</span>
+
+      <div class="dot-nav" id="dots">
+        <button class="dot active" data-target="1"></button>
+        <button class="dot" data-target="2"></button>
+        <button class="dot" data-target="3"></button>
+        <button class="dot" data-target="4"></button>
+        <button class="dot" data-target="5"></button>
+        <button class="dot" data-target="6"></button>
+        <button class="dot" data-target="7"></button>
+      </div>
+
+      <button class="nav-btn" id="btn-prev" disabled>◀ Zurück</button>
+      <button class="nav-btn" id="btn-next">Weiter ▶</button>
+      <button class="nav-btn fs-btn" id="btn-fs" title="Vollbild">⛶</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- SLIDE 1 -->
+    <section class="slide active" id="slide-1">
+      <div class="slide-accent-bar"></div>
+
+      <h1 class="title-main">Agentic AI<br>Python Tutor System</h1>
+
+      <p class="title-sub">Intelligenter KI-Python-Tutor</p>
+
+      <div class="title-tagline">
+        💡 Lernen, Debuggen und Üben mit KI
+      </div>
+
+      <div class="title-dots">
+        <div class="title-dot-item">
+          <div class="icon icon-ai">
+            <i class="fa-solid fa-brain"></i>
+          </div>
+          <span>KI-gestützt</span>
+        </div>
+
+        <div class="title-dot-item">
+          <div class="icon icon-python">
+            <i class="fa-brands fa-python"></i>
+          </div>
+          <span>Python</span>
+        </div>
+
+        <div class="title-dot-item">
+          <div class="icon icon-personal">
+            <i class="fa-solid fa-user-graduate"></i>
+          </div>
+          <span>Personalisiert</span>
+        </div>
+
+        <div class="title-dot-item">
+          <div class="icon icon-agent">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <span>Agentic</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 — Agenda -->
+    <section class="slide" id="slide-2" data-num="02 / 07">
+      <div class="slide-accent-bar"></div>
+
+      <div class="slide-header">
+        <span class="slide-label">Übersicht</span>
+        <h2 class="slide-title">Agenda</h2>
+      </div>
+
+      <div class="agenda-grid">
+
+        <div class="agenda-item">
+          <div class="agenda-num">01</div>
+          <div class="agenda-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="agenda-text">
+            <div class="agenda-title">Problem and Motivation</div>
+            <div class="agenda-desc">Warum brauchen wir einen KI-Tutor?</div>
+          </div>
+        </div>
+
+        <div class="agenda-item">
+          <div class="agenda-num">02</div>
+          <div class="agenda-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <div class="agenda-text">
+            <div class="agenda-title">Lösung and Funktionen</div>
+            <div class="agenda-desc">Was kann das System?</div>
+          </div>
+        </div>
+
+        <div class="agenda-item">
+          <div class="agenda-num">03</div>
+          <div class="agenda-icon"><i class="fa-solid fa-layer-group"></i></div>
+          <div class="agenda-text">
+            <div class="agenda-title">Architektur</div>
+            <div class="agenda-desc">Technischer Aufbau and Datenfluss</div>
+          </div>
+        </div>
+
+        <div class="agenda-item">
+          <div class="agenda-num">04</div>
+          <div class="agenda-icon"><i class="fa-solid fa-person-chalkboard"></i></div>
+          <div class="agenda-text">
+            <div class="agenda-title">Demo-Ablauf</div>
+            <div class="agenda-desc">User Journey live in Aktion</div>
+          </div>
+        </div>
+
+        <div class="agenda-item">
+          <div class="agenda-num">05</div>
+          <div class="agenda-icon"><i class="fa-solid fa-timeline"></i></div>
+          <div class="agenda-text">
+            <div class="agenda-title">Sprint-Plan and DoD</div>
+            <div class="agenda-desc">3 Sprints and Definition of Done</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SLIDE 3 -->
+    <section class="slide" id="slide-3">
+      <div class="slide-accent-bar"></div>
+
+      <div class="slide-header">
+        <span class="slide-label">Problem and Motivation</span>
+        <h2 class="slide-title">Warum brauchen wir<br><em>einen KI-Tutor?</em></h2>
+      </div>
+
+      <div class="problem-grid">
+
+        <div class="problem-card prob-card-1">
+          <div class="prob-header">
+            <div class="prob-icon-fa"><i class="fa-solid fa-face-frown-open"></i></div>
+            <div class="prob-text">
+              <h3>Schwierige Grundlagen</h3>
+            </div>
+          </div>
+          <ul class="prob-points">
+            <li><i class="fa-solid fa-circle-dot"></i> Viele Schüler scheitern beim Einstieg in Python.</li>
+            <li><i class="fa-solid fa-circle-dot"></i> Grundkonzepte wie Variablen und Typen wirken abstrakt.</li>
+          </ul>
+          <div class="prob-stat">
+            <span class="prob-stat-num">Oft</span>
+            <span class="prob-stat-label">überfordert</span>
+          </div>
+        </div>
+
+        <div class="problem-card prob-card-2">
+          <div class="prob-header">
+            <div class="prob-icon-fa"><i class="fa-solid fa-code"></i></div>
+            <div class="prob-text">
+              <h3>Komplexe Konzepte</h3>
+            </div>
+          </div>
+          <ul class="prob-points">
+            <li><i class="fa-solid fa-circle-dot"></i> Schleifen, Funktionen und Debugging überfordern oft.</li>
+            <li><i class="fa-solid fa-circle-dot"></i> Fehlersuche ohne Hilfe kostet viel Zeit und Motivation.</li>
+          </ul>
+          <div class="prob-stat">
+            <span class="prob-stat-num">Häufig</span>
+            <span class="prob-stat-label">blockiert</span>
+          </div>
+        </div>
+
+        <div class="problem-card prob-card-3">
+          <div class="prob-header">
+            <div class="prob-icon-fa"><i class="fa-solid fa-clock"></i></div>
+            <div class="prob-text">
+              <h3>Wenig Lehrerzeit</h3>
+            </div>
+          </div>
+          <ul class="prob-points">
+            <li><i class="fa-solid fa-circle-dot"></i> Lehrkräfte können nicht jeden Schüler einzeln betreuen.</li>
+            <li><i class="fa-solid fa-circle-dot"></i> Fragen außerhalb der Kurszeit bleiben unbeantwortet.</li>
+          </ul>
+          <div class="prob-stat">
+            <span class="prob-stat-num">Kaum</span>
+            <span class="prob-stat-label">Einzelhilfe</span>
+          </div>
+        </div>
+
+        <div class="problem-card prob-card-4">
+          <div class="prob-header">
+            <div class="prob-icon-fa"><i class="fa-solid fa-sliders"></i></div>
+            <div class="prob-text">
+              <h3>Fehlende Personalisierung</h3>
+            </div>
+          </div>
+          <ul class="prob-points">
+            <li><i class="fa-solid fa-circle-dot"></i> Klassische Tools ignorieren den individuellen Lernstand.</li>
+            <li><i class="fa-solid fa-circle-dot"></i> Kein Feedback, kein Fortschritt-Tracking, kein Lernpfad.</li>
+          </ul>
+          <div class="prob-stat">
+            <span class="prob-stat-num">Keine</span>
+            <span class="prob-stat-label">Anpassung</span>
+          </div>
+        </div>
+
+      </div>
+
+
+    </section>
+
+    <!-- SLIDE 4 -->
+    <section class="slide" id="slide-4">
+      <div class="slide-accent-bar"></div>
+
+      <div class="slide-header">
+        <span class="slide-label">Lösung and Funktionen</span>
+        <h2 class="slide-title">Was kann der<br><em>KI-Tutor?</em></h2>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feat-icon blue">💬</div>
+          <span class="feat-label">Feature 01</span>
+          <div class="feat-title">Code erklären</div>
+          <p class="feat-desc">Python-Code verständlich und schrittweise erklären lassen.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-icon indigo">🔍</div>
+          <span class="feat-label">Feature 02</span>
+          <div class="feat-title">Fehler erkennen</div>
+          <p class="feat-desc">Bugs automatisch identifizieren und Lösungshinweise geben.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-icon teal">✏️</div>
+          <span class="feat-label">Feature 03</span>
+          <div class="feat-title">Übungen generieren</div>
+          <p class="feat-desc">Passende Übungsaufgaben automatisch erstellen.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-icon purple">📄</div>
+          <span class="feat-label">Feature 04</span>
+          <div class="feat-title">Lernmaterial aus PDFs</div>
+          <p class="feat-desc">Eigenes Kursmaterial per RAG einbinden und nutzen.</p>
+
+        </div>
+
+        <div class="feature-card">
+          <div class="feat-icon amber">📊</div>
+          <span class="feat-label">Feature 05</span>
+          <div class="feat-title">Lernfortschritt speichern</div>
+          <p class="feat-desc">Fortschritt speichern, Stärken und Schwächen tracken.</p>
+
+        </div>
+
+        <div class="feature-card feature-special">
+          <div class="feat-icon indigo">🤖</div>
+          <span class="feat-label">Kern</span>
+          <div class="feat-title">Agentic AI</div>
+          <p class="feat-desc">LangChain-Agent wählt automatisch das richtige Tool für jede Anfrage.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5 -->
+    <section class="slide" id="slide-5">
+      <div class="slide-accent-bar"></div>
+
+      <div class="slide-header">
+        <span class="slide-label">Technischer Ansatz</span>
+        <h2 class="slide-title"><em>Architektur</em></h2>
+      </div>
+
+      <div class="arch-wrapper">
+
+        <div class="tech-stack">
+          <div class="tech-item">
+            <span class="tech-badge">Frontend</span>
+            <span class="tech-name">React / Next.js</span>
+
+          </div>
+
+          <div class="tech-item">
+            <span class="tech-badge be">Backend</span>
+            <span class="tech-name">Python + FastAPI</span>
+
+          </div>
+
+          <div class="tech-item">
+            <span class="tech-badge ai">Framework</span>
+            <span class="tech-name">LangChain Agent</span>
+
+          </div>
+
+          <div class="tech-item">
+            <span class="tech-badge ai">KI-Modell</span>
+            <span class="tech-name">OpenAI API</span>
+
+          </div>
+
+          <div class="tech-item">
+            <span class="tech-badge rag">RAG</span>
+            <span class="tech-name">PDF + Vector DB</span>
+
+          </div>
+
+          <div class="tech-item">
+            <span class="tech-badge mem">Memory</span>
+            <span class="tech-name">Lernfortschritt</span>
+
+          </div>
+        </div>
+
+        <div class="arch-flow">
+          <div class="arch-flow-title">Architektur – Datenfluss</div>
+
+          <div class="flow-node user-node">👤 User</div>
+          <div class="flow-arrow"></div>
+
+          <div class="flow-node">🖥️ Frontend</div>
+          <div class="flow-arrow"></div>
+
+          <div class="flow-node">⚙️ FastAPI Backend</div>
+          <div class="flow-arrow"></div>
+
+          <div class="flow-node highlight">🤖 LangChain Agent</div>
+          <div class="flow-arrow small-arrow"></div>
+
+          <div class="flow-tools-row">
+            <div class="flow-tool">OpenAI</div>
+            <div class="flow-tool">Tools</div>
+            <div class="flow-tool">RAG</div>
+            <div class="flow-tool">Memory</div>
+          </div>
+
+          <div class="flow-arrow answer-arrow"></div>
+
+          <div class="flow-node user-node">💬 Antwort</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SLIDE 6 -->
+    <section class="slide" id="slide-6">
+      <div class="slide-accent-bar"></div>
+
+      <div class="slide-header">
+        <span class="slide-label">Demo-Ablauf</span>
+        <h2 class="slide-title">User Journey –<br><em>Live in Aktion</em></h2>
+      </div>
+
+      <div class="journey-layout">
+
+        <!-- Schritt 1: Schüler fragt -->
+        <div class="journey-step">
+          <div class="jstep-head">
+            <div class="jstep-avatar">👨‍💻</div>
+            <div class="jstep-meta">
+              <span class="jstep-label">Schüler</span>
+              <span class="jstep-tag user-tag">Eingabe</span>
+            </div>
+          </div>
+          <div class="chat-bubble user-bubble">
+            „Warum funktioniert meine<br><strong>for-Schleife</strong> nicht?"
+          </div>
+          <div class="code-card">
+            <div class="code-card-header">
+              <span class="code-dot red"></span>
+              <span class="code-dot yellow"></span>
+              <span class="code-dot green"></span>
+              <span class="code-filename">loop.py</span>
+            </div>
+            <pre class="code-block"><span class="code-kw">for</span> i <span class="code-kw">in</span> range(<span class="code-num">5</span>)
+    <span class="code-fn">print</span>(i)  <span class="code-err"># ← SyntaxError!</span></pre>
+          </div>
+        </div>
+
+        <!-- Pfeil -->
+        <div class="journey-arrow">
+          <div class="jarrow-line"></div>
+          <div class="jarrow-label">analysiert</div>
+          <div class="jarrow-head">▶</div>
+        </div>
+
+        <!-- Schritt 2: KI-Agent -->
+        <div class="journey-step agent-step">
+          <div class="jstep-head">
+            <div class="jstep-avatar agent-avatar">🤖</div>
+            <div class="jstep-meta">
+              <span class="jstep-label">KI-Tutor</span>
+              <span class="jstep-tag agent-tag">Agent aktiv</span>
+            </div>
+          </div>
+          <div class="agent-actions">
+            <div class="agent-action">
+              <span class="action-icon" style="background:rgba(99,102,241,0.15)">🔍</span>
+              <span class="action-text"><strong>Fehler erkannt:</strong> Doppelpunkt fehlt nach
+                <code>range(5)</code></span>
+            </div>
+            <div class="agent-action">
+              <span class="action-icon" style="background:rgba(56,189,248,0.12)">💡</span>
+              <span class="action-text"><strong>Erklärung:</strong> In Python braucht jede <code>for</code>-Zeile einen
+                <code>:</code> am Ende.</span>
+            </div>
+            <div class="agent-action">
+              <span class="action-icon" style="background:rgba(52,211,153,0.12)">✅</span>
+              <span class="action-text"><strong>Lösung:</strong> <code>for i in range(5):</code></span>
+            </div>
+            <div class="agent-action">
+              <span class="action-icon" style="background:rgba(167,139,250,0.12)">✏️</span>
+              <span class="action-text"><strong>Übung generiert:</strong> Schreibe eine Schleife von 1 bis 10.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pfeil -->
+        <div class="journey-arrow">
+          <div class="jarrow-line"></div>
+          <div class="jarrow-label">Ergebnis</div>
+          <div class="jarrow-head">▶</div>
+        </div>
+
+        <!-- Schritt 3: Ergebnis -->
+        <div class="journey-step result-step">
+          <div class="jstep-head">
+            <div class="jstep-avatar">🎓</div>
+            <div class="jstep-meta">
+              <span class="jstep-label">Schüler</span>
+              <span class="jstep-tag success-tag">Verstanden!</span>
+            </div>
+          </div>
+          <div class="chat-bubble ai-bubble">
+            „Ich verstehe jetzt,<br>warum der Fehler aufgetreten ist."
+          </div>
+          <div class="result-outcomes">
+            <div class="outcome-chip">✓ Fehler verstanden</div>
+            <div class="outcome-chip">✓ Konzept gelernt</div>
+            <div class="outcome-chip">✓ Übung gestartet</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SLIDE 7 -->
+    <section class="slide" id="slide-7">
+      <div class="slide-accent-bar"></div>
+
+      <div class="slide-header">
+        <span class="slide-label">Roadmap</span>
+        <h2 class="slide-title">Sprint-Plan and <em>Definition of Done</em></h2>
+      </div>
+
+      <div class="sprint-section">
+
+        <div class="sprints-grid sprints-grid--3">
+          <div class="sprint-card sprint-c1">
+            <div class="sprint-card-head">
+              <span class="sprint-num">Sprint 1</span>
+              <span class="sprint-badge">Basis</span>
+            </div>
+            <ul>
+              <li>Projektstruktur erstellen</li>
+              <li>FastAPI Backend aufbauen</li>
+              <li>Dummy-Funktionen für Code-Erklärung and Debugging</li>
+            </ul>
+          </div>
+
+          <div class="sprint-card sprint-c2">
+            <div class="sprint-card-head">
+              <span class="sprint-num">Sprint 2</span>
+              <span class="sprint-badge">KI-Integration</span>
+            </div>
+            <ul>
+              <li>OpenAI API integrieren</li>
+              <li>LangChain Agent aufbauen</li>
+              <li>Übungs-Generator implementieren</li>
+            </ul>
+          </div>
+
+          <div class="sprint-card sprint-c3">
+            <div class="sprint-card-head">
+              <span class="sprint-num">Sprint 3</span>
+              <span class="sprint-badge">RAG and Memory</span>
+            </div>
+            <ul>
+              <li>PDF-Verarbeitung and RAG-Pipeline</li>
+              <li>Vector Database integrieren</li>
+              <li>Memory-System für Lernfortschritt</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="dod-col">
+          <div class="dod-box">
+            <div class="box-title"><i class="fa-solid fa-circle-check"></i> Definition of Done</div>
+            <ul>
+              <li><i class="fa-solid fa-check"></i> Code ist auf GitHub gepusht</li>
+              <li><i class="fa-solid fa-check"></i> Alle Funktionen sind getestet</li>
+              <li><i class="fa-solid fa-check"></i> API-Endpunkte dokumentiert</li>
+              <li><i class="fa-solid fa-check"></i> Demo läuft fehlerfrei</li>
+              <li><i class="fa-solid fa-check"></i> Kein offener Bug im Sprint-Scope</li>
+              <li><i class="fa-solid fa-check"></i> Peer Review abgeschlossen</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+    const counter = document.getElementById('counter');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnFS = document.getElementById('btn-fs');
+
+    const CARD_SEL = '.problem-card, .feature-card, .sprint-card, .dod-box, .agenda-item, .journey-step, .tech-item, .arch-flow';
+
+    let current = 0;
+    let stepIndex = 0; // 0 = kein Fokus; 1..n = Karte fokussiert
+
+    function getCards() {
+      return Array.from(slides[current].querySelectorAll(CARD_SEL));
+    }
+
+    function setStep(idx) {
+      const cards = getCards();
+      stepIndex = idx;
+      if (idx === 0 || cards.length === 0) {
+        slides[current].classList.remove('has-focus');
+        cards.forEach(c => c.classList.remove('card-focus'));
+      } else {
+        slides[current].classList.add('has-focus');
+        cards.forEach((c, i) => c.classList.toggle('card-focus', i === idx - 1));
+      }
+    }
+
+    function clearStep() {
+      const cards = getCards();
+      stepIndex = 0;
+      slides[current].classList.remove('has-focus');
+      cards.forEach(c => c.classList.remove('card-focus'));
+    }
+
+    function goTo(n) {
+      clearStep();
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+
+      current = Math.max(0, Math.min(n, slides.length - 1));
+
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+
+      counter.textContent = `Slide ${current + 1} / ${slides.length}`;
+
+      btnPrev.disabled = current === 0;
+      btnNext.disabled = current === slides.length - 1;
+      document.documentElement.style.fontSize = current === 0 ? '130%' : '149.5%';
+    }
+
+    btnPrev.addEventListener('click', () => goTo(current - 1));
+    btnNext.addEventListener('click', () => goTo(current + 1));
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => goTo(Number(dot.dataset.target) - 1));
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        const cards = getCards();
+        if (cards.length > 0 && stepIndex < cards.length) {
+          setStep(stepIndex + 1);
+        } else {
+          goTo(current + 1);
+        }
+      }
+
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        if (stepIndex > 0) {
+          setStep(stepIndex - 1);
+        } else {
+          goTo(current - 1);
+        }
+      }
+
+      if (event.key === 'Escape') {
+        if (stepIndex > 0) {
+          clearStep();
+        } else if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+      }
+
+      if (event.key === 'f' || event.key === 'F') toggleFS();
+    });
+
+    function toggleFS() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        btnFS.textContent = '✕';
+        btnFS.title = 'Vollbild beenden';
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        btnFS.textContent = '⛶';
+        btnFS.title = 'Vollbild';
+      }
+    });
+
+    btnFS.addEventListener('click', toggleFS);
+  </script>
+
+</body>
+
+</html>
