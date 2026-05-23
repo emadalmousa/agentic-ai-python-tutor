@@ -24,4 +24,6 @@ def run_analysis(code: str, question: str | None = None) -> dict:
 
 def _is_connection_error(e: Exception) -> bool:
     msg = str(e).lower()
-    return any(kw in msg for kw in ["connection", "connect", "refused", "unreachable", "timeout"])
+    class_name = type(e).__name__.lower()
+    keywords = ["connection", "connect", "refused", "unreachable", "timeout"]
+    return any(kw in msg or kw in class_name for kw in keywords)
