@@ -17,8 +17,9 @@ fi
 # Backend starten
 cd "$(dirname "$0")/backend"
 
-if [ ! -d "venv" ]; then
+if [ ! -f "venv/bin/activate" ]; then
   echo "Erstelle venv..."
+  rm -rf venv
   python3 -m venv venv
   source venv/bin/activate
   pip install -r requirements.txt -q

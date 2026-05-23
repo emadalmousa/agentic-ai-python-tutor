@@ -1,15 +1,40 @@
 from pydantic import BaseModel
 
 
-# Eingabe vom Benutzer: der Python-Code und eine optionale Frage
 class CodeRequest(BaseModel):
     code: str
-    question: str | None = None  # optional — kann leer bleiben
+    question: str | None = None
 
 
-# Ausgabe des Backends: Erklärung, Fehlerstatus, Hinweis und nächste Übung
 class TutorResponse(BaseModel):
-    explanation: str   # Erklärung des Codes
-    error_found: bool  # True wenn ein Fehler erkannt wurde
-    suggestion: str    # Hinweis oder Fehlerbeschreibung
-    next_exercise: str | None = None  # optionale Übungsaufgabe
+    explanation: str
+    error_found: bool
+    error_type: str = "Kein Fehler"
+    suggestion: str
+    next_exercise: str | None = None
+
+
+class ChatMessage(BaseModel):
+    role: str        # "user" oder "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    code: str
+    message: str
+    history: list[ChatMessage] = []
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    history: list[ChatMessage]
+
+
+class RunRequest(BaseModel):
+    code: str
+
+
+class RunResponse(BaseModel):
+    stdout: str
+    stderr: str
+    exit_code: int

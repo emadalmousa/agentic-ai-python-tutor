@@ -4,4 +4,5 @@ pydantic
 langchain
 langchain-core
 langchain-ollama
+langchain-openai
 python-dotenv

@@ -1,91 +1,117 @@
 "use client"
 
 import { useState } from "react"
+import Header from "@/components/tutor/Header"
 import CodeEditor from "@/components/tutor/CodeEditor"
+import EditorFooter from "@/components/tutor/EditorFooter"
 import TutorResult from "@/components/tutor/TutorResult"
+import ChatPanel from "@/components/tutor/ChatPanel"
 import { useTutorAnalysis } from "@/hooks/useTutorAnalysis"
+import { useChat } from "@/hooks/useChat"
+import { useCodeRunner } from "@/hooks/useCodeRunner"
 
 export default function Home() {
   const [dark, setDark] = useState(true)
-  const { code, setCode, question, setQuestion, result, loading, error, analyze } = useTutorAnalysis()
+  const [activeTab, setActiveTab] = useState<"analyze" | "chat">("chat")
 
-  const bg = dark ? "min-h-screen bg-[#0a1628] text-white" : "min-h-screen bg-gray-50 text-gray-900"
-  const card = dark
-    ? "bg-[#111e30] border border-[#1e2f45] rounded-2xl p-6 shadow-xl"
-    : "bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"
-  const labelCls = dark
-    ? "block text-sm font-medium text-gray-300 mb-2"
-    : "block text-sm font-medium text-gray-600 mb-2"
-  const inputCls = dark
-    ? "w-full rounded-xl border border-[#2d3f55] bg-[#0d1b2a] px-4 py-2.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    : "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+  const { code, setCode, result, loading: analyzing, error: analyzeError, analyze } = useTutorAnalysis()
+  const { history, input, setInput, loading: chatLoading, error: chatError, send, reset, bottomRef } = useChat(code)
+  const { output, loading: running, run } = useCodeRunner()
+
+  const bg         = dark ? "bg-[#060e1c] text-white"        : "bg-gray-100 text-gray-900"
+  const border     = dark ? "border-[#1e2f45]"               : "border-gray-200"
+  const tabBase    = "px-4 py-2 text-xs font-semibold rounded-lg transition-all"
+  const tabActive  = dark ? "bg-[#1e2f45] text-white"        : "bg-indigo-100 text-indigo-700"
+  const tabInactive = dark ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"
+  const labelCls   = dark ? "block text-xs font-medium text-gray-400 mb-1.5" : "block text-xs font-medium text-gray-500 mb-1.5"
 
   return (
-    <div className={bg}>
-      <div className="max-w-2xl mx-auto px-4 py-12">
+    <div className={`${bg} h-screen flex flex-col overflow-hidden`}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h1 className={`text-2xl font-bold ${dark ? "text-white" : "text-gray-900"}`}>
-              🤖 Python Tutor
-            </h1>
-            <p className={`text-sm mt-1 ${dark ? "text-gray-400" : "text-gray-500"}`}>
-              Agentic AI — Phase 1
-            </p>
-          </div>
-          <button
-            onClick={() => setDark(!dark)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${dark
-              ? "border-[#2d3f55] text-gray-300 hover:bg-[#1e2f45]"
-              : "border-gray-200 text-gray-600 hover:bg-gray-100"}`}
-          >
-            {dark ? "☀ Hell" : "🌙 Dunkel"}
-          </button>
-        </div>
+      <Header dark={dark} onToggleDark={() => setDark(!dark)} />
 
-        {/* Input Card */}
-        <div className={`${card} mb-6`}>
-          <div className="mb-5">
-            <label className={labelCls}>Dein Python-Code</label>
+      {/* ── Split Layout ── */}
+      <div className="flex flex-1 min-h-0">
+
+        {/* ════ LINKE SEITE: Code-Editor ════ */}
+        <div className={`w-[480px] flex-shrink-0 flex flex-col border-r ${border}`}>
+
+          {/* Editor scrollt */}
+          <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
+            <label className={labelCls}>Python-Code</label>
             <CodeEditor code={code} onChange={setCode} dark={dark} />
           </div>
 
-          <div className="mb-5">
-            <label className={labelCls}>Frage (optional)</label>
-            <input
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="z.B. Warum funktioniert meine for-Schleife nicht?"
-              className={inputCls}
-            />
-          </div>
-
-          <button
-            onClick={analyze}
-            disabled={loading || !code.trim()}
-            className="w-full py-3 rounded-xl font-semibold text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Analysiere..." : "Analysieren"}
-          </button>
+          {/* Footer bleibt immer sichtbar */}
+          <EditorFooter
+            dark={dark}
+            code={code}
+            running={running}
+            analyzing={analyzing}
+            output={output}
+            onRun={() => run(code)}
+            onAnalyze={analyze}
+          />
         </div>
 
-        {/* Fehler */}
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-400">
-            {error}
-          </div>
-        )}
+        {/* ════ RECHTE SEITE: Tabs (Chat / Analyse) ════ */}
+        <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Ergebnis */}
-        {result && (
-          <div className={card}>
-            <TutorResult result={result} dark={dark} />
+          {/* Tab-Leiste */}
+          <div className={`flex items-center gap-1 px-4 py-2 border-b ${border} ${dark ? "bg-[#080f1e]" : "bg-gray-50"} flex-shrink-0`}>
+            <button
+              onClick={() => setActiveTab("chat")}
+              className={`${tabBase} ${activeTab === "chat" ? tabActive : tabInactive}`}
+            >
+              💬 Chat
+            </button>
+            <button
+              onClick={() => setActiveTab("analyze")}
+              className={`${tabBase} ${activeTab === "analyze" ? tabActive : tabInactive}`}
+            >
+              🔍 Analyse
+            </button>
           </div>
-        )}
 
+          {/* Tab-Inhalt */}
+          <div className="flex-1 min-h-0">
+
+            {activeTab === "chat" && (
+              <ChatPanel
+                history={history}
+                input={input}
+                loading={chatLoading}
+                error={chatError}
+                bottomRef={bottomRef}
+                onInput={setInput}
+                onSend={send}
+                onReset={reset}
+                dark={dark}
+              />
+            )}
+
+            {activeTab === "analyze" && (
+              <div className="h-full overflow-y-auto px-4 py-4">
+                {analyzeError && (
+                  <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    {analyzeError}
+                  </div>
+                )}
+                {result ? (
+                  <TutorResult result={result} dark={dark} />
+                ) : (
+                  <div className={`text-center mt-16 text-sm ${dark ? "text-gray-600" : "text-gray-400"}`}>
+                    <div className="text-3xl mb-3">🔍</div>
+                    <p>Klicke auf <strong>Analysieren</strong> um eine vollständige Code-Analyse zu starten.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
       </div>
+
     </div>
   )
 }

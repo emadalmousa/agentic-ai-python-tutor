@@ -1,7 +1,7 @@
 "use client"
 
 import type { TutorResponse } from "@/types/tutor"
-import StatusBadge from "./StatusBadge"
+import MarkdownMessage from "./MarkdownMessage"
 
 interface Props {
   result: TutorResponse
@@ -9,40 +9,76 @@ interface Props {
 }
 
 export default function TutorResult({ result, dark }: Props) {
-  const card = dark
-    ? "bg-[#1e2a3a] border border-[#2d3f55] rounded-xl p-5"
-    : "bg-white border border-gray-200 rounded-xl p-5 shadow-sm"
-  const label = dark
-    ? "text-xs font-semibold uppercase tracking-widest text-indigo-400 mb-1"
-    : "text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-1"
-  const text = dark
-    ? "text-gray-200 text-sm leading-relaxed"
-    : "text-gray-700 text-sm leading-relaxed"
+  const text  = dark ? "text-gray-200" : "text-gray-800"
+  const sub   = dark ? "text-gray-400" : "text-gray-500"
+  const card  = dark ? "bg-[#0d1b2a] border-[#1e2f45]" : "bg-white border-gray-200"
+  const divider = dark ? "border-[#1e2f45]" : "border-gray-100"
+
+  const errorColor = result.error_found
+    ? dark ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-red-50 border-red-200 text-red-600"
+    : dark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-600"
+
+  const errorIcon = result.error_found ? "🔴" : "🟢"
+  const errorLabel = result.error_found ? result.error_type : "Kein Fehler"
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <StatusBadge errorFound={result.error_found} />
+
+      {/* ── Status-Banner ── */}
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${errorColor}`}>
+        <span className="text-lg">{errorIcon}</span>
+        <div>
+          <div className="font-bold text-sm">{errorLabel}</div>
+          <div className="text-xs opacity-75">Code-Analyse abgeschlossen</div>
+        </div>
       </div>
 
-      <div className={card}>
-        <p className={label}>Erklärung</p>
-        <p className={text}>{result.explanation}</p>
+      {/* ── Erklärung ── */}
+      <div className={`rounded-xl border ${card} overflow-hidden`}>
+        <div className={`flex items-center gap-2 px-4 py-3 border-b ${divider}`}>
+          <span>📖</span>
+          <span className={`text-xs font-bold uppercase tracking-widest ${dark ? "text-indigo-400" : "text-indigo-500"}`}>
+            Code-Erklärung
+          </span>
+        </div>
+        <div className="px-4 py-4">
+          <MarkdownMessage content={result.explanation} dark={dark} />
+        </div>
       </div>
 
-      <div className={card}>
-        <p className={label}>Hinweis</p>
-        <p className={text}>{result.suggestion}</p>
+      {/* ── Fehler / Hinweis ── */}
+      <div className={`rounded-xl border ${card} overflow-hidden`}>
+        <div className={`flex items-center gap-2 px-4 py-3 border-b ${divider}`}>
+          <span>{result.error_found ? "🐛" : "💡"}</span>
+          <span className={`text-xs font-bold uppercase tracking-widest ${dark ? "text-amber-400" : "text-amber-600"}`}>
+            {result.error_found ? "Fehler & Lösung" : "Hinweis"}
+          </span>
+        </div>
+        <div className="px-4 py-4">
+          <MarkdownMessage content={result.suggestion} dark={dark} />
+        </div>
       </div>
 
+      {/* ── Übung ── */}
       {result.next_exercise && (
-        <div className={dark
-          ? "bg-indigo-900/30 border border-indigo-500/30 rounded-xl p-5"
-          : "bg-indigo-50 border border-indigo-200 rounded-xl p-5"}>
-          <p className={label}>Nächste Übung</p>
-          <p className={text}>{result.next_exercise}</p>
+        <div className={`rounded-xl border overflow-hidden ${dark ? "bg-indigo-950/40 border-indigo-500/20" : "bg-indigo-50 border-indigo-200"}`}>
+          <div className={`flex items-center gap-2 px-4 py-3 border-b ${dark ? "border-indigo-500/20" : "border-indigo-200"}`}>
+            <span>🎯</span>
+            <span className={`text-xs font-bold uppercase tracking-widest ${dark ? "text-indigo-400" : "text-indigo-600"}`}>
+              Deine nächste Übung
+            </span>
+          </div>
+          <div className="px-4 py-4">
+            <MarkdownMessage content={result.next_exercise!} dark={dark} />
+          </div>
+          <div className={`px-4 py-3 border-t ${dark ? "border-indigo-500/20" : "border-indigo-200"}`}>
+            <p className={`text-xs ${sub}`}>
+              💬 Hast du Fragen zur Übung? Frag den Tutor im Chat!
+            </p>
+          </div>
         </div>
       )}
+
     </div>
   )
 }
