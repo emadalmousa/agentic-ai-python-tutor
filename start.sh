@@ -45,6 +45,6 @@ cleanup() {
   exit
 }
 
-trap cleanup INT TERM
+trap cleanup INT TERM EXIT
 
 wait
