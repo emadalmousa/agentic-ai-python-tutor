@@ -1,7 +1,9 @@
 # Einstiegspunkt der Anwendung — wird von uvicorn geladen
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from routers.tutor import router as tutor_router
+from agent.tutor_agent import ServiceUnavailableError
 
 # FastAPI-Anwendung erstellen
 app = FastAPI(title="Agentic AI Python Tutor System")
@@ -16,6 +18,14 @@ app.add_middleware(
 
 # Tutor-Router einbinden — registriert alle /tutor/... Endpunkte
 app.include_router(tutor_router)
+
+
+@app.exception_handler(ServiceUnavailableError)
+async def service_unavailable_handler(request: Request, exc: ServiceUnavailableError):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": str(exc)},
+    )
 
 
 # Health-Check — zeigt ob das Backend läuft

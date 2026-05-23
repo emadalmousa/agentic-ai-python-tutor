@@ -1,6 +1,6 @@
 # Phase 2: LangChain + Ollama Integration — Implementation Plan
 
-**Status**: 🔄 In Progress (Phase 1 Complete)
+**Status**: 🔄 In Progress (Phase 1, 2 Complete)
 
 **Last Updated**: 2026-05-23
 
@@ -130,8 +130,8 @@ Source: `backend/.env` (git-ignored) and `backend/.env.example` (committed).
 | Phase | Delivers | Status | Detail File |
 |---|---|---|---|
 | 1: Foundation | Config, `.env`, `agent/` package scaffold, updated `start.sh` | ✅ | `phase-2-langchain-ollama/phase-1-foundation.md` |
-| 2: LangChain Tools | `explain_code_tool` and `debug_code_tool` as LangChain tools | ⏸️ | `phase-2-langchain-ollama/phase-2-tools.md` |
-| 3: Integration | Services wired to agent, 503 error handler, `question` forwarded | ⏸️ | `phase-2-langchain-ollama/phase-3-integration.md` |
+| 2: LangChain Tools | `explain_code_tool` and `debug_code_tool` as LangChain tools | ✅ | `phase-2-langchain-ollama/phase-2-tools.md` |
+| 3: Integration | Services wired to agent, 503 error handler, `question` forwarded | ✅ | `phase-2-langchain-ollama/phase-3-integration.md` |
 | Quality Gate | Full end-to-end manual test + regression check | ⏸️ | *(in this file)* |
 | Documentation | README, `.env.example`, sprint status | ⏸️ | *(in this file)* |
 

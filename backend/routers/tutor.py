@@ -14,7 +14,7 @@ NEXT_EXERCISE = "Schreibe eine for-Schleife, die die Zahlen von 1 bis 10 ausgibt
 @router.post("/analyze", response_model=TutorResponse)
 def analyze_code(request: CodeRequest) -> TutorResponse:
     # Code erklären
-    explanation = explain_code(request.code)
+    explanation = explain_code(request.code, request.question)
 
     # Fehler suchen — gibt (bool, str) zurück
     error_found, suggestion = debug_code(request.code)
