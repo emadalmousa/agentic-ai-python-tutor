@@ -27,14 +27,13 @@ def _parse_debug_response(content: str) -> dict:
     except json.JSONDecodeError:
         pass
 
-    # JSON aus Markdown-Blöcken extrahieren
-    match = re.search(r'\{[^}]+\}', content, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            pass
+    # Strip markdown fences, dann json.loads erneut versuchen
+    stripped = re.sub(r'^```(?:json)?\s*', '', content.strip(), flags=re.MULTILINE)
+    stripped = re.sub(r'```\s*$', '', stripped.strip(), flags=re.MULTILINE)
+    try:
+        return json.loads(stripped.strip())
+    except json.JSONDecodeError:
+        pass
 
-    # Fallback: aus Text ableiten
-    error_found = any(word in content.lower() for word in ["fehler", "error", "syntaxfehler", "problem"])
-    return {"error_found": error_found, "suggestion": content.strip()}
+    # Fallback: exakt dieses Dict zurückgeben
+    return {"error_found": False, "suggestion": "Analyse nicht möglich."}
