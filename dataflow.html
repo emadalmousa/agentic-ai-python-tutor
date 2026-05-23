@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Python Tutor — Vollständiger Datenfluss Sprint 2</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #060e1c;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 40px 20px 80px;
+}
+.page { max-width: 980px; margin: 0 auto; }
+
+/* ── TITLE ── */
+.main-title {
+  text-align: center;
+  font-size: 1.7rem;
+  color: #a5b4fc;
+  letter-spacing: .06em;
+  margin-bottom: 6px;
+  font-weight: 800;
+}
+.main-sub {
+  text-align: center;
+  color: #2d4a6a;
+  font-size: .83rem;
+  margin-bottom: 48px;
+}
+
+/* ── SECTION TITLE ── */
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  padding: 10px 18px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-divider {
+  border: none;
+  border-top: 1px solid #0f1e30;
+  margin: 48px 0;
+}
+
+/* ── OVERVIEW GRID ── */
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 48px;
+}
+.overview-card {
+  border-radius: 14px;
+  padding: 18px 16px;
+  border: 1px solid;
+  position: relative;
+  overflow: hidden;
+}
+.overview-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+}
+.ov-analyze { background: #0a0d1e; border-color: #1e2f5a; }
+.ov-analyze::before { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+.ov-chat    { background: #0a1410; border-color: #1a3020; }
+.ov-chat::before    { background: linear-gradient(90deg, #10b981, #34d399); }
+.ov-run     { background: #0a1206; border-color: #1a2a10; }
+.ov-run::before     { background: linear-gradient(90deg, #84cc16, #a3e635); }
+.ov-title { font-weight: 800; font-size: .9rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.ov-body  { font-size: .75rem; color: #64748b; line-height: 1.7; }
+.ov-body code {
+  background: rgba(255,255,255,.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: .72rem;
+  color: #7dd3fc;
+}
+.ov-steps { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.ov-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .72rem;
+  color: #475569;
+}
+.ov-step-num {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* ── ZONE ── */
+.zone {
+  border-radius: 16px;
+  padding: 18px 20px 20px;
+  margin-bottom: 4px;
+  border: 1px solid;
+}
+.zone-label {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-weight: 800;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.zone-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: .18;
+}
+
+.zone-browser  { background: #080f1e; border-color: #1a2f4a; }
+.zone-browser  .zone-label { color: #60a5fa; }
+.zone-http     { background: #050810; border-color: #0f1e2e; }
+.zone-http     .zone-label { color: #334155; }
+.zone-fastapi  { background: #07100d; border-color: #142818; }
+.zone-fastapi  .zone-label { color: #34d399; }
+.zone-agent    { background: #0d0a1e; border-color: #231a40; }
+.zone-agent    .zone-label { color: #c084fc; }
+.zone-langchain{ background: #100818; border-color: #2d1040; }
+.zone-langchain .zone-label { color: #e879f9; }
+.zone-provider { background: #0a0810; border-color: #200a38; }
+.zone-provider .zone-label { color: #a78bfa; }
+.zone-ollama   { background: #1a0808; border-color: #3d1010; }
+.zone-ollama   .zone-label { color: #f87171; }
+.zone-openai   { background: #041208; border-color: #0a2a10; }
+.zone-openai   .zone-label { color: #4ade80; }
+.zone-model    { background: #120a00; border-color: #3d2000; }
+.zone-model    .zone-label { color: #fb923c; }
+.zone-subprocess { background: #080f06; border-color: #142210; }
+.zone-subprocess .zone-label { color: #a3e635; }
+.zone-classifier { background: #070e0a; border-color: #102016; }
+.zone-classifier .zone-label { color: #86efac; }
+
+/* ── CARD ── */
+.card {
+  border-radius: 10px;
+  padding: 12px 16px;
+  border: 1px solid;
+  margin-bottom: 8px;
+  font-size: .82rem;
+}
+.card:last-child { margin-bottom: 0; }
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.card-icon  { font-size: 1.1rem; }
+.card-title { font-weight: 700; font-size: .88rem; flex: 1; }
+.card-file  { font-family: monospace; font-size: .67rem; opacity: .4; }
+.card-body  { color: #94a3b8; line-height: 1.65; }
+.card-body code {
+  background: rgba(255,255,255,.07);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: monospace;
+  font-size: .74rem;
+  color: #7dd3fc;
+}
+.card-body strong { color: #e2e8f0; }
+
+.card-blue    { background: #0a1628; border-color: #1e3a5f; }
+.card-dark    { background: #0d1b2a; border-color: #1e2f45; }
+.card-green   { background: #081a0f; border-color: #0f2a1a; }
+.card-purple  { background: #0e0b22; border-color: #2a1a50; }
+.card-pink    { background: #130a1e; border-color: #351050; }
+.card-red     { background: #1a0a0a; border-color: #401010; }
+.card-orange  { background: #160a00; border-color: #402000; }
+.card-lime    { background: #0a1206; border-color: #1a2a10; }
+.card-teal    { background: #041210; border-color: #082820; }
+
+/* ── ROLE BADGES ── */
+.role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: .65rem;
+  font-weight: 700;
+  margin-top: 6px;
+  margin-right: 4px;
+}
+.role-routing    { background: #0f2a40; color: #38bdf8; }
+.role-state      { background: #0f1f3a; color: #93c5fd; }
+.role-validate   { background: #0f2a1a; color: #4ade80; }
+.role-delegate   { background: #1a0f2a; color: #a78bfa; }
+.role-orchestrate{ background: #1e0f35; color: #c084fc; }
+.role-format     { background: #2a0a35; color: #e879f9; }
+.role-abstract   { background: #220a30; color: #d946ef; }
+.role-serve      { background: #300a0a; color: #f87171; }
+.role-inference  { background: #280a00; color: #fb923c; }
+.role-parse      { background: #1a1000; color: #fbbf24; }
+.role-classify   { background: #082010; color: #4ade80; }
+.role-run        { background: #0a1606; color: #a3e635; }
+.role-security   { background: #201000; color: #fbbf24; }
+.role-render     { background: #0a0f20; color: #818cf8; }
+.role-fallback   { background: #100a20; color: #c084fc; }
+
+/* ── ARROWS ── */
+.arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 4px 0;
+}
+.arrow-line {
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to bottom, #3b82f6, #6366f1);
+  border-radius: 2px;
+}
+.arrow-head {
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 9px solid #6366f1;
+}
+.arrow-label {
+  font-size: .65rem;
+  color: #1e3a5f;
+  font-family: monospace;
+  margin-top: 2px;
+  text-align: center;
+}
+.arrow-up { flex-direction: column-reverse; }
+.arrow-up .arrow-head {
+  border-top: none;
+  border-bottom: 9px solid #3b82f6;
+}
+.arrow-up .arrow-label { margin-top: 0; margin-bottom: 2px; }
+.arrow-red .arrow-line { background: linear-gradient(to bottom, #ef4444, #dc2626); }
+.arrow-red .arrow-head { border-top-color: #dc2626; }
+.arrow-red.arrow-up .arrow-head { border-bottom-color: #ef4444; }
+.arrow-green .arrow-line { background: linear-gradient(to bottom, #10b981, #059669); }
+.arrow-green .arrow-head { border-top-color: #059669; }
+.arrow-green.arrow-up .arrow-head { border-bottom-color: #10b981; }
+.arrow-yellow .arrow-line { background: linear-gradient(to bottom, #f59e0b, #d97706); }
+.arrow-yellow .arrow-head { border-top-color: #d97706; }
+
+/* ── HTTP ROW ── */
+.http-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #04070f;
+  border: 1px dashed #0f1e30;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-family: monospace;
+  font-weight: 700;
+}
+.badge-post   { background: #0f2a40; color: #38bdf8; }
+.badge-url    { background: #0f2a1a; color: #4ade80; }
+.badge-json   { background: #1a0f30; color: #a78bfa; }
+.badge-200    { background: #0a2010; color: #86efac; }
+.badge-503    { background: #2a0808; color: #fca5a5; }
+.badge-400    { background: #2a1a00; color: #fcd34d; }
+
+/* ── JSON BLOCK ── */
+.json-block {
+  background: #04070e;
+  border: 1px solid #0f1e30;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: monospace;
+  font-size: .73rem;
+  color: #475569;
+  margin-top: 6px;
+  line-height: 1.7;
+}
+.json-key   { color: #7dd3fc; }
+.json-str   { color: #a78bfa; }
+.json-bool-true  { color: #4ade80; }
+.json-bool-false { color: #f87171; }
+.json-num   { color: #fb923c; }
+.json-null  { color: #64748b; }
+
+/* ── PROMPT BOX ── */
+.prompt-box {
+  background: #0a0510;
+  border: 1px dashed #3d1060;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: .71rem;
+  color: #c084fc;
+  line-height: 1.6;
+}
+.prompt-label {
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #6b21a8;
+  font-weight: 700;
+  margin-bottom: 3px;
+  margin-top: 8px;
+}
+.prompt-label:first-child { margin-top: 0; }
+.prompt-system { color: #e879f9; }
+.prompt-user   { color: #a78bfa; }
+
+/* ── TOOLS GRID ── */
+.tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+.tool-box {
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid;
+  font-size: .76rem;
+}
+.tool-explain { background: #0e0c28; border-color: #2a2060; }
+.tool-debug   { background: #0c0e26; border-color: #1a2060; }
+.tool-exercise{ background: #0c1a08; border-color: #1a3010; }
+.tool-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .82rem;
+}
+.tool-body { color: #64748b; line-height: 1.6; }
+.tool-body code {
+  background: rgba(255,255,255,.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: .68rem;
+  color: #7dd3fc;
+}
+
+/* ── RESPONSE GRID ── */
+.resp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 10px;
+}
+.resp-field {
+  background: #0a1020;
+  border: 1px solid #1a2840;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.resp-key  { font-family: monospace; font-size: .72rem; color: #7dd3fc; font-weight: 700; }
+.resp-val  { font-size: .68rem; color: #334155; margin-top: 2px; line-height: 1.4; }
+
+/* ── SPLIT ── */
+.split-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.split-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px; }
+
+/* ── DECISION BOX ── */
+.decision {
+  background: #08100a;
+  border: 2px solid #14301a;
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: center;
+  position: relative;
+  margin: 6px 0;
+}
+.decision-title { font-weight: 800; font-size: .85rem; color: #4ade80; margin-bottom: 6px; }
+.decision-body  { font-size: .75rem; color: #64748b; line-height: 1.5; }
+.decision-yes { color: #4ade80; font-weight: 700; font-size: .72rem; }
+.decision-no  { color: #f87171; font-weight: 700; font-size: .72rem; }
+.decision-arrows {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 10px;
+  gap: 10px;
+}
+.decision-branch {
+  flex: 1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: .73rem;
+  text-align: center;
+}
+.branch-yes { background: #082010; border: 1px solid #0f3018; color: #4ade80; }
+.branch-no  { background: #180808; border: 1px solid #300f0f; color: #f87171; }
+
+/* ── NOTE ── */
+.note {
+  background: #0d0a00;
+  border: 1px solid #2a1800;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .74rem;
+  color: #78350f;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+.note strong { color: #fbbf24; }
+.note-green {
+  background: #041208;
+  border-color: #082818;
+  color: #14532d;
+}
+.note-green strong { color: #4ade80; }
+.note-blue {
+  background: #04080f;
+  border-color: #0f1e30;
+  color: #1e3a5f;
+}
+.note-blue strong { color: #60a5fa; }
+
+/* ── FRONTEND MAP ── */
+.frontend-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.fe-card {
+  background: #080f1e;
+  border: 1px solid #1e3050;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.fe-card-title {
+  font-family: monospace;
+  font-size: .78rem;
+  font-weight: 700;
+  color: #818cf8;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fe-card-body { font-size: .72rem; color: #475569; line-height: 1.6; }
+.fe-card-path { font-size: .65rem; color: #1e3a5f; font-family: monospace; margin-bottom: 4px; }
+
+/* ── LEGEND ── */
+.legend {
+  margin-top: 48px;
+  padding: 22px;
+  background: #060c18;
+  border: 1px solid #0f1e30;
+  border-radius: 16px;
+}
+.legend-title {
+  font-size: .78rem;
+  font-weight: 800;
+  color: #334155;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.legend-item {
+  background: #080f1e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  border: 1px solid #1a2840;
+}
+.legend-item-title { font-weight: 700; font-size: .82rem; margin-bottom: 4px; }
+.legend-item-body  { font-size: .72rem; color: #334155; line-height: 1.5; }
+
+/* ── TIMELINE ── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 10px 0;
+}
+.tl-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  position: relative;
+}
+.tl-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 30px;
+  bottom: -8px;
+  width: 2px;
+  background: #1e2f45;
+}
+.tl-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 2px solid;
+}
+.tl-content { flex: 1; }
+.tl-title { font-weight: 700; font-size: .82rem; margin-bottom: 2px; }
+.tl-desc  { font-size: .73rem; color: #475569; line-height: 1.5; }
+.tl-desc code {
+  background: rgba(255,255,255,.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: .7rem;
+  color: #7dd3fc;
+}
+
+/* ── PROVIDER DECISION ── */
+.provider-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-top: 10px;
+}
+.provider-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  font-weight: 800;
+  color: #334155;
+  padding-top: 30px;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="main-title">🤖 Python Tutor — Vollständiger Datenfluss</div>
+<p class="main-sub">Sprint 2 abgeschlossen · 3 Endpoints · LangChain · OpenAI / Ollama Fallback · Chat · Code-Ausführung</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 0: ÜBERBLICK
+═══════════════════════════════════════════════════════ -->
+<div class="section-title" style="background:#0a0d1e; border:1px solid #1e2f5a; color:#a5b4fc;">
+  📊 Überblick — 3 unabhängige Datenwege
+</div>
+
+<div class="overview-grid">
+
+  <div class="overview-card ov-analyze">
+    <div class="ov-title" style="color:#818cf8;">🔍 POST /tutor/analyze</div>
+    <div class="ov-body">Code an LLM schicken → Erklärung, Fehleranalyse und Übung zurückbekommen.</div>
+    <div class="ov-steps">
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#1e1a50; color:#818cf8; border:1px solid #2a2060;">1</div>
+        Frontend sendet Code
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#1e1a50; color:#818cf8; border:1px solid #2a2060;">2</div>
+        3 Tool-Aufrufe: explain → debug → exercise
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#1e1a50; color:#818cf8; border:1px solid #2a2060;">3</div>
+        LLM antwortet 3× → strukturierte Antwort
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#1e1a50; color:#818cf8; border:1px solid #2a2060;">4</div>
+        Markdown-gerenderte Ergebnisse im Tab
+      </div>
+    </div>
+  </div>
+
+  <div class="overview-card ov-chat">
+    <div class="ov-title" style="color:#34d399;">💬 POST /tutor/chat</div>
+    <div class="ov-body">Freier Chat — zuerst Klassifikation ob Python-Thema, dann Antwort mit Gesprächshistorie.</div>
+    <div class="ov-steps">
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#082010; color:#34d399; border:1px solid #0f3020;">1</div>
+        Nachricht + History senden
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#082010; color:#34d399; border:1px solid #0f3020;">2</div>
+        <code>gpt-4o-mini</code> klassifiziert: Python?
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#082010; color:#34d399; border:1px solid #0f3020;">3</div>
+        Nein → Sofort-Ablehnung (kein teures LLM)
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#082010; color:#34d399; border:1px solid #0f3020;">4</div>
+        Ja → <code>gpt-4o</code> antwortet mit History
+      </div>
+    </div>
+  </div>
+
+  <div class="overview-card ov-run">
+    <div class="ov-title" style="color:#a3e635;">▶ POST /tutor/run</div>
+    <div class="ov-body">Code direkt ausführen — kein LLM! Python-Interpreter lokal, stdout/stderr zurück.</div>
+    <div class="ov-steps">
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#0a1a04; color:#a3e635; border:1px solid #1a3008;">1</div>
+        Code als String senden
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#0a1a04; color:#a3e635; border:1px solid #1a3008;">2</div>
+        Tempfile anlegen (<code>.py</code>)
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#0a1a04; color:#a3e635; border:1px solid #1a3008;">3</div>
+        <code>subprocess.run(python tmp.py)</code>
+      </div>
+      <div class="ov-step">
+        <div class="ov-step-num" style="background:#0a1a04; color:#a3e635; border:1px solid #1a3008;">4</div>
+        <code>stdout</code> + <code>stderr</code> + <code>exit_code</code> zurück
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 1: /tutor/analyze
+═══════════════════════════════════════════════════════ -->
+<div class="section-title" style="background:#0a0d1e; border:1px solid #1e2f5a; color:#818cf8;">
+  🔍 Datenweg 1 — POST /tutor/analyze
+</div>
+
+<!-- FRONTEND -->
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Browser / Frontend &nbsp;·&nbsp; Next.js · Port 3000</div>
+
+  <div class="split-2">
+    <div>
+      <div class="card card-lime">
+        <div class="card-head">
+          <span class="card-icon">🧩</span>
+          <span class="card-title">EditorFooter — Sticky Button-Leiste</span>
+          <span class="card-file">components/tutor/EditorFooter.tsx</span>
+        </div>
+        <div class="card-body">
+          Immer am unteren Rand der linken Spalte sichtbar.<br>
+          Button <strong>„Code analysieren"</strong> klicken → ruft <code>onAnalyze()</code> auf.<br>
+          Zeigt auch Output-Panel nach Code-Ausführung.
+          <span class="role role-render">Sticky Footer</span>
+        </div>
+      </div>
+      <div class="card card-dark" style="margin-top:8px;">
+        <div class="card-head">
+          <span class="card-icon">🪝</span>
+          <span class="card-title">useTutorAnalysis — State</span>
+          <span class="card-file">hooks/useTutorAnalysis.ts</span>
+        </div>
+        <div class="card-body">
+          Verwaltet: <code>code</code>, <code>result</code>, <code>loading</code>, <code>error</code>.<br>
+          Setzt <code>loading=true</code> → ruft <code>analyzeCode()</code> auf → wartet.
+          <span class="role role-state">State-Manager</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card card-blue">
+        <div class="card-head">
+          <span class="card-icon">📡</span>
+          <span class="card-title">API-Client</span>
+          <span class="card-file">lib/api.ts → analyzeCode()</span>
+        </div>
+        <div class="card-body">
+          Baut HTTP-Request mit <code>fetch()</code>.<br>
+          URL: <code>NEXT_PUBLIC_API_URL</code> (Default <code>http://127.0.0.1:8000</code>)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note note-blue" style="margin-top:10px;">
+    <strong>Was wird gesendet:</strong>
+    <div class="json-block" style="margin-top:6px;">
+      {<br>
+      &nbsp;&nbsp;<span class="json-key">"code"</span>: <span class="json-str">"for i in range(5)\n    print(i)"</span>,<br>
+      &nbsp;&nbsp;<span class="json-key">"question"</span>: <span class="json-str">"Warum klappt das nicht?"</span> <span style="color:#1e3a5f;">← optional</span><br>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">HTTP POST localhost:8000/tutor/analyze</span></div>
+
+<!-- FASTAPI -->
+<div class="zone zone-fastapi">
+  <div class="zone-label">⚡ FastAPI Backend &nbsp;·&nbsp; Port 8000</div>
+
+  <div class="split-2">
+    <div class="card card-green">
+      <div class="card-head">
+        <span class="card-icon">🛡</span>
+        <span class="card-title">CORS + Exception-Handler</span>
+        <span class="card-file">main.py</span>
+      </div>
+      <div class="card-body">
+        Erlaubt Anfragen von <code>localhost:3000</code>.<br>
+        Registriert: <code>ServiceUnavailableError → HTTP 503</code><br>
+        → wenn Ollama offline ist kommt kein Python-Crash sondern eine saubere Fehlermeldung.
+        <span class="role role-routing">CORS</span>
+        <span class="role role-validate">Error-Handler</span>
+      </div>
+    </div>
+    <div class="card card-green">
+      <div class="card-head">
+        <span class="card-icon">🗺</span>
+        <span class="card-title">Router + Pydantic-Validierung</span>
+        <span class="card-file">routers/tutor.py → analyze_code()</span>
+      </div>
+      <div class="card-body">
+        JSON → <code>CodeRequest(code, question?)</code> — Pydantic prüft automatisch Typen.<br>
+        Ruft direkt <code>run_analysis(code, question)</code> auf.<br>
+        Baut <code>TutorResponse</code> → FastAPI serialisiert zu JSON.
+        <span class="role role-routing">HTTP-Handler</span>
+        <span class="role role-validate">Pydantic</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note note-green" style="margin-top:8px;">
+    <strong>Wichtig:</strong> Früher gab es eine Services-Schicht (<code>code_explainer.py</code>, <code>debugger.py</code>) — diese wurden entfernt. Der Router ruft jetzt direkt <code>run_analysis()</code> auf → nur 3 LLM-Calls statt früher 4.
+  </div>
+</div>
+
+<div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+<!-- AGENT -->
+<div class="zone zone-agent">
+  <div class="zone-label">🤖 Agent-Orchestrator &nbsp;·&nbsp; agent/tutor_agent.py</div>
+
+  <div class="card card-purple">
+    <div class="card-head">
+      <span class="card-icon">🎛</span>
+      <span class="card-title">run_analysis(code, question) — Koordination</span>
+      <span class="card-file">agent/tutor_agent.py</span>
+    </div>
+    <div class="card-body">
+      Ruft die 3 Tools <strong>sequenziell</strong> auf (jedes ist ein LLM-Aufruf):<br>
+      <div class="timeline" style="margin-top:10px;">
+        <div class="tl-step">
+          <div class="tl-num" style="background:#1e0f35; color:#c084fc; border-color:#3a1a60;">1</div>
+          <div class="tl-content">
+            <div class="tl-title" style="color:#c084fc;">explain_code_tool.invoke()</div>
+            <div class="tl-desc">Schickt Code + Frage ans LLM → bekommt deutschen Erklärungstext zurück</div>
+          </div>
+        </div>
+        <div class="tl-step">
+          <div class="tl-num" style="background:#1e0f35; color:#a78bfa; border-color:#3a1a60;">2</div>
+          <div class="tl-content">
+            <div class="tl-title" style="color:#a78bfa;">debug_code_tool.invoke()</div>
+            <div class="tl-desc">Schickt Code → bekommt <code>{"error_found": bool, "suggestion": str}</code> als JSON</div>
+          </div>
+        </div>
+        <div class="tl-step">
+          <div class="tl-num" style="background:#1e0f35; color:#86efac; border-color:#3a1a60;">3</div>
+          <div class="tl-content">
+            <div class="tl-title" style="color:#86efac;">exercise_tool.invoke()</div>
+            <div class="tl-desc">Schickt Code + Fehler-Info → bekommt passende Übungsaufgabe zurück</div>
+          </div>
+        </div>
+      </div>
+      Fängt alle Verbindungsfehler ab → <code>ServiceUnavailableError</code> → HTTP 503.
+      <span class="role role-orchestrate">Orchestrator</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+<!-- LANGCHAIN TOOLS -->
+<div class="zone zone-langchain">
+  <div class="zone-label">🔗 LangChain Tools &nbsp;·&nbsp; Prompt-Formatierung &amp; LLM-Abstraktion</div>
+
+  <div class="card card-pink" style="margin-bottom:12px;">
+    <div class="card-head">
+      <span class="card-icon">🧩</span>
+      <span class="card-title">Was LangChain macht — und was es NICHT ist</span>
+    </div>
+    <div class="card-body">
+      LangChain ist <strong>kein KI-Modell</strong> — es ist ein Python-Framework das:<br>
+      <div class="split-2" style="margin-top:8px;">
+        <div style="background:#0a0614; border:1px solid #200a30; border-radius:8px; padding:10px; font-size:.74rem; color:#64748b; line-height:1.7;">
+          <strong style="color:#e879f9;">Was es tut:</strong><br>
+          • <code>@tool</code>-Decorator: markiert Funktion als Tool<br>
+          • <code>SystemMessage</code> / <code>HumanMessage</code>: strukturiert Prompts<br>
+          • <code>llm.invoke([...])</code>: sendet Nachrichten, empfängt Antwort<br>
+          • Abstrahiert HTTP-Kommunikation mit Ollama/OpenAI
+        </div>
+        <div style="background:#0a0614; border:1px solid #200a30; border-radius:8px; padding:10px; font-size:.74rem; color:#64748b; line-height:1.7;">
+          <strong style="color:#e879f9;">Provider-Austausch:</strong><br>
+          Durch Abstraktion reicht es eine Zeile zu ändern:<br>
+          <code>ChatOllama(…)</code> ↔ <code>ChatOpenAI(…)</code><br>
+          Alle Tools und der Agent bleiben gleich — nur <code>config.py</code> ändert sich.
+        </div>
+      </div>
+      <span class="role role-abstract">Abstraktions-Framework</span>
+      <span class="role role-format">Prompt-Builder</span>
+    </div>
+  </div>
+
+  <div class="tools-grid">
+
+    <div class="tool-box tool-explain">
+      <div class="tool-title" style="color:#c084fc;">📖 explain_code_tool</div>
+      <div class="tool-body">
+        <span style="font-family:monospace;color:#4b607a;font-size:.68rem;">tools/explain_tool.py</span>
+        <div class="prompt-box" style="margin-top:8px;">
+          <div class="prompt-label">SystemMessage</div>
+          <span class="prompt-system">"Du bist ein freundlicher Python-Tutor für Anfänger. Erkläre den Code Schritt für Schritt, nummeriert, klar und auf Deutsch. Erkläre jeden Konzept."</span>
+          <div class="prompt-label">HumanMessage</div>
+          <span class="prompt-user">Code:<br>```python<br>[code]<br>```<br>Frage: [question]</span>
+        </div>
+        <div style="margin-top:8px; color:#475569; font-size:.7rem;">→ Antwort: Langer Erklärungstext auf Deutsch mit Markdown</div>
+      </div>
+    </div>
+
+    <div class="tool-box tool-debug">
+      <div class="tool-title" style="color:#818cf8;">🐛 debug_code_tool</div>
+      <div class="tool-body">
+        <span style="font-family:monospace;color:#4b607a;font-size:.68rem;">tools/debug_tool.py</span>
+        <div class="prompt-box" style="margin-top:8px;">
+          <div class="prompt-label">SystemMessage</div>
+          <span class="prompt-system">"Du bist ein Python-Debugger. Antworte NUR mit JSON: {"error_found": bool, "error_type": str, "suggestion": str}"</span>
+          <div class="prompt-label">HumanMessage</div>
+          <span class="prompt-user">Code:<br>```python<br>[code]<br>```</span>
+        </div>
+        <div style="margin-top:8px; color:#475569; font-size:.7rem;">→ JSON-Parsing: direkt → Fence-Strip → Fallback</div>
+        <span class="role role-parse" style="margin-top:6px;">JSON-Parser</span>
+      </div>
+    </div>
+
+    <div class="tool-box tool-exercise">
+      <div class="tool-title" style="color:#86efac;">🎯 exercise_tool</div>
+      <div class="tool-body">
+        <span style="font-family:monospace;color:#4b607a;font-size:.68rem;">tools/exercise_tool.py</span>
+        <div class="prompt-box" style="margin-top:8px;">
+          <div class="prompt-label">SystemMessage</div>
+          <span class="prompt-system">"Erstelle eine passende Übungsaufgabe für Anfänger. Format: 🎯 Aufgabe / 💡 Tipp / ✅ Ziel"</span>
+          <div class="prompt-label">HumanMessage</div>
+          <span class="prompt-user">Code: [code]<br>Fehler gefunden: [bool]<br>Hinweis: [suggestion]</span>
+        </div>
+        <div style="margin-top:8px; color:#475569; font-size:.7rem;">→ Antwort: Strukturierte Übungsaufgabe</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="arrow arrow-red"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">HTTP POST → Provider (OpenAI oder Ollama)</span></div>
+
+<!-- PROVIDER SELECTION -->
+<div class="zone zone-provider">
+  <div class="zone-label">🔀 Provider-Auswahl &nbsp;·&nbsp; agent/config.py — get_llm()</div>
+
+  <div class="card card-pink">
+    <div class="card-head">
+      <span class="card-icon">⚙</span>
+      <span class="card-title">get_llm() — Automatischer Fallback</span>
+      <span class="card-file">agent/config.py</span>
+    </div>
+    <div class="card-body">
+      Diese Funktion wird <strong>bei jedem LLM-Aufruf</strong> ausgeführt und entscheidet welcher Provider benutzt wird:
+    </div>
+  </div>
+
+  <div class="decision" style="margin-top:10px;">
+    <div class="decision-title">🤔 Ist <code>OPENAI_API_KEY</code> gesetzt und gültig?</div>
+    <div class="decision-body">Prüft: Key vorhanden? Kein Platzhalter? OpenAI-API erreichbar (models.list)?</div>
+    <div class="decision-arrows">
+      <div class="decision-branch branch-yes">
+        ✅ <strong>JA</strong><br><br>
+        Nutze <strong>OpenAI</strong><br>
+        Modell: <code>gpt-4o</code><br>
+        temperature=0<br>
+        <span style="font-size:.68rem; color:#166534;">Schnell, smart, kostet $</span>
+      </div>
+      <div class="decision-branch branch-no">
+        ❌ <strong>NEIN / FEHLER</strong><br><br>
+        Fallback auf <strong>Ollama</strong><br>
+        Modell: <code>llama3.2</code><br>
+        localhost:11434<br>
+        <span style="font-size:.68rem; color:#7f1d1d;">Langsamer, kostenlos, lokal</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:8px;">
+    <strong>Warum automatischer Fallback?</strong> OpenAI-Credits können aufgebraucht sein (<code>insufficient_quota</code>) oder der API-Key fehlt komplett. Ohne Fallback würde die App komplett ausfallen. Mit Fallback läuft sie immer — nur langsamer.
+  </div>
+</div>
+
+<div class="arrow arrow-red"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">HTTP POST /v1/chat/completions (OpenAI) oder /api/chat (Ollama)</span></div>
+
+<!-- KI MODELL -->
+<div class="zone zone-model">
+  <div class="zone-label">🧠 KI-Modell &nbsp;·&nbsp; gpt-4o (OpenAI) oder llama3.2 (Ollama lokal)</div>
+
+  <div class="split-2">
+    <div class="card card-orange">
+      <div class="card-head">
+        <span class="card-icon">🧠</span>
+        <span class="card-title">Was das Modell tut</span>
+      </div>
+      <div class="card-body">
+        <strong>Hier passiert die echte KI-Intelligenz.</strong><br><br>
+        Das Modell empfängt System-Prompt + Code und:<br>
+        • Versteht Python durch Training auf Milliarden Code-Beispielen<br>
+        • Erkennt Syntaxfehler durch sprachliches Muster-Matching<br>
+        • Generiert Text Token für Token (Wort für Wort)<br>
+        • Antwortet auf Deutsch weil der System-Prompt es vorgibt<br>
+        • <code>temperature=0</code>: kein Zufall → immer gleiche Antwort
+        <span class="role role-inference">Neural Network</span>
+      </div>
+    </div>
+    <div class="card card-orange">
+      <div class="card-head">
+        <span class="card-icon">📤</span>
+        <span class="card-title">3 Antworten (eine pro Tool)</span>
+      </div>
+      <div class="card-body">
+        <strong style="color:#fb923c;">Für explain_tool:</strong><br>
+        <span style="font-size:.72rem; color:#475569;">"Der Code enthält eine for-Schleife... Der Fehler ist ein fehlender Doppelpunkt..."</span><br><br>
+        <strong style="color:#fb923c;">Für debug_tool:</strong><br>
+        <span style="font-family:monospace; font-size:.7rem; color:#475569;">{"error_found": true, "error_type": "SyntaxError", "suggestion": "Fehlender Doppelpunkt..."}</span><br><br>
+        <strong style="color:#fb923c;">Für exercise_tool:</strong><br>
+        <span style="font-size:.72rem; color:#475569;">"🎯 Aufgabe: Korrigiere die Schleife..."</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RÜCKWEG -->
+<div class="arrow arrow-up"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">response.content (Text zurück)</span></div>
+
+<div class="zone zone-fastapi">
+  <div class="zone-label">↩ Rückweg — JSON-Response zusammenbauen</div>
+
+  <div class="card card-green">
+    <div class="card-head">
+      <span class="card-icon">🔧</span>
+      <span class="card-title">run_analysis() sammelt alle 3 Antworten</span>
+      <span class="card-file">tutor_agent.py → router → TutorResponse</span>
+    </div>
+    <div class="card-body">
+      <code>_parse_debug_response()</code>: direkt JSON → Fence-Strip (<code>```json...```</code> entfernen) → Fallback dict<br>
+      Router baut <code>TutorResponse</code> und FastAPI serialisiert automatisch zu JSON.
+    </div>
+  </div>
+
+  <div class="resp-grid">
+    <div class="resp-field">
+      <div class="resp-key">explanation</div>
+      <div class="resp-val">Langer Markdown-Text · Erklärung auf Deutsch</div>
+    </div>
+    <div class="resp-field">
+      <div class="resp-key">error_found</div>
+      <div class="resp-val">true / false · vom LLM erkannt</div>
+    </div>
+    <div class="resp-field">
+      <div class="resp-key">error_type</div>
+      <div class="resp-val">"SyntaxError" / "Kein Fehler" etc.</div>
+    </div>
+    <div class="resp-field">
+      <div class="resp-key">suggestion</div>
+      <div class="resp-val">Fehlerbeschreibung oder Tipp · Markdown</div>
+    </div>
+    <div class="resp-field">
+      <div class="resp-key">next_exercise</div>
+      <div class="resp-val">Übungsaufgabe vom exercise_tool</div>
+    </div>
+    <div class="resp-field">
+      <div class="resp-key">HTTP Status</div>
+      <div class="resp-val">200 OK · oder 503 wenn Ollama offline</div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow arrow-up"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Frontend — Ergebnis rendern</div>
+  <div class="split-2">
+    <div class="card card-dark">
+      <div class="card-head">
+        <span class="card-icon">🪝</span>
+        <span class="card-title">Hook aktualisiert State</span>
+        <span class="card-file">useTutorAnalysis.ts</span>
+      </div>
+      <div class="card-body">
+        <code>setResult(data)</code> → <code>loading=false</code> → React re-rendert → Tab auf "Analyse" wechseln.
+      </div>
+    </div>
+    <div class="card card-dark">
+      <div class="card-head">
+        <span class="card-icon">🎨</span>
+        <span class="card-title">TutorResult + MarkdownMessage</span>
+        <span class="card-file">TutorResult.tsx → MarkdownMessage.tsx</span>
+      </div>
+      <div class="card-body">
+        <code>TutorResult</code>: zeigt 3 Sektionen (Erklärung, Fehler, Übung).<br>
+        <code>MarkdownMessage</code>: rendert <code>**fett**</code>, <code>`code`</code>, Codeblöcke mit Syntax-Highlighting via <code>react-syntax-highlighter</code>.
+        <span class="role role-render">Markdown-Rendering</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 2: /tutor/chat
+═══════════════════════════════════════════════════════ -->
+<div class="section-title" style="background:#071008; border:1px solid #142818; color:#34d399;">
+  💬 Datenweg 2 — POST /tutor/chat
+</div>
+
+<!-- FRONTEND CHAT -->
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Browser — Chat-Interface</div>
+
+  <div class="split-2">
+    <div class="card card-teal">
+      <div class="card-head">
+        <span class="card-icon">💬</span>
+        <span class="card-title">ChatPanel — UI</span>
+        <span class="card-file">components/tutor/ChatPanel.tsx</span>
+      </div>
+      <div class="card-body">
+        Textarea mit Auto-Resize. Enter = senden, Shift+Enter = neue Zeile.<br>
+        Optimistisches Update: User-Nachricht erscheint sofort, Tutor-Antwort nach Ladeanzeige.<br>
+        Bouncing-Dots Typing-Indikator während LLM antwortet.
+        <span class="role role-render">Chat-UI</span>
+      </div>
+    </div>
+    <div class="card card-dark">
+      <div class="card-head">
+        <span class="card-icon">🪝</span>
+        <span class="card-title">useChat — State + History</span>
+        <span class="card-file">hooks/useChat.ts</span>
+      </div>
+      <div class="card-body">
+        Verwaltet: <code>history</code> (alle Nachrichten), <code>input</code>, <code>loading</code>.<br>
+        Sendet immer die <strong>gesamte History</strong> mit — das LLM "erinnert" sich so an vorherige Nachrichten.<br>
+        Auto-Scroll mit <code>bottomRef</code>.
+        <span class="role role-state">Conversation State</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note note-blue" style="margin-top:10px;">
+    <strong>Was wird gesendet:</strong>
+    <div class="json-block" style="margin-top:6px;">
+      {<br>
+      &nbsp;&nbsp;<span class="json-key">"message"</span>: <span class="json-str">"Was bedeutet range()?"</span>,<br>
+      &nbsp;&nbsp;<span class="json-key">"code"</span>: <span class="json-str">"for i in range(5):\n    print(i)"</span>,<br>
+      &nbsp;&nbsp;<span class="json-key">"history"</span>: [<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;{ <span class="json-key">"role"</span>: <span class="json-str">"user"</span>, <span class="json-key">"content"</span>: <span class="json-str">"Hallo!"</span> },<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;{ <span class="json-key">"role"</span>: <span class="json-str">"assistant"</span>, <span class="json-key">"content"</span>: <span class="json-str">"Hallo! Wie kann ich helfen?"</span> }<br>
+      &nbsp;&nbsp;]<br>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="arrow arrow-green"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">HTTP POST localhost:8000/tutor/chat</span></div>
+
+<!-- FASTAPI CHAT ROUTER -->
+<div class="zone zone-fastapi">
+  <div class="zone-label">⚡ FastAPI — chat() Endpoint</div>
+
+  <div class="card card-green">
+    <div class="card-head">
+      <span class="card-icon">🗺</span>
+      <span class="card-title">Router empfängt ChatRequest</span>
+      <span class="card-file">routers/tutor.py → chat()</span>
+    </div>
+    <div class="card-body">
+      JSON → <code>ChatRequest(message, code, history)</code> per Pydantic validiert.<br>
+      <strong>Erste Aktion:</strong> Off-Topic-Filter aufrufen: <code>_is_python_related(request.message)</code>
+    </div>
+  </div>
+</div>
+
+<div class="arrow arrow-green"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+<!-- CLASSIFIER -->
+<div class="zone zone-classifier">
+  <div class="zone-label">🔎 LLM-Klassifikation &nbsp;·&nbsp; gpt-4o-mini — Off-Topic Filter</div>
+
+  <div class="card card-green">
+    <div class="card-head">
+      <span class="card-icon">🔎</span>
+      <span class="card-title">_is_python_related() — LLM entscheidet</span>
+      <span class="card-file">routers/tutor.py</span>
+    </div>
+    <div class="card-body">
+      Statt lokalem Keyword-Filter (unzuverlässig) fragt ein <strong>billiges LLM</strong>:<br>
+      <div class="prompt-box" style="margin-top:8px;">
+        <div class="prompt-label">SystemMessage</div>
+        <span class="prompt-system">"Du klassifizierst Nachrichten. Antworte NUR mit 'ja' wenn die Nachricht mit Python-Programmierung zu tun hat, sonst NUR mit 'nein'. Kein weiterer Text."</span>
+        <div class="prompt-label">HumanMessage</div>
+        <span class="prompt-user">"Was bedeutet range()?"</span>
+      </div>
+      Nutzt <code>get_classifier_llm()</code> → <code>gpt-4o-mini</code> (15× billiger als gpt-4o).<br>
+      Prüft: <code>response.content.strip().lower().startswith("ja")</code>
+      <span class="role role-classify">LLM-Klassifikation</span>
+    </div>
+  </div>
+
+  <div class="split-2" style="margin-top:10px;">
+    <div style="background:#08180a; border:2px solid #14301a; border-radius:12px; padding:14px;">
+      <div style="font-weight:800; color:#4ade80; margin-bottom:8px; font-size:.85rem;">✅ Antwort: "ja" → Python-Thema</div>
+      <div style="font-size:.73rem; color:#166534; line-height:1.7;">
+        LLM-Chat wird aufgerufen mit voller History.<br>
+        Modell: <code>gpt-4o</code> (oder Ollama-Fallback).<br>
+        System-Prompt enthält aktuellen Code des Schülers.
+      </div>
+    </div>
+    <div style="background:#180808; border:2px solid #300f0f; border-radius:12px; padding:14px;">
+      <div style="font-weight:800; color:#f87171; margin-bottom:8px; font-size:.85rem;">❌ Antwort: "nein" → Kein Python</div>
+      <div style="font-size:.73rem; color:#7f1d1d; line-height:1.7;">
+        <strong>Sofort zurück</strong> ohne teures LLM aufzurufen.<br>
+        Antwort: "Ich bin dein Python-Tutor und kann nur bei Python und Programmierung helfen. 🐍"<br>
+        History wird trotzdem aktualisiert.
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:8px;">
+    <strong>Warum LLM statt Keywords?</strong> Ein lokaler Keyword-Filter hatte einen kritischen Bug: das Zeichen <code>-</code> war in der Liste → jeder deutsche Satz mit Bindestrich (z.B. "Was ist die Haupt-Stadt?") passierte den Filter. Das LLM versteht Kontext — es erkennt zuverlässig ob etwas wirklich mit Python zu tun hat.
+  </div>
+</div>
+
+<!-- WENN PYTHON-THEMA -->
+<div class="arrow arrow-green"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">Nur wenn Python-Thema → Chat-LLM aufrufen</span></div>
+
+<div class="zone zone-fastapi">
+  <div class="zone-label">💬 Chat-LLM Aufruf — mit Gesprächshistorie</div>
+
+  <div class="card card-green">
+    <div class="card-head">
+      <span class="card-icon">📋</span>
+      <span class="card-title">Nachrichten-Struktur für das LLM</span>
+      <span class="card-file">routers/tutor.py → chat()</span>
+    </div>
+    <div class="card-body">
+      LangChain baut diese Struktur aus History + neuer Nachricht:
+      <div class="prompt-box" style="margin-top:8px;">
+        <div class="prompt-label">SystemMessage (immer zuerst)</div>
+        <span class="prompt-system">"Du bist ein freundlicher Python-Tutor für Anfänger. Antworte klar, geduldig und auf Deutsch. Gib bei Bedarf Codebeispiele.<br>Aktueller Code des Schülers:<br>```python<br>for i in range(5):<br>    print(i)<br>```"</span>
+        <div class="prompt-label">HumanMessage (aus History)</div>
+        <span class="prompt-user">"Hallo!"</span>
+        <div class="prompt-label">AIMessage (aus History)</div>
+        <span class="prompt-system">"Hallo! Wie kann ich dir helfen?"</span>
+        <div class="prompt-label">HumanMessage (neue Nachricht)</div>
+        <span class="prompt-user">"Was bedeutet range()?"</span>
+      </div>
+      Das LLM "sieht" den gesamten Gesprächsverlauf → kann sich auf frühere Nachrichten beziehen.
+      <span class="role role-format">History-Kontext</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow arrow-green"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">LLM antwortet → History aktualisieren → zurück ans Frontend</span></div>
+
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Frontend — Antwort anzeigen</div>
+  <div class="split-2">
+    <div class="card card-dark">
+      <div class="card-head"><span class="card-icon">🪝</span><span class="card-title">useChat aktualisiert History</span></div>
+      <div class="card-body">
+        <code>setHistory(data.history)</code> → neue History enthält alle alten + neue Nachrichten.<br>
+        Auto-Scroll zu neuester Nachricht.
+      </div>
+    </div>
+    <div class="card card-dark">
+      <div class="card-head"><span class="card-icon">🎨</span><span class="card-title">MarkdownMessage rendert Antwort</span></div>
+      <div class="card-body">
+        Tutor-Antworten enthalten oft <code>**fett**</code>, <code>`code`</code> oder Codeblöcke.<br>
+        <code>MarkdownMessage</code> rendert alles schön mit Syntax-Highlighting.
+        <span class="role role-render">Markdown</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 3: /tutor/run
+═══════════════════════════════════════════════════════ -->
+<div class="section-title" style="background:#080f06; border:1px solid #142210; color:#a3e635;">
+  ▶ Datenweg 3 — POST /tutor/run (kein LLM!)
+</div>
+
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Browser — Ausführen-Button</div>
+  <div class="split-2">
+    <div class="card card-lime">
+      <div class="card-head">
+        <span class="card-icon">▶</span>
+        <span class="card-title">EditorFooter — Ausführen-Button</span>
+        <span class="card-file">components/tutor/EditorFooter.tsx</span>
+      </div>
+      <div class="card-body">
+        Grüner Button neben "Code analysieren". Klick → <code>onRun()</code> → <code>useCodeRunner.run(code)</code>.
+      </div>
+    </div>
+    <div class="card card-lime">
+      <div class="card-head">
+        <span class="card-icon">🪝</span>
+        <span class="card-title">useCodeRunner — State</span>
+        <span class="card-file">hooks/useCodeRunner.ts</span>
+      </div>
+      <div class="card-body">
+        Verwaltet <code>output</code> + <code>loading</code>. Bei Fehler: <code>{stdout: "", stderr: "Backend nicht erreichbar.", exit_code: 1}</code>
+        <span class="role role-state">State</span>
+      </div>
+    </div>
+  </div>
+  <div class="json-block" style="margin-top:10px;">
+    Gesendet: { <span class="json-key">"code"</span>: <span class="json-str">"print('Hallo Welt')"</span> }
+  </div>
+</div>
+
+<div class="arrow arrow-yellow"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">HTTP POST /tutor/run</span></div>
+
+<div class="zone zone-subprocess">
+  <div class="zone-label">⚙ FastAPI + subprocess — Code direkt ausführen</div>
+
+  <div class="card card-lime">
+    <div class="card-head">
+      <span class="card-icon">📄</span>
+      <span class="card-title">Schritt 1: Tempfile anlegen</span>
+      <span class="card-file">routers/tutor.py → run_code()</span>
+    </div>
+    <div class="card-body">
+      <code>tempfile.NamedTemporaryFile(suffix=".py")</code> → schreibt den Code in eine temporäre Datei.<br>
+      Warum Datei statt direkt? <code>subprocess.run()</code> braucht eine Datei zum Ausführen.
+    </div>
+  </div>
+
+  <div class="card card-lime" style="margin-top:8px;">
+    <div class="card-head">
+      <span class="card-icon">▶</span>
+      <span class="card-title">Schritt 2: Python-Interpreter aufrufen</span>
+    </div>
+    <div class="card-body">
+      <code>subprocess.run([sys.executable, tmp_path], capture_output=True, text=True, timeout=10)</code><br><br>
+      • <code>sys.executable</code>: derselbe Python der das Backend ausführt (aus dem venv)<br>
+      • <code>capture_output=True</code>: stdout und stderr werden aufgefangen statt im Terminal auszugeben<br>
+      • <code>text=True</code>: Output als String (nicht bytes)<br>
+      • <code>timeout=10</code>: nach 10 Sekunden abbrechen → schützt vor Endlosschleifen
+      <span class="role role-run">subprocess</span>
+      <span class="role role-security">Timeout-Schutz</span>
+    </div>
+  </div>
+
+  <div class="card card-lime" style="margin-top:8px;">
+    <div class="card-head">
+      <span class="card-icon">🗑</span>
+      <span class="card-title">Schritt 3: Aufräumen + zurückgeben</span>
+    </div>
+    <div class="card-body">
+      <code>os.unlink(tmp_path)</code> löscht die Tempfile (im <code>finally</code>-Block → läuft immer).<br>
+      Zurück: <code>RunResponse(stdout, stderr, exit_code)</code>
+    </div>
+  </div>
+
+  <div class="split-2" style="margin-top:10px;">
+    <div style="background:#0a1a06; border:1px solid #1a3010; border-radius:10px; padding:12px;">
+      <div style="font-weight:700; color:#a3e635; margin-bottom:6px; font-size:.82rem;">✅ Erfolgreiche Ausführung</div>
+      <div class="json-block">
+        {<br>
+        &nbsp;&nbsp;<span class="json-key">"stdout"</span>: <span class="json-str">"Hallo Welt\n"</span>,<br>
+        &nbsp;&nbsp;<span class="json-key">"stderr"</span>: <span class="json-str">""</span>,<br>
+        &nbsp;&nbsp;<span class="json-key">"exit_code"</span>: <span class="json-num">0</span><br>
+        }
+      </div>
+    </div>
+    <div style="background:#180808; border:1px solid #300f0f; border-radius:10px; padding:12px;">
+      <div style="font-weight:700; color:#f87171; margin-bottom:6px; font-size:.82rem;">❌ Laufzeitfehler</div>
+      <div class="json-block">
+        {<br>
+        &nbsp;&nbsp;<span class="json-key">"stdout"</span>: <span class="json-str">""</span>,<br>
+        &nbsp;&nbsp;<span class="json-key">"stderr"</span>: <span class="json-str">"SyntaxError: invalid syntax\n..."</span>,<br>
+        &nbsp;&nbsp;<span class="json-key">"exit_code"</span>: <span class="json-num">1</span><br>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:8px;">
+    <strong>Kein LLM involviert!</strong> Der Code läuft direkt im Python-Interpreter — das ist schnell (unter 1 Sekunde) und kostet keine API-Credits. Der LLM-Aufruf kommt erst wenn der Nutzer auf "Code analysieren" klickt.
+  </div>
+</div>
+
+<div class="arrow arrow-yellow arrow-up"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Frontend — Output-Panel</div>
+  <div class="card card-lime">
+    <div class="card-head">
+      <span class="card-icon">📟</span>
+      <span class="card-title">EditorFooter — Output-Panel</span>
+      <span class="card-file">components/tutor/EditorFooter.tsx</span>
+    </div>
+    <div class="card-body">
+      Erscheint direkt <strong>über den Buttons</strong> (immer sichtbar durch sticky Layout).<br>
+      • Grüner Punkt + <code>exit 0</code> = Erfolg<br>
+      • Roter Punkt + <code>exit 1</code> = Fehler<br>
+      • <code>stderr</code> in rot angezeigt (Traceback etc.)<br>
+      • Terminal-Look: dunkler Hintergrund, Monospace-Font, max 9 Zeilen scrollbar
+      <span class="role role-render">Terminal-Output</span>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 4: FRONTEND-KOMPONENTEN
+═══════════════════════════════════════════════════════ -->
+<div class="section-title" style="background:#08091e; border:1px solid #1e2a50; color:#818cf8;">
+  🖼 Frontend-Komponenten — Übersicht
+</div>
+
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Next.js App-Struktur</div>
+
+  <div class="card card-blue" style="margin-bottom:14px;">
+    <div class="card-head">
+      <span class="card-icon">📐</span>
+      <span class="card-title">Seiten-Layout — h-screen, kein Scrollen der ganzen Seite</span>
+      <span class="card-file">app/page.tsx</span>
+    </div>
+    <div class="card-body">
+      <code>h-screen overflow-hidden</code>: Die App füllt genau das Browser-Fenster.<br>
+      Zwei Spalten: Links Editor (480px fix), Rechts Chat/Analyse (flex-1).<br>
+      <strong>Warum kein normales Scrollen?</strong> So können Editor links und Chat rechts unabhängig scrollen, ohne dass Buttons wegscrollen.
+    </div>
+  </div>
+
+  <div class="frontend-grid">
+
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">🔒 Header.tsx</div>
+      <div class="fe-card-body">
+        <code>sticky top-0 z-50</code> — bleibt beim Scrollen oben.<br>
+        Logo + Hell/Dunkel-Toggle.<br>
+        <code>backdrop-blur</code>: Glasmorphismus wenn Content dahinter scrollt.
+      </div>
+    </div>
+
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">⌨ CodeEditor.tsx</div>
+      <div class="fe-card-body">
+        React Simple Code Editor mit Prism.js Syntax-Highlighting.<br>
+        Zeigt Python-Code mit Farben, Tab-Einrückung.
+      </div>
+    </div>
+
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">📌 EditorFooter.tsx</div>
+      <div class="fe-card-body">
+        <code>flex-shrink-0</code> — bleibt immer unten in der linken Spalte.<br>
+        Output-Panel (erscheint über Buttons) + Ausführen + Analysieren.
+      </div>
+    </div>
+
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">💬 ChatPanel.tsx</div>
+      <div class="fe-card-body">
+        Chat-Blasen (User rechts, Tutor links).<br>
+        Textarea mit Auto-Resize.<br>
+        Typing-Indikator (bouncing dots).<br>
+        Auto-Scroll zu neuester Nachricht.
+      </div>
+    </div>
+
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">📊 TutorResult.tsx</div>
+      <div class="fe-card-body">
+        3 Sektionen: Erklärung, Fehler/Hinweis, Übung.<br>
+        Status-Banner (grün/rot).<br>
+        Nutzt MarkdownMessage für alle Texte.
+      </div>
+    </div>
+
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">✨ MarkdownMessage.tsx</div>
+      <div class="fe-card-body">
+        Rendert Markdown: <code>**fett**</code>, <code>`inline`</code>, Listen, Blockquotes.<br>
+        Codeblöcke mit <code>react-syntax-highlighter</code>: oneDark / oneLight Theme.<br>
+        Sprache wird oben im Block angezeigt.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="split-3" style="margin-top:12px;">
+    <div class="fe-card" style="border-color:#1a3050;">
+      <div class="fe-card-path">hooks/</div>
+      <div class="fe-card-title" style="color:#93c5fd;">🪝 useTutorAnalysis.ts</div>
+      <div class="fe-card-body">State für Analyse: code, result, loading, error. Ruft analyzeCode() auf.</div>
+    </div>
+    <div class="fe-card" style="border-color:#1a3050;">
+      <div class="fe-card-path">hooks/</div>
+      <div class="fe-card-title" style="color:#93c5fd;">🪝 useChat.ts</div>
+      <div class="fe-card-body">State für Chat: history, input, loading. Verwaltet Gesprächshistorie. Auto-Scroll mit bottomRef.</div>
+    </div>
+    <div class="fe-card" style="border-color:#1a3050;">
+      <div class="fe-card-path">hooks/</div>
+      <div class="fe-card-title" style="color:#93c5fd;">🪝 useCodeRunner.ts</div>
+      <div class="fe-card-body">State für Code-Ausführung: output, loading. Ruft runCode() auf.</div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ═══════════════════════════════════════════════════════
+     LEGENDE
+═══════════════════════════════════════════════════════ -->
+<div class="legend">
+  <div class="legend-title">🔑 Jede Schicht — wer ist wofür verantwortlich?</div>
+  <div class="legend-grid">
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#60a5fa;">React / Next.js</div>
+      <div class="legend-item-body">UI-Rendering, State (useState/useReducer), HTTP-Requests bauen und absenden. Kein KI-Wissen, keine Geschäftslogik.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#818cf8;">Custom Hooks</div>
+      <div class="legend-item-body">Kapseln State-Logik: loading, error, data. Trennung von UI (Component) und Logik (Hook) — macht Code wiederverwendbar.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#34d399;">FastAPI + Pydantic</div>
+      <div class="legend-item-body">HTTP-Server, URL-Routing, automatische JSON-Validierung. Kein KI-Wissen — nur: "kommt der Request an? Hat er die richtigen Felder?"</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#c084fc;">tutor_agent.py</div>
+      <div class="legend-item-body">Orchestriert Tool-Aufrufe sequenziell. Fängt Verbindungsfehler ab. Einzige Stelle die "weiß" dass es 3 Tools gibt.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#e879f9;">LangChain</div>
+      <div class="legend-item-body">Framework: formatiert Prompts (SystemMessage/HumanMessage), abstrahiert Provider-API. Selbst kein Modell — nur ein strukturierter HTTP-Client.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#4ade80;">gpt-4o-mini (Classifier)</div>
+      <div class="legend-item-body">Billiges Modell (~0.15$/1M Token) für einfache Ja/Nein-Klassifikation. Verhindert teure gpt-4o-Aufrufe für Off-Topic-Fragen.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#f87171;">Ollama</div>
+      <div class="legend-item-body">Lokaler Modell-Server auf Port 11434. Lädt KI-Modelle herunter, stellt OpenAI-kompatible REST-API bereit. Selbst kein KI-Modell.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#fb923c;">llama3.2 / gpt-4o</div>
+      <div class="legend-item-body">Das eigentliche Neural Network. Versteht Code durch Training, generiert Text Token für Token. temperature=0 = deterministisch.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#a3e635;">subprocess (run)</div>
+      <div class="legend-item-body">Führt Python-Code direkt im Interpreter aus. Kein LLM! Schnell (&lt;1s), kostenlos. Timeout=10s schützt vor Endlosschleifen.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#fbbf24;">config.py</div>
+      <div class="legend-item-body">Einzige Stelle wo Provider gewählt wird. Automatischer Fallback: OpenAI funktioniert? → nutze es. Sonst Ollama. Kein manuelles Eingreifen nötig.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#38bdf8;">MarkdownMessage</div>
+      <div class="legend-item-body">LLMs antworten in Markdown. Ohne Rendering sieht der Nutzer **rohe Sternchen**. MarkdownMessage macht daraus echte Formatierung.</div>
+    </div>
+
+    <div class="legend-item">
+      <div class="legend-item-title" style="color:#f472b6;">Pydantic Schemas</div>
+      <div class="legend-item-body">schemas.py definiert Ein- und Ausgabe-Formate. FastAPI validiert automatisch — falscher Typ → 422 Error, ohne dass man selbst prüfen muss.</div>
+    </div>
+
+  </div>
+</div>
+
+<p style="text-align:center; color:#1e3a5f; font-size:.68rem; margin-top:28px;">
+  Python Tutor · Sprint 2 abgeschlossen · 3 Endpoints · LangChain + OpenAI/Ollama Fallback · Chat + Classifier + Code-Runner
+</p>
+
+</div>
+</body>
+</html>
