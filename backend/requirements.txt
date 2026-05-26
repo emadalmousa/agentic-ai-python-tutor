@@ -6,3 +6,6 @@ langchain-core
 langchain-ollama
 langchain-openai
 python-dotenv
+faiss-cpu
+pypdf
+python-multipart

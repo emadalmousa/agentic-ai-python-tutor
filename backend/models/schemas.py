@@ -3,7 +3,6 @@ from pydantic import BaseModel
 
 class CodeRequest(BaseModel):
     code: str
-    question: str | None = None
 
 
 class TutorResponse(BaseModel):
@@ -12,6 +11,7 @@ class TutorResponse(BaseModel):
     error_type: str = "Kein Fehler"
     suggestion: str
     next_exercise: str | None = None
+    sources: list[str] = []
 
 
 class ChatMessage(BaseModel):
@@ -38,3 +38,8 @@ class RunResponse(BaseModel):
     stdout: str
     stderr: str
     exit_code: int
+
+
+class UploadResponse(BaseModel):
+    status: str
+    chunks: int

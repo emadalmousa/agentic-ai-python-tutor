@@ -79,6 +79,30 @@ export default function TutorResult({ result, dark }: Props) {
         </div>
       )}
 
+      {/* ── Quellen aus Lernmaterial ── */}
+      {result.sources && result.sources.length > 0 && (
+        <div className={`rounded-xl border overflow-hidden ${dark ? "bg-amber-950/20 border-amber-500/20" : "bg-amber-50 border-amber-200"}`}>
+          <div className={`flex items-center gap-2 px-4 py-3 border-b ${dark ? "border-amber-500/20" : "border-amber-200"}`}>
+            <span>📚</span>
+            <span className={`text-xs font-bold uppercase tracking-widest ${dark ? "text-amber-400" : "text-amber-600"}`}>
+              Aus dem Lernmaterial
+            </span>
+          </div>
+          <div className="px-4 py-3 flex flex-col gap-2">
+            {result.sources.slice(0, 3).map((source, idx) => (
+              <div
+                key={idx}
+                className={`border-l-2 border-amber-400 pl-3 py-2 rounded-r-lg ${dark ? "bg-amber-500/5" : "bg-amber-100/50"}`}
+              >
+                <p className={`text-xs font-mono leading-relaxed whitespace-pre-wrap ${dark ? "text-gray-300" : "text-gray-700"}`}>
+                  {source}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

@@ -53,3 +53,26 @@ def get_llm():
         model=os.getenv("OLLAMA_MODEL", "llama3.2"),
         temperature=0,
     )
+
+
+def get_embeddings():
+    """Gibt ein Embedding-Modell zurück (OpenAI bevorzugt, Ollama als Fallback)."""
+    api_key = os.getenv("OPENAI_API_KEY", "")
+
+    if api_key and not api_key.startswith("sk-..."):
+        try:
+            from langchain_openai import OpenAIEmbeddings
+            import openai
+            client = openai.OpenAI(api_key=api_key)
+            client.models.list()
+            logger.info("OpenAI API aktiv — verwende OpenAIEmbeddings")
+            return OpenAIEmbeddings(api_key=api_key)
+        except Exception as e:
+            logger.warning("OpenAI nicht verfügbar für Embeddings (%s) — Fallback auf Ollama", e)
+
+    from langchain_ollama import OllamaEmbeddings
+    logger.info("Verwende OllamaEmbeddings — Modell: %s", os.getenv("OLLAMA_MODEL", "llama3.2"))
+    return OllamaEmbeddings(
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        model=os.getenv("OLLAMA_MODEL", "llama3.2"),
+    )

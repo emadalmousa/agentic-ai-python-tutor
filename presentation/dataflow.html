@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Python Tutor — Datenfluss & Architektur</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #060e1c;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 40px 20px 100px;
+}
+.page { max-width: 1020px; margin: 0 auto; }
+
+/* ── TITLE ── */
+.main-title {
+  text-align: center;
+  font-size: 1.8rem;
+  color: #a5b4fc;
+  letter-spacing: .06em;
+  margin-bottom: 6px;
+  font-weight: 800;
+}
+.main-sub {
+  text-align: center;
+  color: #334155;
+  font-size: .83rem;
+  margin-bottom: 14px;
+}
+
+/* ── LEGEND CHIPS ── */
+.legend-chips {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 48px;
+}
+.lchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 700;
+  border: 1px solid;
+}
+.lchip-lc  { background:#13082a; border-color:#5b21b6; color:#c084fc; }
+.lchip-ag  { background:#0e1a30; border-color:#1d4ed8; color:#60a5fa; }
+.lchip-rag { background:#1a1000; border-color:#92400e; color:#fbbf24; }
+.lchip-py  { background:#071a0a; border-color:#166534; color:#4ade80; }
+.lchip-no  { background:#0d0d0d; border-color:#374151; color:#6b7280; }
+
+/* ── SECTION TITLE ── */
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  padding: 10px 18px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-divider {
+  border: none;
+  border-top: 1px solid #0f1e30;
+  margin: 52px 0;
+}
+
+/* ── ZONE ── */
+.zone {
+  border-radius: 16px;
+  padding: 18px 20px 20px;
+  margin-bottom: 4px;
+  border: 1px solid;
+}
+.zone-label {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-weight: 800;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.zone-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: .15;
+}
+
+.zone-browser   { background: #080f1e; border-color: #1a2f4a; }
+.zone-browser   .zone-label { color: #60a5fa; }
+.zone-fastapi   { background: #07100d; border-color: #142818; }
+.zone-fastapi   .zone-label { color: #34d399; }
+.zone-agent     { background: #0d0a1e; border-color: #231a40; }
+.zone-agent     .zone-label { color: #c084fc; }
+.zone-langchain { background: #100818; border-color: #2d1040; }
+.zone-langchain .zone-label { color: #e879f9; }
+.zone-provider  { background: #0a0810; border-color: #200a38; }
+.zone-provider  .zone-label { color: #a78bfa; }
+.zone-model     { background: #120a00; border-color: #3d2000; }
+.zone-model     .zone-label { color: #fb923c; }
+.zone-rag       { background: #0d0900; border-color: #2a1800; }
+.zone-rag       .zone-label { color: #fbbf24; }
+.zone-subprocess{ background: #080f06; border-color: #142210; }
+.zone-subprocess .zone-label { color: #a3e635; }
+.zone-classifier{ background: #070e0a; border-color: #102016; }
+.zone-classifier .zone-label { color: #86efac; }
+
+/* ── CARD ── */
+.card {
+  border-radius: 10px;
+  padding: 12px 16px;
+  border: 1px solid;
+  margin-bottom: 8px;
+  font-size: .82rem;
+}
+.card:last-child { margin-bottom: 0; }
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.card-icon  { font-size: 1.1rem; }
+.card-title { font-weight: 700; font-size: .88rem; flex: 1; }
+.card-file  { font-family: monospace; font-size: .67rem; opacity: .4; }
+.card-body  { color: #94a3b8; line-height: 1.65; }
+.card-body code {
+  background: rgba(255,255,255,.07);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: monospace;
+  font-size: .74rem;
+  color: #7dd3fc;
+}
+.card-body strong { color: #e2e8f0; }
+
+.card-blue   { background: #0a1628; border-color: #1e3a5f; }
+.card-dark   { background: #0d1b2a; border-color: #1e2f45; }
+.card-green  { background: #081a0f; border-color: #0f2a1a; }
+.card-purple { background: #0e0b22; border-color: #2a1a50; }
+.card-pink   { background: #130a1e; border-color: #351050; }
+.card-orange { background: #160a00; border-color: #402000; }
+.card-lime   { background: #0a1206; border-color: #1a2a10; }
+.card-amber  { background: #130a00; border-color: #3a2000; }
+
+/* ── LC-BADGE: LangChain-Nutzungs-Marker ── */
+.lc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #13082a;
+  border: 1px solid #5b21b6;
+  color: #c084fc;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: .67rem;
+  font-weight: 700;
+  font-family: monospace;
+  margin-top: 6px;
+  margin-right: 4px;
+}
+.lc-badge::before { content: '⛓'; font-style: normal; }
+
+/* ── AGENT-BADGE ── */
+.ag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #0e1a30;
+  border: 1px solid #1d4ed8;
+  color: #60a5fa;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: .67rem;
+  font-weight: 700;
+  font-family: monospace;
+  margin-top: 6px;
+  margin-right: 4px;
+}
+.ag-badge::before { content: '🤖'; }
+
+/* ── RAG-BADGE ── */
+.rag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #1a1000;
+  border: 1px solid #92400e;
+  color: #fbbf24;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: .67rem;
+  font-weight: 700;
+  font-family: monospace;
+  margin-top: 6px;
+  margin-right: 4px;
+}
+.rag-badge::before { content: '📚'; }
+
+/* ── ROLE BADGES ── */
+.role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: .65rem;
+  font-weight: 700;
+  margin-top: 6px;
+  margin-right: 4px;
+}
+.role-routing  { background: #0f2a40; color: #38bdf8; }
+.role-validate { background: #0f2a1a; color: #4ade80; }
+.role-state    { background: #0f1f3a; color: #93c5fd; }
+.role-run      { background: #0a1606; color: #a3e635; }
+.role-security { background: #201000; color: #fbbf24; }
+.role-render   { background: #0a0f20; color: #818cf8; }
+.role-fallback { background: #100a20; color: #c084fc; }
+
+/* ── ARROWS ── */
+.arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0;
+}
+.arrow-line {
+  width: 2px;
+  height: 22px;
+  background: linear-gradient(to bottom, #3b82f6, #6366f1);
+  border-radius: 2px;
+}
+.arrow-head {
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 9px solid #6366f1;
+}
+.arrow-label {
+  font-size: .65rem;
+  color: #1e3a5f;
+  font-family: monospace;
+  margin-top: 2px;
+  text-align: center;
+}
+.arrow-up { flex-direction: column-reverse; }
+.arrow-up .arrow-head { border-top: none; border-bottom: 9px solid #3b82f6; }
+.arrow-up .arrow-label { margin-top: 0; margin-bottom: 2px; }
+.arrow-red .arrow-line { background: linear-gradient(to bottom, #ef4444, #dc2626); }
+.arrow-red .arrow-head { border-top-color: #dc2626; }
+.arrow-red.arrow-up .arrow-head { border-bottom-color: #ef4444; }
+.arrow-green .arrow-line { background: linear-gradient(to bottom, #10b981, #059669); }
+.arrow-green .arrow-head { border-top-color: #059669; }
+.arrow-green.arrow-up .arrow-head { border-bottom-color: #10b981; }
+.arrow-yellow .arrow-line { background: linear-gradient(to bottom, #f59e0b, #d97706); }
+.arrow-yellow .arrow-head { border-top-color: #d97706; }
+.arrow-yellow.arrow-up .arrow-head { border-bottom-color: #f59e0b; }
+
+/* ── HTTP ROW ── */
+.http-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #04070f;
+  border: 1px dashed #0f1e30;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-family: monospace;
+  font-weight: 700;
+}
+.badge-post  { background: #0f2a40; color: #38bdf8; }
+.badge-url   { background: #0f2a1a; color: #4ade80; }
+.badge-200   { background: #0a2010; color: #86efac; }
+.badge-503   { background: #2a0808; color: #fca5a5; }
+.badge-400   { background: #2a1a00; color: #fcd34d; }
+
+/* ── JSON BLOCK ── */
+.json-block {
+  background: #04070e;
+  border: 1px solid #0f1e30;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: monospace;
+  font-size: .73rem;
+  color: #475569;
+  margin-top: 6px;
+  line-height: 1.7;
+}
+.json-key  { color: #7dd3fc; }
+.json-str  { color: #a78bfa; }
+.json-bool-true  { color: #4ade80; }
+.json-bool-false { color: #f87171; }
+.json-num  { color: #fb923c; }
+.json-null { color: #64748b; }
+
+/* ── CODE SNIPPET ── */
+.code-snippet {
+  background: #050a14;
+  border: 1px solid #1a2840;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: monospace;
+  font-size: .71rem;
+  color: #94a3b8;
+  margin-top: 8px;
+  line-height: 1.8;
+  overflow-x: auto;
+}
+.cs-kw   { color: #c084fc; }
+.cs-fn   { color: #60a5fa; }
+.cs-cls  { color: #34d399; }
+.cs-str  { color: #a78bfa; }
+.cs-cm   { color: #334155; }
+.cs-dec  { color: #fbbf24; }
+.cs-lc   { color: #e879f9; font-weight: 700; }
+
+/* ── CALLOUT ── */
+.callout {
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-top: 10px;
+  font-size: .78rem;
+  line-height: 1.7;
+  border-left: 4px solid;
+}
+.callout-purple { background: #0e0820; border-color: #7c3aed; color: #c4b5fd; }
+.callout-blue   { background: #050e20; border-color: #1d4ed8; color: #93c5fd; }
+.callout-amber  { background: #100800; border-color: #b45309; color: #fcd34d; }
+.callout-green  { background: #041208; border-color: #166534; color: #86efac; }
+.callout-red    { background: #120404; border-color: #991b1b; color: #fca5a5; }
+.callout strong { color: #fff; }
+.callout code   {
+  background: rgba(255,255,255,.08);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-family: monospace;
+  font-size: .74rem;
+}
+
+/* ── REACT LOOP ── */
+.react-loop {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+.react-step {
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid;
+  text-align: center;
+}
+.rs-reason { background: #120820; border-color: #5b21b6; }
+.rs-act    { background: #0e1820; border-color: #1d4ed8; }
+.rs-obs    { background: #0a1a08; border-color: #166534; }
+.rs-icon   { font-size: 1.4rem; margin-bottom: 6px; }
+.rs-title  { font-size: .8rem; font-weight: 800; margin-bottom: 4px; }
+.rs-body   { font-size: .7rem; color: #475569; line-height: 1.5; }
+
+/* ── TOOLS GRID ── */
+.tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.tool-box {
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid;
+  font-size: .76rem;
+}
+.tool-explain  { background: #0e0c28; border-color: #2a2060; }
+.tool-debug    { background: #0c0e26; border-color: #1a2060; }
+.tool-exercise { background: #0c1a08; border-color: #1a3010; }
+.tool-rag      { background: #130a00; border-color: #3a2000; }
+.tool-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .82rem;
+}
+.tool-body { color: #64748b; line-height: 1.6; font-size: .73rem; }
+.tool-body code {
+  background: rgba(255,255,255,.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: .68rem;
+  color: #7dd3fc;
+}
+.tool-prompt {
+  background: #05030e;
+  border: 1px dashed #2a1050;
+  border-radius: 6px;
+  padding: 7px 10px;
+  margin-top: 8px;
+  font-size: .68rem;
+  color: #7c3aed;
+  line-height: 1.55;
+}
+.tool-prompt em { color: #c084fc; font-style: normal; }
+
+/* ── PROVIDER DECISION ── */
+.decision {
+  background: #08100a;
+  border: 2px solid #14301a;
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: center;
+  margin: 8px 0;
+}
+.decision-title { font-weight: 800; font-size: .85rem; color: #4ade80; margin-bottom: 6px; }
+.decision-body  { font-size: .75rem; color: #64748b; line-height: 1.5; }
+.decision-arrows { display: flex; gap: 10px; margin-top: 10px; }
+.decision-branch { flex: 1; border-radius: 8px; padding: 10px; font-size: .73rem; text-align: center; }
+.branch-yes { background: #082010; border: 1px solid #0f3018; color: #4ade80; }
+.branch-no  { background: #180808; border: 1px solid #300f0f; color: #f87171; }
+
+/* ── SPLIT ── */
+.split-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.split-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px; }
+
+/* ── TIMELINE ── */
+.timeline { display: flex; flex-direction: column; gap: 0; margin: 10px 0; }
+.tl-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  position: relative;
+}
+.tl-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 32px;
+  bottom: -8px;
+  width: 2px;
+  background: #1e2f45;
+}
+.tl-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 2px solid;
+}
+.tl-content { flex: 1; padding-top: 2px; }
+.tl-title { font-weight: 700; font-size: .82rem; margin-bottom: 2px; }
+.tl-desc  { font-size: .73rem; color: #475569; line-height: 1.5; }
+.tl-desc code {
+  background: rgba(255,255,255,.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: .7rem;
+  color: #7dd3fc;
+}
+
+/* ── RESP GRID ── */
+.resp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 10px;
+}
+.resp-field {
+  background: #0a1020;
+  border: 1px solid #1a2840;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.resp-key { font-family: monospace; font-size: .72rem; color: #7dd3fc; font-weight: 700; }
+.resp-val { font-size: .68rem; color: #334155; margin-top: 2px; line-height: 1.4; }
+
+/* ── PROMPT BOX ── */
+.prompt-box {
+  background: #0a0510;
+  border: 1px dashed #3d1060;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: .71rem;
+  color: #c084fc;
+  line-height: 1.6;
+}
+.prompt-label {
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #6b21a8;
+  font-weight: 700;
+  margin-bottom: 3px;
+  margin-top: 8px;
+}
+.prompt-label:first-child { margin-top: 0; }
+.prompt-sys { color: #e879f9; }
+.prompt-usr { color: #a78bfa; }
+
+/* ── OVERVIEW GRID ── */
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 48px;
+}
+.overview-card {
+  border-radius: 14px;
+  padding: 18px 16px;
+  border: 1px solid;
+  position: relative;
+  overflow: hidden;
+}
+.overview-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+}
+.ov-analyze { background: #0a0d1e; border-color: #1e2f5a; }
+.ov-analyze::before { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+.ov-chat    { background: #0a1410; border-color: #1a3020; }
+.ov-chat::before    { background: linear-gradient(90deg, #10b981, #34d399); }
+.ov-run     { background: #0a1206; border-color: #1a2a10; }
+.ov-run::before     { background: linear-gradient(90deg, #84cc16, #a3e635); }
+.ov-upload  { background: #0a0900; border-color: #2a1e00; }
+.ov-upload::before  { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.ov-title { font-weight: 800; font-size: .88rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.ov-body  { font-size: .74rem; color: #475569; line-height: 1.65; }
+.ov-body code { background: rgba(255,255,255,.08); padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: .7rem; color: #7dd3fc; }
+.ov-steps { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.ov-step  { display: flex; align-items: center; gap: 7px; font-size: .7rem; color: #475569; }
+.ov-step-num {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .63rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* ── NOTE ── */
+.note {
+  background: #0d0a00;
+  border: 1px solid #2a1800;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .74rem;
+  color: #78350f;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+.note strong { color: #fbbf24; }
+.note-green { background: #041208; border-color: #082818; color: #14532d; }
+.note-green strong { color: #4ade80; }
+.note-blue  { background: #04080f; border-color: #0f1e30; color: #1e3a5f; }
+.note-blue  strong { color: #60a5fa; }
+.note-purple { background: #0a0518; border-color: #2a0a50; color: #4c1d95; }
+.note-purple strong { color: #c084fc; }
+
+/* ── FRONTEND GRID ── */
+.frontend-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.fe-card {
+  background: #080f1e;
+  border: 1px solid #1e3050;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.fe-card-title { font-family: monospace; font-size: .78rem; font-weight: 700; color: #818cf8; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.fe-card-body  { font-size: .72rem; color: #475569; line-height: 1.6; }
+.fe-card-path  { font-size: .65rem; color: #1e3a5f; font-family: monospace; margin-bottom: 4px; }
+
+/* ── LEGEND BOX ── */
+.legend-box {
+  margin-top: 48px;
+  padding: 22px;
+  background: #060c18;
+  border: 1px solid #0f1e30;
+  border-radius: 16px;
+}
+.legend-box-title {
+  font-size: .78rem;
+  font-weight: 800;
+  color: #334155;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.legend-item {
+  background: #080f1e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  border: 1px solid #1a2840;
+}
+.legend-item-title { font-weight: 700; font-size: .82rem; margin-bottom: 4px; }
+.legend-item-body  { font-size: .72rem; color: #334155; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  HEADER                                                      ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div class="main-title">🤖 Python Tutor — Vollständiger Datenfluss</div>
+<p class="main-sub">Aktueller Stand · 4 Endpoints · ReAct-Agent · RAG · OpenAI / Ollama Fallback · LangChain 1.3 / LangGraph</p>
+
+<div class="legend-chips">
+  <span class="lchip lchip-lc">⛓ LangChain wird hier genutzt</span>
+  <span class="lchip lchip-ag">🤖 KI-Agent entscheidet hier</span>
+  <span class="lchip lchip-rag">📚 RAG-Pipeline</span>
+  <span class="lchip lchip-py">🐍 Normales Python / FastAPI</span>
+  <span class="lchip lchip-no">🚫 Kein LLM / kein Agent</span>
+</div>
+
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  SECTION 0 — ÜBERBLICK                                       ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div class="section-title" style="background:#0a0d1e; border:1px solid #1e2f5a; color:#a5b4fc;">
+  📊 Überblick — 4 unabhängige Datenwege
+</div>
+
+<div class="overview-grid">
+
+  <div class="overview-card ov-analyze">
+    <div class="ov-title" style="color:#818cf8;">🔍 POST /tutor/analyze</div>
+    <div class="ov-body"><strong style="color:#c084fc;">ReAct-Agent + LangChain.</strong> Agent entscheidet welche Tools er aufruft.</div>
+    <div class="ov-steps">
+      <div class="ov-step"><div class="ov-step-num" style="background:#1e1a50;color:#818cf8;border:1px solid #2a2060;">1</div>Frontend sendet Code</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#1e1a50;color:#818cf8;border:1px solid #2a2060;">2</div>Agent: reason → act → observe</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#1e1a50;color:#818cf8;border:1px solid #2a2060;">3</div>4 Tools: explain · debug · exercise · rag</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#1e1a50;color:#818cf8;border:1px solid #2a2060;">4</div>Strukturierte Antwort + RAG-Quellen</div>
+    </div>
+  </div>
+
+  <div class="overview-card ov-chat">
+    <div class="ov-title" style="color:#34d399;">💬 POST /tutor/chat</div>
+    <div class="ov-body"><strong style="color:#10b981;">LangChain direkt</strong> — kein Agent. Off-Topic-Filter via Klassifikations-LLM, dann Chat mit History.</div>
+    <div class="ov-steps">
+      <div class="ov-step"><div class="ov-step-num" style="background:#082010;color:#34d399;border:1px solid #0f3020;">1</div>Nachricht + History senden</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#082010;color:#34d399;border:1px solid #0f3020;">2</div><code>get_classifier_llm()</code> → ja/nein</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#082010;color:#34d399;border:1px solid #0f3020;">3</div>Nein → Sofort-Ablehnung</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#082010;color:#34d399;border:1px solid #0f3020;">4</div>Ja → <code>get_llm()</code> mit History</div>
+    </div>
+  </div>
+
+  <div class="overview-card ov-run">
+    <div class="ov-title" style="color:#a3e635;">▶ POST /tutor/run</div>
+    <div class="ov-body"><strong style="color:#a3e635;">Kein LLM. Kein LangChain. Kein Agent.</strong> Nur Python-Interpreter lokal via subprocess.</div>
+    <div class="ov-steps">
+      <div class="ov-step"><div class="ov-step-num" style="background:#0a1a04;color:#a3e635;border:1px solid #1a3008;">1</div>Code senden</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#0a1a04;color:#a3e635;border:1px solid #1a3008;">2</div>Tempfile anlegen</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#0a1a04;color:#a3e635;border:1px solid #1a3008;">3</div><code>subprocess.run()</code></div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#0a1a04;color:#a3e635;border:1px solid #1a3008;">4</div><code>stdout · stderr · exit_code</code></div>
+    </div>
+  </div>
+
+  <div class="overview-card ov-upload">
+    <div class="ov-title" style="color:#fbbf24;">📄 POST /tutor/upload-material</div>
+    <div class="ov-body"><strong style="color:#fbbf24;">LangChain für Embeddings.</strong> PDF → Text → Chunks → FAISS-Vektoren.</div>
+    <div class="ov-steps">
+      <div class="ov-step"><div class="ov-step-num" style="background:#1a1200;color:#fbbf24;border:1px solid #3a2a00;">1</div>PDF-Datei senden</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#1a1200;color:#fbbf24;border:1px solid #3a2a00;">2</div><code>pypdf</code> extrahiert Text</div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#1a1200;color:#fbbf24;border:1px solid #3a2a00;">3</div>Chunks → <code>get_embeddings()</code></div>
+      <div class="ov-step"><div class="ov-step-num" style="background:#1a1200;color:#fbbf24;border:1px solid #3a2a00;">4</div>FAISS-Index speichern</div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  SECTION 1 — POST /tutor/analyze                             ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div class="section-title" style="background:#0a0d1e; border:1px solid #1e2f5a; color:#818cf8;">
+  🔍 Datenweg 1 — POST /tutor/analyze &nbsp;·&nbsp; <span style="font-size:.85rem;color:#5b21b6;">⛓ LangChain + 🤖 ReAct-Agent</span>
+</div>
+
+<!-- FRONTEND -->
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Browser / Frontend &nbsp;·&nbsp; Next.js · Port 3000</div>
+  <div class="split-2">
+    <div>
+      <div class="card card-lime">
+        <div class="card-head"><span class="card-icon">🧩</span><span class="card-title">EditorFooter — „Code analysieren"-Button</span><span class="card-file">EditorFooter.tsx</span></div>
+        <div class="card-body">
+          Klick → <code>onAnalyze()</code> → Hook startet den API-Call.
+          <span class="role role-render">UI</span>
+          <span class="lchip lchip-no" style="font-size:.62rem;">🚫 kein LLM</span>
+        </div>
+      </div>
+      <div class="card card-dark" style="margin-top:8px;">
+        <div class="card-head"><span class="card-icon">🪝</span><span class="card-title">useTutorAnalysis — State</span><span class="card-file">hooks/useTutorAnalysis.ts</span></div>
+        <div class="card-body">
+          Verwaltet <code>code</code>, <code>result</code>, <code>loading</code>, <code>error</code>.<br>
+          Ruft <code>analyzeCode()</code> aus <code>lib/api.ts</code> auf.
+          <span class="role role-state">State</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card card-blue">
+        <div class="card-head"><span class="card-icon">📡</span><span class="card-title">lib/api.ts → analyzeCode()</span></div>
+        <div class="card-body">
+          <code>fetch(POST /tutor/analyze, {code})</code><br>
+          Wartet auf Response → gibt <code>TutorResponse</code> zurück:<br>
+          <code>explanation · error_found · suggestion · next_exercise · sources</code>
+        </div>
+      </div>
+      <div class="note note-blue" style="margin-top:8px;">
+        <strong>Was gesendet wird:</strong>
+        <div class="json-block" style="margin-top:6px;">
+          {&nbsp;<span class="json-key">"code"</span>: <span class="json-str">"for i in range(5)\n    print(i)"</span>&nbsp;}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">HTTP POST :8000/tutor/analyze</span></div>
+
+<!-- FASTAPI -->
+<div class="zone zone-fastapi">
+  <div class="zone-label">⚡ FastAPI — routers/tutor.py + main.py &nbsp;·&nbsp; <span style="color:#14532d;">🐍 normales Python</span></div>
+  <div class="split-2">
+    <div class="card card-green">
+      <div class="card-head"><span class="card-icon">🛡</span><span class="card-title">main.py — CORS + Exception-Handler</span></div>
+      <div class="card-body">
+        <code>ServiceUnavailableError → HTTP 503</code><br>
+        Registriert in <code>main.py</code> — fängt Verbindungsfehler aus dem Agent global ab.
+      </div>
+    </div>
+    <div class="card card-green">
+      <div class="card-head"><span class="card-icon">🗺</span><span class="card-title">analyze_code() — Endpunkt</span><span class="card-file">routers/tutor.py</span></div>
+      <div class="card-body">
+        JSON → <code>CodeRequest(code)</code> via Pydantic.<br>
+        Ruft <code>run_analysis(request.code)</code> auf.<br>
+        Baut <code>TutorResponse</code> → FastAPI serialisiert zu JSON.
+        <span class="role role-routing">HTTP-Handler</span>
+        <span class="role role-validate">Pydantic</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+<!-- AGENT ZONE — HERZSTÜCK -->
+<div class="zone zone-agent">
+  <div class="zone-label">🤖 KI-Agent — agent/tutor_agent.py &nbsp;·&nbsp; <span style="color:#5b21b6;">⛓ LangChain create_agent (LangGraph)</span></div>
+
+  <!-- Was ist der Agent? -->
+  <div class="callout callout-purple" style="margin-bottom:14px;">
+    <strong>Was ist ein KI-Agent — und was ist der Unterschied zu einem Chat-Bot?</strong><br>
+    Ein normaler Chat-Bot bekommt eine Frage und antwortet direkt. Ein <strong>Agent</strong> bekommt eine Aufgabe und entscheidet <em>selbst</em> welche Werkzeuge (Tools) er aufruft, in welcher Reihenfolge, und ob er das Ergebnis eines Tools als Input für das nächste nutzt. Er hat Werkzeuge zur Verfügung — und Verstand genug um sie richtig einzusetzen.
+  </div>
+
+  <!-- ReAct-Loop -->
+  <div class="card card-purple">
+    <div class="card-head">
+      <span class="card-icon">🔄</span>
+      <span class="card-title">Der ReAct-Loop — Reason → Act → Observe</span>
+      <span class="card-file">agent/tutor_agent.py → run_analysis()</span>
+    </div>
+    <div class="card-body">
+      <div class="react-loop">
+        <div class="react-step rs-reason">
+          <div class="rs-icon">🧠</div>
+          <div class="rs-title" style="color:#c084fc;">1. REASON</div>
+          <div class="rs-body">Das LLM liest den Code und überlegt: „Was brauche ich zuerst?" → entscheidet: <em>explain_code_tool aufrufen</em></div>
+        </div>
+        <div class="react-step rs-act">
+          <div class="rs-icon">⚡</div>
+          <div class="rs-title" style="color:#60a5fa;">2. ACT</div>
+          <div class="rs-body">LangGraph führt das gewählte Tool aus. Das Tool ruft intern das LLM erneut auf und gibt ein Ergebnis zurück.</div>
+        </div>
+        <div class="react-step rs-obs">
+          <div class="rs-icon">👁</div>
+          <div class="rs-title" style="color:#4ade80;">3. OBSERVE</div>
+          <div class="rs-body">Das Agent-LLM sieht das Tool-Ergebnis und entscheidet: noch ein Tool? Oder ist alles da für die Final Answer?</div>
+        </div>
+      </div>
+      Dieser Loop wiederholt sich bis der Agent alle nötigen Informationen hat → dann schreibt er die <strong>Final Answer</strong> im vorgegebenen Format.
+    </div>
+  </div>
+
+  <!-- Code wie create_agent genutzt wird -->
+  <div class="card card-purple" style="margin-top:8px;">
+    <div class="card-head">
+      <span class="card-icon">⛓</span>
+      <span class="card-title">Wie LangChain hier konkret genutzt wird</span>
+      <span class="card-file">agent/tutor_agent.py</span>
+    </div>
+    <div class="card-body">
+      <div class="code-snippet">
+<span class="cs-cm"># LangChain-Import: create_agent kommt aus langchain.agents (LangChain 1.3 / LangGraph)</span><br>
+<span class="cs-kw">from</span> <span class="cs-lc">langchain.agents</span> <span class="cs-kw">import</span> <span class="cs-fn">create_agent</span><br>
+<br>
+<span class="cs-cm"># 1. LLM holen (OpenAI oder Ollama — entschieden in config.py)</span><br>
+llm = <span class="cs-fn">get_llm</span>()  <span class="cs-cm"># → ChatOpenAI oder ChatOllama</span><br>
+<br>
+<span class="cs-cm"># 2. Tool-Liste bauen — rag_tool nur wenn FAISS-Index vorhanden</span><br>
+tools = <span class="cs-fn">_build_tools</span>()  <span class="cs-cm"># [explain_tool, debug_tool, exercise_tool, (rag_tool)]</span><br>
+<br>
+<span class="cs-cm"># 3. LangChain erstellt einen LangGraph-Agenten (CompiledStateGraph)</span><br>
+agent = <span class="cs-lc">create_agent</span>(llm, tools, system_prompt=_SYSTEM_PROMPT)<br>
+<br>
+<span class="cs-cm"># 4. Agent wird mit der Code-Aufgabe gestartet → ReAct-Loop läuft</span><br>
+result = agent.<span class="cs-fn">invoke</span>({"messages": [("human", <span class="cs-str">f"Analysiere: {code}"</span>)]})<br>
+<br>
+<span class="cs-cm"># 5. Letzte Nachricht = Final Answer des Agents</span><br>
+final_text = result[<span class="cs-str">"messages"</span>][-1].content<br>
+<br>
+<span class="cs-cm"># 6. Regex-Parser extrahiert 5 Felder aus dem Free-Text</span><br>
+parsed = <span class="cs-fn">_parse_agent_output</span>(final_text)
+      </div>
+      <span class="lc-badge">create_agent aus langchain.agents</span>
+      <span class="ag-badge">Agent entscheidet selbst welche Tools</span>
+    </div>
+  </div>
+
+  <!-- _build_tools -->
+  <div class="callout callout-blue" style="margin-top:10px;">
+    <strong>_build_tools() — warum rag_tool bedingt ist:</strong><br>
+    <code>_build_tools()</code> prüft ob der FAISS-Ordner (<code>backend/vectorstore/</code>) existiert. Nur wenn ein PDF hochgeladen wurde existiert dieser Ordner. Ohne Index würde <code>rag_tool</code> beim Aufruf abstürzen. Der Agent bekommt also nur die Tools die er tatsächlich nutzen kann.
+  </div>
+
+  <!-- _parse_agent_output -->
+  <div class="callout callout-amber" style="margin-top:8px;">
+    <strong>_parse_agent_output() — warum der Parser nötig ist:</strong><br>
+    Der ReAct-Agent gibt seine Final Answer als freien Text aus. <code>_parse_agent_output(text)</code> sucht per Regex nach Labels (<code>Erklärung:</code>, <code>Fehler gefunden:</code>, etc.) und extrahiert daraus das strukturierte Dict. Fehlt ein Feld → sicherer Default. Dieser Parser hält das Router-Interface stabil egal wie der Agent formuliert.
+  </div>
+
+  <div class="note note-purple" style="margin-top:10px;">
+    <strong>LangChain-Rolle hier:</strong> <code>create_agent()</code> aus LangChain 1.3 erzeugt einen <strong>LangGraph CompiledStateGraph</strong>. LangGraph managt den Reason→Act→Observe-Loop, verwaltet den Nachrichten-State und ruft bei jedem „Act"-Schritt das passende Tool auf — alles automatisch, ohne dass man den Loop selbst schreiben muss.
+  </div>
+</div>
+
+<div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+<!-- LANGCHAIN TOOLS -->
+<div class="zone zone-langchain">
+  <div class="zone-label">⛓ LangChain Tools &nbsp;·&nbsp; agent/tools/ &nbsp;·&nbsp; jedes Tool = ein LLM-Aufruf</div>
+
+  <div class="card card-pink" style="margin-bottom:12px;">
+    <div class="card-head"><span class="card-icon">⛓</span><span class="card-title">Was LangChain bei den Tools macht — und was es NICHT ist</span></div>
+    <div class="card-body">
+      LangChain ist <strong>kein KI-Modell selbst</strong> — es ist das Framework das:<br>
+      <div class="split-2" style="margin-top:8px;">
+        <div style="background:#0a0614;border:1px solid #200a30;border-radius:8px;padding:10px;font-size:.73rem;color:#64748b;line-height:1.7;">
+          <strong style="color:#e879f9;">Was LangChain tut:</strong><br>
+          • <code>@tool</code>-Decorator: macht eine Python-Funktion zum Agent-Werkzeug<br>
+          • <code>SystemMessage / HumanMessage</code>: strukturiert den Prompt<br>
+          • <code>llm.invoke([...])</code>: sendet an OpenAI/Ollama, empfängt Antwort<br>
+          • Abstrahiert HTTP-API — Tool-Code ist provider-unabhängig
+        </div>
+        <div style="background:#0a0614;border:1px solid #200a30;border-radius:8px;padding:10px;font-size:.73rem;color:#64748b;line-height:1.7;">
+          <strong style="color:#e879f9;">Was die KI tut:</strong><br>
+          Das LLM (gpt-4o oder llama3.2) liest den System-Prompt, versteht den Code und <em>generiert</em> die Antwort Token für Token. LangChain schickt nur die Anfrage und empfängt das Ergebnis — die Intelligenz kommt vom Modell selbst.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tools-grid">
+
+    <!-- explain -->
+    <div class="tool-box tool-explain">
+      <div class="tool-title" style="color:#c084fc;">📖 explain_code_tool</div>
+      <div class="tool-body">
+        <code>tools/explain_tool.py</code><br><br>
+        <strong style="color:#94a3b8;">LangChain-Nutzung:</strong><br>
+        <code>@tool</code> — macht die Funktion für <code>create_agent</code> sichtbar<br>
+        <code>SystemMessage + HumanMessage</code><br>
+        <code>llm.invoke([system, human])</code><br><br>
+        <div class="tool-prompt">
+          <em>System:</em> "Du bist ein Python-Tutor. Erkläre den Code Schritt für Schritt, nummeriert, auf Deutsch."<br>
+          <em>Human:</em> "Code:\n```python\n{code}\n```"
+        </div>
+        Ausgabe: Langer Markdown-Text
+        <br><span class="lc-badge">@tool + llm.invoke()</span>
+      </div>
+    </div>
+
+    <!-- debug -->
+    <div class="tool-box tool-debug">
+      <div class="tool-title" style="color:#818cf8;">🐛 debug_code_tool</div>
+      <div class="tool-body">
+        <code>tools/debug_tool.py</code><br><br>
+        <strong style="color:#94a3b8;">LangChain-Nutzung:</strong><br>
+        <code>@tool</code> · <code>SystemMessage + HumanMessage</code><br>
+        <code>llm.invoke()</code> → JSON-Antwort<br><br>
+        <div class="tool-prompt">
+          <em>System:</em> "Antworte NUR mit JSON: {error_found, error_type, suggestion}"<br>
+          <em>Human:</em> "Code:\n```python\n{code}\n```"
+        </div>
+        <code>_parse_debug_response()</code> — parst JSON robust (direkt → fence-strip → fallback)
+        <br><span class="lc-badge">@tool + llm.invoke()</span>
+      </div>
+    </div>
+
+    <!-- exercise -->
+    <div class="tool-box tool-exercise">
+      <div class="tool-title" style="color:#86efac;">🎯 exercise_tool</div>
+      <div class="tool-body">
+        <code>tools/exercise_tool.py</code><br><br>
+        <strong style="color:#94a3b8;">LangChain-Nutzung:</strong><br>
+        <code>@tool</code> · <code>SystemMessage + HumanMessage</code><br>
+        <code>llm.invoke()</code><br><br>
+        <div class="tool-prompt">
+          <em>System:</em> "Erstelle eine Übungsaufgabe. Format: 🎯 Aufgabe / 💡 Tipp / ✅ Ziel"<br>
+          <em>Human:</em> Code + error_found + suggestion
+        </div>
+        Ausgabe: Strukturierte Aufgabe auf Deutsch
+        <br><span class="lc-badge">@tool + llm.invoke()</span>
+      </div>
+    </div>
+
+    <!-- rag -->
+    <div class="tool-box tool-rag">
+      <div class="tool-title" style="color:#fbbf24;">📚 rag_tool</div>
+      <div class="tool-body">
+        <code>tools/rag_tool.py</code><br><br>
+        <strong style="color:#94a3b8;">Nur aktiv wenn PDF hochgeladen.</strong><br>
+        Kein eigener LLM-Aufruf — nutzt FAISS-Vektorsuche:<br><br>
+        <div class="tool-prompt">
+          <em>1.</em> <code>load()</code> → FAISS-Index laden<br>
+          <em>2.</em> Query → Embedding-Vektor<br>
+          <em>3.</em> FAISS-Ähnlichkeitssuche → top_k Chunks
+        </div>
+        Ausgabe: relevante Textstellen aus dem PDF
+        <br><span class="lc-badge">@tool</span>
+        <span class="rag-badge">FAISS-Suche</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="callout callout-purple" style="margin-top:12px;">
+    <strong>Warum @tool und nicht einfach eine normale Funktion?</strong><br>
+    <code>create_agent(llm, tools)</code> erwartet LangChain-Tool-Objekte. Der <code>@tool</code>-Decorator liest den Funktions-Docstring und macht ihn zur Tool-Beschreibung für das Agent-LLM. Wenn der Agent "überlegt" welches Tool er aufruft, liest er genau diese Beschreibungen. Ohne <code>@tool</code> würde der Agent das Werkzeug nicht kennen.
+  </div>
+</div>
+
+<div class="arrow arrow-red"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">HTTP POST an OpenAI oder Ollama</span></div>
+
+<!-- PROVIDER -->
+<div class="zone zone-provider">
+  <div class="zone-label">🔀 Provider-Auswahl &nbsp;·&nbsp; agent/config.py &nbsp;·&nbsp; <span style="color:#5b21b6;">⛓ LangChain ChatOpenAI / ChatOllama</span></div>
+
+  <div class="card card-purple">
+    <div class="card-head"><span class="card-icon">⚙</span><span class="card-title">get_llm() + get_classifier_llm() + get_embeddings()</span><span class="card-file">agent/config.py</span></div>
+    <div class="card-body">
+      Einzige Stelle im Code wo der Provider gewählt wird. Alle drei Funktionen folgen demselben Schema:<br><br>
+      <div class="code-snippet">
+<span class="cs-cm"># LangChain-Imports: je nach Provider unterschiedliche Klasse</span><br>
+<span class="cs-kw">from</span> <span class="cs-lc">langchain_openai</span> <span class="cs-kw">import</span> <span class="cs-cls">ChatOpenAI</span><br>
+<span class="cs-kw">from</span> <span class="cs-lc">langchain_ollama</span> <span class="cs-kw">import</span> <span class="cs-cls">ChatOllama</span><br>
+<br>
+<span class="cs-cm"># Beide Klassen haben exakt dieselbe Schnittstelle → llm.invoke([...])</span><br>
+<span class="cs-cm"># Der Rest des Codes muss nicht wissen welche es ist</span>
+      </div>
+      <span class="lc-badge">langchain_openai.ChatOpenAI</span>
+      <span class="lc-badge">langchain_ollama.ChatOllama</span>
+    </div>
+  </div>
+
+  <div class="decision" style="margin-top:10px;">
+    <div class="decision-title">🤔 Ist OPENAI_API_KEY gesetzt und gültig?</div>
+    <div class="decision-body">Prüft: Key vorhanden? Kein Platzhalter <code>sk-...</code>? <code>openai.OpenAI().models.list()</code> erfolgreich?</div>
+    <div class="decision-arrows">
+      <div class="decision-branch branch-yes">
+        ✅ <strong>JA → OpenAI</strong><br><br>
+        <code>get_llm()</code>: <code>gpt-4o</code> (oder <code>LLM_MODEL</code>)<br>
+        <code>get_classifier_llm()</code>: <code>gpt-4o-mini</code><br>
+        <code>get_embeddings()</code>: <code>OpenAIEmbeddings</code><br>
+        temperature=0 · schnell · kostet $
+      </div>
+      <div class="decision-branch branch-no">
+        ❌ <strong>NEIN → Ollama Fallback</strong><br><br>
+        <code>get_llm()</code>: <code>llama3.2</code> (oder <code>OLLAMA_MODEL</code>)<br>
+        <code>get_classifier_llm()</code>: <code>llama3.2</code><br>
+        <code>get_embeddings()</code>: <code>OllamaEmbeddings</code><br>
+        temperature=0 · lokal · kostenlos · langsamer
+      </div>
+    </div>
+  </div>
+
+  <div class="note note-purple" style="margin-top:8px;">
+    <strong>Warum ist das die einzige Stelle?</strong> Alle vier Tools, der Agent und der Chat-Endpunkt rufen nur <code>get_llm()</code> auf — sie haben kein Wissen über den Provider. Wenn morgen ein neues Modell genutzt werden soll, ändert sich nur <code>config.py</code> und die <code>.env</code>-Datei.
+  </div>
+</div>
+
+<div class="arrow arrow-red"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">OpenAI: POST /v1/chat/completions &nbsp;|&nbsp; Ollama: POST /api/chat</span></div>
+
+<!-- KI MODELL -->
+<div class="zone zone-model">
+  <div class="zone-label">🧠 Das KI-Modell &nbsp;·&nbsp; gpt-4o (OpenAI) oder llama3.2 (Ollama lokal)</div>
+  <div class="split-2">
+    <div class="card card-orange">
+      <div class="card-head"><span class="card-icon">🧠</span><span class="card-title">Was das Modell wirklich macht</span></div>
+      <div class="card-body">
+        <strong>Hier passiert die eigentliche Intelligenz.</strong><br><br>
+        Das Modell wurde auf Milliarden Code-Beispielen trainiert. Es:<br>
+        • erkennt Python-Muster und Fehler durch dieses Training<br>
+        • generiert Text <em>Token für Token</em> (Wort für Wort, probabilistisch)<br>
+        • folgt dem System-Prompt weil es gelernt hat Anweisungen zu befolgen<br>
+        • antwortet auf Deutsch weil der System-Prompt es so vorgibt<br>
+        • <code>temperature=0</code>: immer die wahrscheinlichste Antwort → deterministisch
+      </div>
+    </div>
+    <div class="card card-orange">
+      <div class="card-head"><span class="card-icon">📤</span><span class="card-title">Was der Agent vom Modell bekommt</span></div>
+      <div class="card-body">
+        Das Agent-LLM wird mehrfach aufgerufen — einmal für jede Reasoning-Runde und einmal pro Tool-Aufruf:<br><br>
+        <strong style="color:#fb923c;">Reasoning-Aufruf:</strong> Agent entscheidet welches Tool → antwortet mit Tool-Name + Parametern<br><br>
+        <strong style="color:#fb923c;">Tool-Aufruf (z.B. explain):</strong><br>
+        <span style="font-size:.72rem;color:#475569;">"Der Code enthält eine for-Schleife ohne Doppelpunkt..."</span><br><br>
+        <strong style="color:#fb923c;">Final Answer:</strong> Agent fasst alle Ergebnisse zusammen im vorgegebenen Format
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RÜCKWEG -->
+<div class="arrow arrow-up"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">Antwort zurück → _parse_agent_output() → TutorResponse → JSON</span></div>
+
+<div class="zone zone-fastapi">
+  <div class="zone-label">↩ Rückweg — Antwort zusammenbauen und senden</div>
+  <div class="card card-green">
+    <div class="card-head"><span class="card-icon">🔧</span><span class="card-title">run_analysis() → Router → TutorResponse</span></div>
+    <div class="card-body">
+      <code>_parse_agent_output(final_text)</code>: Regex sucht nach <code>Erklärung:</code>, <code>Fehler gefunden:</code>, etc.<br>
+      <code>_get_rag_sources(code)</code>: FAISS-Suche → <code>sources: list[str]</code> (leer wenn kein PDF)<br>
+      Router baut <code>TutorResponse</code>, FastAPI serialisiert zu JSON.
+    </div>
+  </div>
+  <div class="resp-grid">
+    <div class="resp-field"><div class="resp-key">explanation</div><div class="resp-val">Erklärung · Markdown</div></div>
+    <div class="resp-field"><div class="resp-key">error_found</div><div class="resp-val">true / false · bool</div></div>
+    <div class="resp-field"><div class="resp-key">error_type</div><div class="resp-val">"Syntaxfehler" / "Kein Fehler"</div></div>
+    <div class="resp-field"><div class="resp-key">suggestion</div><div class="resp-val">Fehlertipp · Markdown</div></div>
+    <div class="resp-field"><div class="resp-key">next_exercise</div><div class="resp-val">Übungsaufgabe · Markdown</div></div>
+    <div class="resp-field"><div class="resp-key">sources</div><div class="resp-val">RAG-Quellen · leer wenn kein PDF</div></div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  SECTION 2 — RAG: PDF Upload                                 ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div class="section-title" style="background:#0d0900; border:1px solid #2a1800; color:#fbbf24;">
+  📄 Datenweg 2 — POST /tutor/upload-material &nbsp;·&nbsp; <span style="font-size:.85rem;color:#92400e;">📚 RAG-Pipeline · ⛓ LangChain Embeddings</span>
+</div>
+
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Frontend — Material-Tab</div>
+  <div class="card card-amber">
+    <div class="card-head"><span class="card-icon">📤</span><span class="card-title">MaterialPanel — Drag &amp; Drop PDF-Upload</span><span class="card-file">components/tutor/MaterialPanel.tsx</span></div>
+    <div class="card-body">
+      Klick oder Drag &amp; Drop → <code>useMaterial.upload(file)</code> → <code>lib/api.ts uploadMaterial()</code><br>
+      Sendet <code>multipart/form-data</code> mit der PDF-Datei.<br>
+      Nach Upload: Dateiname + Anzahl Abschnitte anzeigen. Amber-Punkt im Tab-Button leuchtet auf.
+      <span class="lchip lchip-no" style="font-size:.62rem;margin-top:4px;">🚫 kein LLM im Frontend</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow arrow-yellow"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">HTTP POST :8000/tutor/upload-material (multipart/form-data)</span></div>
+
+<div class="zone zone-rag">
+  <div class="zone-label">📚 RAG-Pipeline &nbsp;·&nbsp; agent/rag/ &nbsp;·&nbsp; ⛓ LangChain Embeddings</div>
+
+  <div class="callout callout-amber" style="margin-bottom:12px;">
+    <strong>Was ist RAG und warum?</strong><br>
+    Ohne RAG kennt der Agent nur was das LLM im Training gesehen hat — er kann keine spezifischen Kursinhalte kennen. Mit RAG kann ein Lehrer sein Kursbuch als PDF hochladen. Bei jeder Analyse sucht der Agent nach passenden Stellen und kann daraus zitieren. Die Antworten sind dadurch direkt auf das Lernmaterial des Kurses abgestimmt.
+  </div>
+
+  <div class="timeline">
+    <div class="tl-step">
+      <div class="tl-num" style="background:#1a1200;color:#fbbf24;border-color:#3a2a00;">1</div>
+      <div class="tl-content">
+        <div class="tl-title" style="color:#fbbf24;">loader.py — PDF → Text</div>
+        <div class="tl-desc"><code>extract_text(pdf_bytes)</code> — <code>pypdf.PdfReader</code> liest alle Seiten. Gibt einen einzigen Text-String zurück. Wirft <code>ValueError</code> wenn PDF leer. <span class="lchip lchip-no" style="font-size:.6rem;">🚫 kein LangChain</span></div>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num" style="background:#1a1200;color:#fbbf24;border-color:#3a2a00;">2</div>
+      <div class="tl-content">
+        <div class="tl-title" style="color:#fbbf24;">splitter.py — Text → Chunks</div>
+        <div class="tl-desc"><code>split_text(text)</code> — rekursives Aufteilen: zuerst an <code>\n\n</code>, dann <code>\n</code>, dann Leerzeichen. Chunk-Größe 500 Zeichen, 50 Zeichen Überlapp. Überlapp verhindert Informationsverlust an Grenzen. <span class="lchip lchip-no" style="font-size:.6rem;">🚫 kein LangChain</span></div>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num" style="background:#1a1200;color:#fbbf24;border-color:#3a2a00;">3</div>
+      <div class="tl-content">
+        <div class="tl-title" style="color:#fbbf24;">vectorstore.py — Chunks → Vektoren → FAISS-Index</div>
+        <div class="tl-desc">
+          <code>build_and_save(chunks)</code>:<br>
+          <code>get_embeddings().embed_documents(chunks)</code> — <strong style="color:#fbbf24;">hier LangChain!</strong> Wandelt Text in Zahlenvektoren um (via OpenAI oder Ollama).<br>
+          <code>faiss.IndexFlatL2(dim)</code> → Index aufbauen → als <code>index.faiss</code> + <code>chunks.pkl</code> speichern.
+          <span class="lc-badge">get_embeddings() = LangChain</span>
+          <span class="rag-badge">FAISS IndexFlatL2</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num" style="background:#1a1200;color:#fbbf24;border-color:#3a2a00;">4</div>
+      <div class="tl-content">
+        <div class="tl-title" style="color:#fbbf24;">Antwort → Frontend</div>
+        <div class="tl-desc"><code>{"status": "ok", "chunks": 142}</code> — ab sofort nutzt jede Analyse den FAISS-Index für Quellen.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout callout-amber" style="margin-top:12px;">
+    <strong>Wie funktioniert Vektorsuche (Embeddings)?</strong><br>
+    Jeder Text-Chunk wird in einen Zahlenvektor mit ~1500 Dimensionen umgewandelt (z.B. <code>[0.23, -0.81, 0.04, ...]</code>). Ähnliche Texte haben ähnliche Vektoren. Bei einer Suchanfrage wird die Anfrage ebenfalls zu einem Vektor — FAISS findet dann die Chunks mit der kleinsten Distanz zu diesem Vektor. Das ist <strong>semantische Suche</strong>: nicht Keyword-Matching, sondern Bedeutungsähnlichkeit.
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  SECTION 3 — POST /tutor/chat                                ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div class="section-title" style="background:#071008; border:1px solid #142818; color:#34d399;">
+  💬 Datenweg 3 — POST /tutor/chat &nbsp;·&nbsp; <span style="font-size:.85rem;color:#166534;">⛓ LangChain direkt — kein Agent</span>
+</div>
+
+<div class="zone zone-fastapi">
+  <div class="zone-label">⚡ FastAPI — chat() Endpunkt &nbsp;·&nbsp; routers/tutor.py</div>
+
+  <div class="callout callout-green" style="margin-bottom:10px;">
+    <strong>Kein Agent — LangChain direkt:</strong><br>
+    Im Chat-Endpunkt gibt es keinen ReAct-Loop. LangChain wird hier nur als <strong>Prompt-Builder und HTTP-Client</strong> genutzt: <code>SystemMessage + HumanMessage + AIMessage</code> formen die Nachrichten-Liste, <code>get_llm().invoke(messages)</code> schickt sie ans LLM. Einfacher, direkter, kein Tool-Aufruf.
+  </div>
+
+  <!-- Classifier -->
+  <div class="card card-green">
+    <div class="card-head"><span class="card-icon">🔎</span><span class="card-title">Schritt 1 — Off-Topic-Filter: _is_python_related()</span></div>
+    <div class="card-body">
+      Ruft <code>get_classifier_llm()</code> auf — das <strong>günstige Modell</strong> (<code>gpt-4o-mini</code> oder Ollama).<br>
+      <div class="prompt-box" style="margin-top:8px;">
+        <div class="prompt-label">SystemMessage</div>
+        <span class="prompt-sys">"Antworte NUR mit 'ja' wenn die Nachricht mit Python zu tun hat, sonst NUR mit 'nein'."</span>
+        <div class="prompt-label">HumanMessage</div>
+        <span class="prompt-usr">"Was bedeutet range()?"</span>
+      </div>
+      Prüft: <code>response.content.strip().lower().startswith("ja")</code><br>
+      Nein → sofort <code>OFF_TOPIC_REPLY</code> zurück — <strong>kein teures Haupt-LLM aufgerufen</strong>.
+      <span class="lc-badge">get_classifier_llm() + llm.invoke()</span>
+    </div>
+  </div>
+
+  <!-- Chat-LLM -->
+  <div class="card card-green" style="margin-top:8px;">
+    <div class="card-head"><span class="card-icon">💬</span><span class="card-title">Schritt 2 — Chat-LLM mit voller History</span></div>
+    <div class="card-body">
+      LangChain baut die Nachrichten-Liste aus der History + neuer Nachricht:<br>
+      <div class="prompt-box" style="margin-top:8px;">
+        <div class="prompt-label">SystemMessage (immer zuerst)</div>
+        <span class="prompt-sys">"Du bist ein Python-Tutor. Aktueller Code:\n```python\n{code}\n```"</span>
+        <div class="prompt-label">HumanMessage (aus History)</div>
+        <span class="prompt-usr">"Hallo!"</span>
+        <div class="prompt-label">AIMessage (aus History)</div>
+        <span class="prompt-sys">"Hallo! Wie kann ich helfen?"</span>
+        <div class="prompt-label">HumanMessage (neue Nachricht)</div>
+        <span class="prompt-usr">"Was bedeutet range()?"</span>
+      </div>
+      Das LLM sieht die gesamte History → kann sich auf frühere Antworten beziehen.<br>
+      <code>get_llm().invoke(messages)</code> → Antwort → History aktualisieren → zurück.
+      <span class="lc-badge">SystemMessage / HumanMessage / AIMessage</span>
+      <span class="lc-badge">get_llm().invoke()</span>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  SECTION 4 — POST /tutor/run                                 ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div class="section-title" style="background:#080f06; border:1px solid #142210; color:#a3e635;">
+  ▶ Datenweg 4 — POST /tutor/run &nbsp;·&nbsp; <span style="font-size:.85rem;color:#166534;">🚫 kein LLM · kein LangChain · kein Agent</span>
+</div>
+
+<div class="zone zone-subprocess">
+  <div class="zone-label">⚙ FastAPI + subprocess — reines Python</div>
+  <div class="timeline">
+    <div class="tl-step">
+      <div class="tl-num" style="background:#0a1a04;color:#a3e635;border-color:#1a3008;">1</div>
+      <div class="tl-content"><div class="tl-title" style="color:#a3e635;">Tempfile anlegen</div><div class="tl-desc"><code>tempfile.NamedTemporaryFile(suffix=".py")</code> — Code reinschreiben</div></div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num" style="background:#0a1a04;color:#a3e635;border-color:#1a3008;">2</div>
+      <div class="tl-content"><div class="tl-title" style="color:#a3e635;">subprocess.run()</div><div class="tl-desc"><code>[sys.executable, tmp_path], timeout=10</code> — Timeout schützt vor Endlosschleifen</div></div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num" style="background:#0a1a04;color:#a3e635;border-color:#1a3008;">3</div>
+      <div class="tl-content"><div class="tl-title" style="color:#a3e635;">Aufräumen + zurückgeben</div><div class="tl-desc"><code>os.unlink(tmp_path)</code> im <code>finally</code> → <code>RunResponse(stdout, stderr, exit_code)</code></div></div>
+    </div>
+  </div>
+  <div class="callout callout-green" style="margin-top:10px;">
+    <strong>Kein LLM, kein LangChain, kein Agent.</strong> Der Code läuft direkt im lokalen Python-Interpreter — in unter einer Sekunde, ohne API-Kosten. Syntaxfehler sieht der Schüler als echten Python-Traceback in <code>stderr</code>.
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  SECTION 5 — FRONTEND-KOMPONENTEN                            ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div class="section-title" style="background:#08091e; border:1px solid #1e2a50; color:#818cf8;">
+  🖼 Frontend-Komponenten — Übersicht
+</div>
+
+<div class="zone zone-browser">
+  <div class="zone-label">🖥 Next.js · Port 3000 · Tailwind CSS</div>
+
+  <div class="frontend-grid">
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">⌨ CodeEditor.tsx</div>
+      <div class="fe-card-body">Python-Code eingeben. Prism.js Syntax-Highlighting.</div>
+    </div>
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">📌 EditorFooter.tsx</div>
+      <div class="fe-card-body">Sticky Footer: Ausführen-Button + Code-analysieren-Button + Output-Panel.</div>
+    </div>
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">📊 TutorResult.tsx</div>
+      <div class="fe-card-body">Erklärung + Fehler + Übung + <strong>📚 RAG-Quellen</strong> (amber, nur wenn sources vorhanden).</div>
+    </div>
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">💬 ChatPanel.tsx</div>
+      <div class="fe-card-body">Chat-Blasen, Textarea, Typing-Indikator, Auto-Scroll.</div>
+    </div>
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">📄 MaterialPanel.tsx</div>
+      <div class="fe-card-body">Drag &amp; Drop PDF-Upload. Idle / Upload / Erfolg / Fehler — States mit amber Farb-Theme.</div>
+    </div>
+    <div class="fe-card">
+      <div class="fe-card-path">components/tutor/</div>
+      <div class="fe-card-title">✨ MarkdownMessage.tsx</div>
+      <div class="fe-card-body">Rendert Markdown mit Syntax-Highlighting (react-syntax-highlighter). Alle LLM-Antworten kommen in Markdown.</div>
+    </div>
+  </div>
+
+  <div class="split-3" style="margin-top:12px;">
+    <div class="fe-card" style="border-color:#1a3050;">
+      <div class="fe-card-path">hooks/</div>
+      <div class="fe-card-title" style="color:#93c5fd;">🪝 useTutorAnalysis.ts</div>
+      <div class="fe-card-body">State: code, result, loading, error. Ruft analyzeCode() auf.</div>
+    </div>
+    <div class="fe-card" style="border-color:#1a3050;">
+      <div class="fe-card-path">hooks/</div>
+      <div class="fe-card-title" style="color:#93c5fd;">🪝 useMaterial.ts</div>
+      <div class="fe-card-body">State: uploading, result, error, fileName. Verwaltet File-Picker + Drag-Handler.</div>
+    </div>
+    <div class="fe-card" style="border-color:#1a3050;">
+      <div class="fe-card-path">hooks/</div>
+      <div class="fe-card-title" style="color:#93c5fd;">🪝 useChat.ts</div>
+      <div class="fe-card-body">State: history, input, loading. Gesamte Chat-History, Auto-Scroll.</div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  SECTION 6 — ZUSAMMENFASSUNG                                 ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<div class="section-title" style="background:#0a0d1e; border:1px solid #1e2f5a; color:#a5b4fc;">
+  🔑 Wo LangChain und der Agent eine Rolle spielen — Zusammenfassung
+</div>
+
+<div class="legend-box">
+  <div class="legend-box-title">Jede Schicht — wer macht was</div>
+  <div class="legend-grid">
+
+    <div class="legend-item" style="border-color:#2a1050;">
+      <div class="legend-item-title" style="color:#c084fc;">⛓ LangChain — @tool Decorator</div>
+      <div class="legend-item-body">Macht Python-Funktionen zu Agent-Werkzeugen. Der Docstring wird die Beschreibung die der Agent liest wenn er überlegt welches Tool er aufruft. Ohne @tool kennt der Agent das Werkzeug nicht.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#2a1050;">
+      <div class="legend-item-title" style="color:#e879f9;">⛓ LangChain — create_agent()</div>
+      <div class="legend-item-body">Erzeugt einen LangGraph CompiledStateGraph. Verwaltet den Reason→Act→Observe-Loop automatisch. Man gibt LLM + Tools → LangChain baut den Agenten-Loop.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#2a1050;">
+      <div class="legend-item-title" style="color:#a78bfa;">⛓ LangChain — SystemMessage / HumanMessage</div>
+      <div class="legend-item-body">Strukturieren den Prompt für das LLM. SystemMessage = Instruktion, HumanMessage = Eingabe. Genutzt in allen 4 Tools und im Chat-Endpunkt direkt.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#2a1050;">
+      <div class="legend-item-title" style="color:#818cf8;">⛓ LangChain — ChatOpenAI / ChatOllama</div>
+      <div class="legend-item-body">Provider-Abstraktion. Beide Klassen haben <code>llm.invoke([...])</code> — identische Schnittstelle. Wechsel des Providers = eine Zeile in config.py.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#2a1050;">
+      <div class="legend-item-title" style="color:#7dd3fc;">⛓ LangChain — OpenAIEmbeddings / OllamaEmbeddings</div>
+      <div class="legend-item-body">Wandeln Text in Zahlenvektoren um. Genutzt in vectorstore.py für RAG. Gleiche Provider-Logik wie ChatOpenAI/ChatOllama.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#1d4ed8;">
+      <div class="legend-item-title" style="color:#60a5fa;">🤖 KI-Agent — Reasoning</div>
+      <div class="legend-item-body">Der Agent liest den System-Prompt + Code-Aufgabe und <em>entscheidet selbst</em> welche Tools er aufruft. Ein Chat-Bot würde das nicht tun — er antwortet direkt.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#1d4ed8;">
+      <div class="legend-item-title" style="color:#38bdf8;">🤖 KI-Agent — Tool-Auswahl</div>
+      <div class="legend-item-body">Der Agent kann rag_tool überspringen wenn kein Lernmaterial hochgeladen wurde, Tools in anderer Reihenfolge aufrufen, oder ein Tool mehrfach aufrufen. Das ist adaptive Intelligenz — kein festes Skript.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#92400e;">
+      <div class="legend-item-title" style="color:#fbbf24;">📚 RAG — Vektorsuche</div>
+      <div class="legend-item-body">Kein Agent-Feature, kein LangChain-Feature — sondern eine separate Pipeline. PDF → Chunks → Embeddings → FAISS-Index. Der Agent nutzt rag_tool als einen seiner möglichen Werkzeuge.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#166534;">
+      <div class="legend-item-title" style="color:#4ade80;">🐍 FastAPI + Pydantic</div>
+      <div class="legend-item-body">HTTP-Routing, Request-Validierung, Response-Serialisierung. Kein KI-Wissen. Trennt sauber HTTP-Schicht von Agent-Logik.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#166534;">
+      <div class="legend-item-title" style="color:#a3e635;">🚫 subprocess — kein LLM</div>
+      <div class="legend-item-body">POST /tutor/run ruft den Python-Interpreter direkt auf. Kein LangChain, kein Agent, kein LLM. Schnell, kostenlos, zeigt echte Python-Fehler.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#374151;">
+      <div class="legend-item-title" style="color:#9ca3af;">⚙ config.py — Provider-Gate</div>
+      <div class="legend-item-body">Einzige Stelle wo OpenAI vs. Ollama entschieden wird. Alle anderen Module rufen nur get_llm() auf — kein Provider-Wissen außerhalb von config.py.</div>
+    </div>
+
+    <div class="legend-item" style="border-color:#374151;">
+      <div class="legend-item-title" style="color:#818cf8;">🖥 Next.js Frontend</div>
+      <div class="legend-item-body">UI-Rendering, State, HTTP-Requests. Kein KI-Wissen. Empfängt fertige JSON-Antworten und zeigt sie gerendert an (Markdown, Syntax-Highlighting).</div>
+    </div>
+
+  </div>
+</div>
+
+<p style="text-align:center; color:#1e3a5f; font-size:.68rem; margin-top:32px;">
+  Python Tutor · ReAct-Agent (LangChain 1.3 / LangGraph) · RAG (FAISS + pypdf) · OpenAI primary / Ollama fallback · FastAPI + Next.js
+</p>
+
+</div>
+</body>
+</html>

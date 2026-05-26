@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>create_agent & run_analysis — Datenfluss</title>
+<style>
+  :root {
+    --bg: #0d0f17;
+    --surface: #141826;
+    --surface2: #1c2235;
+    --border: #2a3150;
+    --accent: #5b8dee;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --accent4: #f59e0b;
+    --accent5: #f87171;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --code-bg: #0a0c14;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  header .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #5b8dee22, #a78bfa22);
+    border: 1px solid #5b8dee44;
+    color: var(--accent);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 18px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+
+  header h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    background: linear-gradient(135deg, #5b8dee, #a78bfa, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* LAYOUT */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  /* ===== FLOW DIAGRAM ===== */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 48px;
+  }
+
+  .flow-step {
+    width: 100%;
+    max-width: 700px;
+    position: relative;
+  }
+
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: default;
+  }
+
+  .flow-box:hover {
+    background: var(--surface2);
+  }
+
+  .flow-box.highlight-blue  { border-color: #5b8dee66; }
+  .flow-box.highlight-purple{ border-color: #a78bfa66; }
+  .flow-box.highlight-green { border-color: #34d39966; }
+  .flow-box.highlight-yellow{ border-color: #f59e0b66; }
+  .flow-box.highlight-red   { border-color: #f8717166; }
+
+  .flow-box:hover.highlight-blue  { border-color: #5b8dee; background: #5b8dee0d; }
+  .flow-box:hover.highlight-purple{ border-color: #a78bfa; background: #a78bfa0d; }
+  .flow-box:hover.highlight-green { border-color: #34d399; background: #34d3990d; }
+  .flow-box:hover.highlight-yellow{ border-color: #f59e0b; background: #f59e0b0d; }
+  .flow-box:hover.highlight-red   { border-color: #f87171; background: #f871710d; }
+
+  .flow-icon {
+    font-size: 24px;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--surface2);
+  }
+
+  .flow-content h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .flow-content p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .flow-content code {
+    background: var(--code-bg);
+    color: var(--accent3);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+  }
+
+  .flow-arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    position: relative;
+  }
+
+  .flow-arrow::before {
+    content: '';
+    position: absolute;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--border), var(--accent));
+    opacity: 0.4;
+  }
+
+  .flow-arrow span {
+    background: var(--bg);
+    padding: 2px 8px;
+    z-index: 1;
+    color: var(--accent);
+    font-size: 18px;
+  }
+
+  /* ===== AGENT LOOP ===== */
+  .loop-diagram {
+    position: relative;
+    margin: 0 auto 48px;
+    max-width: 800px;
+  }
+
+  .loop-title {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .loop-center {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .llm-box {
+    background: linear-gradient(135deg, #5b8dee1a, #a78bfa1a);
+    border: 2px solid #5b8dee55;
+    border-radius: 16px;
+    padding: 24px 40px;
+    text-align: center;
+    min-width: 240px;
+  }
+
+  .llm-box .llm-icon { font-size: 36px; margin-bottom: 8px; }
+  .llm-box h3 { font-size: 16px; color: var(--accent); margin-bottom: 4px; }
+  .llm-box p { font-size: 12px; color: var(--muted); }
+
+  .loop-question {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .diamond {
+    background: var(--surface2);
+    border: 1px solid var(--accent4);
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 13px;
+    color: var(--accent4);
+    text-align: center;
+    position: relative;
+  }
+
+  .loop-branches {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .branch {
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+
+  .branch.yes {
+    background: #34d3991a;
+    border: 1px solid #34d39944;
+  }
+
+  .branch.no {
+    background: #f871711a;
+    border: 1px solid #f8717144;
+  }
+
+  .branch h4 { font-size: 13px; margin-bottom: 6px; }
+  .branch p { font-size: 12px; color: var(--muted); }
+  .branch.yes h4 { color: var(--accent3); }
+  .branch.no h4 { color: var(--accent5); }
+
+  /* ===== TOOLS GRID ===== */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .tool-card:hover {
+    transform: translateY(-3px);
+  }
+
+  .tool-card.explain { border-top: 3px solid var(--accent); }
+  .tool-card.debug   { border-top: 3px solid var(--accent5); }
+  .tool-card.exercise{ border-top: 3px solid var(--accent3); }
+  .tool-card.rag     { border-top: 3px solid var(--accent2); }
+
+  .tool-card .tool-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .tool-card .tool-icon {
+    font-size: 20px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: var(--surface2);
+  }
+
+  .tool-card h3 { font-size: 14px; font-weight: 700; }
+  .tool-card .file-path {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Cascadia Code', monospace;
+    margin-bottom: 10px;
+  }
+  .tool-card p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+  .tag.change { background: #34d3991a; color: var(--accent3); border: 1px solid #34d39944; }
+  .tag.fixed  { background: #f871711a; color: var(--accent5); border: 1px solid #f8717144; }
+  .tag.optional{ background: #a78bfa1a; color: var(--accent2); border: 1px solid #a78bfa44; }
+
+  /* ===== PARAM TABLE ===== */
+  .params-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .param-group h3 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .param-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .param-item .param-name {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    min-width: 130px;
+    padding-top: 2px;
+  }
+
+  .param-item .param-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .param-item.locked {
+    opacity: 0.5;
+  }
+
+  .param-item.locked .param-name {
+    color: var(--muted);
+  }
+
+  /* ===== CODE BLOCK ===== */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 48px;
+    overflow-x: auto;
+  }
+
+  .code-block pre {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .c-comment { color: #4a5568; }
+  .c-keyword  { color: #a78bfa; }
+  .c-func     { color: #5b8dee; }
+  .c-string   { color: #34d399; }
+  .c-var      { color: #f59e0b; }
+  .c-param    { color: #e2e8f0; }
+  .c-type     { color: #f87171; }
+
+  .code-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .code-label span {
+    background: var(--surface2);
+    padding: 3px 10px;
+    border-radius: 4px;
+  }
+
+  /* ===== LEGEND ===== */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* ===== SUMMARY BOXES ===== */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .summary-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .summary-box .big { font-size: 36px; margin-bottom: 8px; }
+  .summary-box h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .summary-box p { font-size: 12px; color: var(--muted); }
+
+  @media (max-width: 700px) {
+    .params-grid { grid-template-columns: 1fr; }
+    .loop-branches { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="badge">LangChain Agent</div>
+    <h1>create_agent & run_analysis</h1>
+    <p>Vollständiger Datenfluss — was passiert, wenn der Student auf "Code analysieren" klickt</p>
+  </header>
+
+  <!-- SUMMARY -->
+  <div class="summary-grid">
+    <div class="summary-box">
+      <div class="big">🔄</div>
+      <h3>Loop-Architektur</h3>
+      <p>Der Agent ruft Tools wiederholt auf bis keine tool_calls mehr kommen</p>
+    </div>
+    <div class="summary-box">
+      <div class="big">🛠️</div>
+      <h3>3–4 Tools</h3>
+      <p>explain, debug, exercise + optionales rag_tool wenn PDF vorhanden</p>
+    </div>
+    <div class="summary-box">
+      <div class="big">✏️</div>
+      <h3>3 Stellschrauben</h3>
+      <p>system_prompt, tools-Liste und SystemMessage in jedem Tool</p>
+    </div>
+  </div>
+
+  <!-- FULL FLOW -->
+  <div class="section-title">Kompletter Datenfluss</div>
+  <div class="flow">
+
+    <div class="flow-step">
+      <div class="flow-box highlight-blue">
+        <div class="flow-icon">🎓</div>
+        <div class="flow-content">
+          <h3>Student klickt "Code analysieren"</h3>
+          <p><code>ChatPanel.tsx</code> — Button onClick</p>
+        </div>
+      </div>
+    </div>
+    <div class="flow-arrow"><span>↓</span></div>
+
+    <div class="flow-step">
+      <div class="flow-box highlight-blue">
+        <div class="flow-icon">🌐</div>
+        <div class="flow-content">
+          <h3>analyzeCode(payload)</h3>
+          <p><code>frontend/lib/api.ts</code> — <code>fetch POST /tutor/analyze</code> mit Body <code>{ code: "..." }</code></p>
+        </div>
+      </div>
+    </div>
+    <div class="flow-arrow"><span>↓</span></div>
+
+    <div class="flow-step">
+      <div class="flow-box highlight-purple">
+        <div class="flow-icon">⚡</div>
+        <div class="flow-content">
+          <h3>analyze_code(request)</h3>
+          <p><code>backend/routers/tutor.py</code> — FastAPI Endpoint empfängt Request, ruft <code>run_analysis(request.code)</code> auf</p>
+        </div>
+      </div>
+    </div>
+    <div class="flow-arrow"><span>↓</span></div>
+
+    <div class="flow-step">
+      <div class="flow-box highlight-yellow">
+        <div class="flow-icon">🤖</div>
+        <div class="flow-content">
+          <h3>run_analysis(code)</h3>
+          <p><code>backend/agent/tutor_agent.py</code> — lädt LLM, baut Tools-Liste via <code>_get_tools()</code>, erstellt Agent via <code>create_agent()</code>, startet mit <code>agent.invoke()</code></p>
+        </div>
+      </div>
+    </div>
+    <div class="flow-arrow"><span>↓</span></div>
+
+    <div class="flow-step">
+      <div class="flow-box highlight-green">
+        <div class="flow-icon">🔁</div>
+        <div class="flow-content">
+          <h3>LangChain Agent Loop</h3>
+          <p>LLM entscheidet welche Tools es aufruft — läuft bis keine <code>tool_calls</code> mehr im Response</p>
+        </div>
+      </div>
+    </div>
+    <div class="flow-arrow"><span>↓</span></div>
+
+    <div class="flow-step">
+      <div class="flow-box highlight-yellow">
+        <div class="flow-icon">🔍</div>
+        <div class="flow-content">
+          <h3>_parse_agent_output(text)</h3>
+          <p><code>tutor_agent.py</code> — liest die 5 Felder aus dem Text: Erklärung / Fehler / Fehlertyp / Verbesserungsvorschlag / Nächste Übung</p>
+        </div>
+      </div>
+    </div>
+    <div class="flow-arrow"><span>↓</span></div>
+
+    <div class="flow-step">
+      <div class="flow-box highlight-blue">
+        <div class="flow-icon">📺</div>
+        <div class="flow-content">
+          <h3>TutorResult zeigt Ergebnis</h3>
+          <p><code>frontend/components/tutor/TutorResult.tsx</code> — rendert JSON als formatierte Ausgabe für den Studenten</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- AGENT LOOP -->
+  <div class="section-title">Agent Loop — Innenleben von create_agent</div>
+  <div class="card loop-diagram">
+    <div class="loop-title">create_agent läuft in einer Schleife</div>
+
+    <div class="loop-center">
+      <div class="llm-box">
+        <div class="llm-icon">🧠</div>
+        <h3>LLM (Ollama)</h3>
+        <p>bekommt Messages + System Prompt<br>antwortet mit tool_calls oder Text</p>
+      </div>
+    </div>
+
+    <div class="loop-question">
+      <div class="diamond">❓ Enthält die Antwort <strong>tool_calls</strong>?</div>
+    </div>
+
+    <div class="loop-branches">
+      <div class="branch yes">
+        <h4>✅ JA — Tools ausführen</h4>
+        <p>explain_code_tool<br>debug_code_tool<br>exercise_tool<br>→ Ergebnis zurück ans LLM<br>→ <strong>Schleife wiederholt sich</strong></p>
+      </div>
+      <div class="branch no">
+        <h4>🛑 NEIN — Fertig</h4>
+        <p>Letzte Antwort ist der finale Text<br>→ <code>result["messages"][-1].content</code><br>→ wird an <code>_parse_agent_output()</code> übergeben</p>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#5b8dee"></div> LLM-Aufruf</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div> Tool-Ausführung</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Entscheidung</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div> Ende der Schleife</div>
+    </div>
+  </div>
+
+  <!-- TOOLS -->
+  <div class="section-title">Die Tools</div>
+  <div class="tools-grid">
+
+    <div class="tool-card explain">
+      <div class="tool-header">
+        <div class="tool-icon">📖</div>
+        <div>
+          <h3>explain_code_tool</h3>
+          <div class="file-path">agent/tools/explain_tool.py</div>
+        </div>
+      </div>
+      <p>Erklärt den Code auf Deutsch — was er macht und wie er funktioniert.</p>
+      <span class="tag change">änderbar</span>
+      <span class="tag change">SystemMessage</span>
+    </div>
+
+    <div class="tool-card debug">
+      <div class="tool-header">
+        <div class="tool-icon">🐛</div>
+        <div>
+          <h3>debug_code_tool</h3>
+          <div class="file-path">agent/tools/debug_tool.py</div>
+        </div>
+      </div>
+      <p>Analysiert den Code auf Syntaxfehler und Logikfehler. Gibt Typ und Lösung zurück.</p>
+      <span class="tag change">änderbar</span>
+      <span class="tag change">SystemMessage</span>
+    </div>
+
+    <div class="tool-card exercise">
+      <div class="tool-header">
+        <div class="tool-icon">🎯</div>
+        <div>
+          <h3>exercise_tool</h3>
+          <div class="file-path">agent/tools/exercise_tool.py</div>
+        </div>
+      </div>
+      <p>Generiert eine passende Übungsaufgabe basierend auf dem Code des Studenten.</p>
+      <span class="tag change">änderbar</span>
+      <span class="tag change">SystemMessage</span>
+    </div>
+
+    <div class="tool-card rag">
+      <div class="tool-header">
+        <div class="tool-icon">📚</div>
+        <div>
+          <h3>rag_tool</h3>
+          <div class="file-path">agent/tools/rag_tool.py</div>
+        </div>
+      </div>
+      <p>Sucht relevante Stellen im hochgeladenen PDF-Lernmaterial. Wird nur geladen wenn FAISS-Index vorhanden.</p>
+      <span class="tag optional">optional</span>
+      <span class="tag change">änderbar</span>
+    </div>
+
+  </div>
+
+  <!-- CODE -->
+  <div class="section-title">run_analysis Code — annotiert</div>
+  <div class="code-block">
+    <div class="code-label"><span>tutor_agent.py</span></div>
+    <pre>
+<span class="c-keyword">def</span> <span class="c-func">run_analysis</span>(<span class="c-param">code</span>: <span class="c-type">str</span>) -> <span class="c-type">dict</span>:
+
+    <span class="c-var">llm</span> = <span class="c-func">get_llm</span>()
+    <span class="c-comment"># ↑ Lädt das Ollama-Modell (konfiguriert in config.py)</span>
+
+    <span class="c-var">tools</span> = <span class="c-func">_get_tools</span>()
+    <span class="c-comment"># ↑ Baut Liste: [explain, debug, exercise] + optional rag_tool</span>
+
+    <span class="c-var">agent</span> = <span class="c-func">create_agent</span>(
+        <span class="c-var">llm</span>,
+        <span class="c-var">tools</span>,
+        <span class="c-param">system_prompt</span>=<span class="c-var">_SYSTEM_PROMPT</span>   <span class="c-comment"># ← HIER kannst du das Verhalten steuern</span>
+    )
+
+    <span class="c-var">result</span> = <span class="c-var">agent</span>.<span class="c-func">invoke</span>({
+        <span class="c-string">"messages"</span>: [{
+            <span class="c-string">"role"</span>: <span class="c-string">"user"</span>,
+            <span class="c-string">"content"</span>: <span class="c-var">code</span>         <span class="c-comment"># ← Der Code des Studenten</span>
+        }]
+    })
+    <span class="c-comment"># ↑ Startet den Loop — LLM + Tools bis keine tool_calls mehr</span>
+
+    <span class="c-var">text</span> = <span class="c-var">result</span>[<span class="c-string">"messages"</span>][-<span class="c-type">1</span>].<span class="c-param">content</span>
+    <span class="c-comment"># ↑ Letzte Nachricht im Loop = finale Antwort des LLM</span>
+
+    <span class="c-keyword">return</span> <span class="c-func">_parse_agent_output</span>(<span class="c-var">text</span>)
+    <span class="c-comment"># ↑ Text → dict mit 5 Feldern (explanation, error_found, ...)</span>
+    </pre>
+  </div>
+
+  <!-- PARAMS -->
+  <div class="section-title">create_agent Parameter — was kannst du ändern</div>
+  <div class="params-grid">
+
+    <div class="param-group">
+      <h3 style="color: var(--accent3)">✅ Kannst du ändern</h3>
+
+      <div class="param-item">
+        <div class="param-name">system_prompt</div>
+        <div class="param-desc">Wichtigster Parameter. Steuert Sprache, Format, Länge der Antwort. In <code>_SYSTEM_PROMPT</code> definiert.</div>
+      </div>
+
+      <div class="param-item">
+        <div class="param-name">tools</div>
+        <div class="param-desc">Liste der Tools. Tools hinzufügen oder entfernen in <code>_get_tools()</code>.</div>
+      </div>
+
+      <div class="param-item">
+        <div class="param-name">debug=True</div>
+        <div class="param-desc">Aktiviert verbose Logging in der Konsole — nützlich beim Entwickeln.</div>
+      </div>
+
+      <div class="param-item">
+        <div class="param-name">SystemMessage<br>in jedem Tool</div>
+        <div class="param-desc">Jedes Tool hat seinen eigenen Prompt. Kurze/lange Antworten werden hier gesteuert.</div>
+      </div>
+    </div>
+
+    <div class="param-group">
+      <h3 style="color: var(--accent5)">❌ Nicht anfassen</h3>
+
+      <div class="param-item locked">
+        <div class="param-name">checkpointer</div>
+        <div class="param-desc">Speichert Agent-State für Mehrfach-Konversationen. Komplex, nicht nötig.</div>
+      </div>
+
+      <div class="param-item locked">
+        <div class="param-name">state_schema</div>
+        <div class="param-desc">Internes LangGraph-Schema. Sehr komplex, bricht alles wenn falsch gesetzt.</div>
+      </div>
+
+      <div class="param-item locked">
+        <div class="param-name">middleware</div>
+        <div class="param-desc">Für fortgeschrittene Pipelines. Nicht relevant für diesen Use-Case.</div>
+      </div>
+
+      <div class="param-item locked">
+        <div class="param-name">response_format</div>
+        <div class="param-desc">Strukturierter JSON-Output vom LLM. Würde den aktuellen Text-Parser brechen.</div>
+      </div>
+
+      <div class="param-item locked">
+        <div class="param-name">interrupt_before/after</div>
+        <div class="param-desc">Für Human-in-the-Loop Workflows. Nicht nötig hier.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STELLSCHRAUBEN -->
+  <div class="section-title">Deine 3 Stellschrauben</div>
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:16px; margin-bottom:48px;">
+
+    <div class="card" style="border-left: 3px solid var(--accent); padding-left: 24px;">
+      <h3 style="color:var(--accent); margin-bottom:8px;">1. _SYSTEM_PROMPT</h3>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:8px;">Wie verhält sich der Agent insgesamt? Wie lang soll die Antwort sein? Welche Tools soll er aufrufen?</p>
+      <code style="font-size:11px; color:var(--accent3); background:var(--code-bg); padding:4px 8px; border-radius:4px;">tutor_agent.py Zeile 16</code>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--accent3); padding-left: 24px;">
+      <h3 style="color:var(--accent3); margin-bottom:8px;">2. tools = [...]</h3>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:8px;">Welche Fähigkeiten hat der Agent? Tool hinzufügen = neue Funktion. Tool entfernen = weniger Fähigkeiten.</p>
+      <code style="font-size:11px; color:var(--accent3); background:var(--code-bg); padding:4px 8px; border-radius:4px;">tutor_agent.py Zeile 64</code>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--accent2); padding-left: 24px;">
+      <h3 style="color:var(--accent2); margin-bottom:8px;">3. SystemMessage in Tool</h3>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:8px;">Wie antwortet jedes einzelne Tool? Hier steuerst du kurze vs. lange Erklärungen pro Tool separat.</p>
+      <code style="font-size:11px; color:var(--accent3); background:var(--code-bg); padding:4px 8px; border-radius:4px;">agent/tools/*.py</code>
+    </div>
+
+  </div>
+
+  <!-- TOOL_CALLS SECTION -->
+  <div class="section-title">Was sind tool_calls?</div>
+
+  <div class="card" style="margin-bottom: 24px;">
+    <p style="font-size:14px; color:var(--muted); line-height:1.7;">
+      Das LLM <strong style="color:var(--text)">ruft keine Tools selbst auf</strong> — es sagt nur
+      <em style="color:var(--accent2)">"ich würde gerne dieses Tool aufrufen"</em>.
+      LangChain liest das <code style="background:var(--code-bg); color:var(--accent3); padding:2px 6px; border-radius:4px;">tool_calls</code>-Feld,
+      führt das Tool wirklich aus, und schickt das Ergebnis zurück ans LLM.
+      Der Loop läuft solange bis <code style="background:var(--code-bg); color:var(--accent3); padding:2px 6px; border-radius:4px;">tool_calls</code> leer ist.
+    </p>
+  </div>
+
+  <!-- TWO RESPONSE TYPES -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:32px;">
+
+    <div>
+      <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--accent5);display:inline-block;"></span>
+        LLM Antwort — OHNE tool_calls (fertig)
+      </div>
+      <div class="code-block" style="margin-bottom:0;">
+        <pre>
+<span class="c-comment">// Loop stoppt hier — das ist die finale Antwort</span>
+{
+  <span class="c-string">"content"</span>: <span class="c-string">"Der Code macht eine
+  Schleife von 0 bis 4."</span>,
+
+  <span class="c-string">"tool_calls"</span>: []   <span class="c-comment">← leer = fertig</span>
+}</pre>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--accent3);display:inline-block;"></span>
+        LLM Antwort — MIT tool_calls (Loop weiter)
+      </div>
+      <div class="code-block" style="margin-bottom:0;">
+        <pre>
+<span class="c-comment">// LangChain führt das Tool aus und sendet zurück</span>
+{
+  <span class="c-string">"content"</span>: <span class="c-string">""</span>,
+  <span class="c-string">"tool_calls"</span>: [{
+    <span class="c-string">"name"</span>: <span class="c-string">"explain_code_tool"</span>,
+    <span class="c-string">"args"</span>: {
+      <span class="c-string">"code"</span>: <span class="c-string">"for i in range(5)..."</span>
+    }
+  }]
+}</pre>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ANIMATED LOOP -->
+  <div class="card" style="margin-bottom: 48px;">
+    <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:20px; text-align:center;">
+      Schritt-für-Schritt Loop mit echten tool_calls
+    </div>
+
+    <!-- Step 1 -->
+    <div style="display:flex; gap:0; flex-direction:column; align-items:center;">
+
+      <div style="width:100%; max-width:680px; background:var(--surface2); border:1px solid #5b8dee44; border-radius:12px; padding:16px 20px; margin-bottom:4px;">
+        <div style="font-size:11px; color:var(--accent); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Schritt 1 — Student schickt Code</div>
+        <pre style="font-family:'Cascadia Code',monospace; font-size:12px; line-height:1.7;"><span class="c-string">"messages"</span>: [{
+  <span class="c-string">"role"</span>: <span class="c-string">"user"</span>,
+  <span class="c-string">"content"</span>: <span class="c-string">"for i in range(5):\n    print(i)"</span>
+}]</pre>
+      </div>
+
+      <div style="height:30px; display:flex; align-items:center; color:var(--accent); font-size:18px;">↓</div>
+
+      <div style="width:100%; max-width:680px; background:var(--surface2); border:1px solid #a78bfa44; border-radius:12px; padding:16px 20px; margin-bottom:4px;">
+        <div style="font-size:11px; color:var(--accent2); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Schritt 2 — LLM antwortet mit tool_calls</div>
+        <pre style="font-family:'Cascadia Code',monospace; font-size:12px; line-height:1.7;"><span class="c-string">"tool_calls"</span>: [
+  { <span class="c-string">"name"</span>: <span class="c-string">"explain_code_tool"</span>, <span class="c-string">"args"</span>: { <span class="c-string">"code"</span>: <span class="c-string">"..."</span> } },
+  { <span class="c-string">"name"</span>: <span class="c-string">"debug_code_tool"</span>,   <span class="c-string">"args"</span>: { <span class="c-string">"code"</span>: <span class="c-string">"..."</span> } },
+  { <span class="c-string">"name"</span>: <span class="c-string">"exercise_tool"</span>,      <span class="c-string">"args"</span>: { <span class="c-string">"code"</span>: <span class="c-string">"..."</span> } }
+]
+<span class="c-comment">← tool_calls nicht leer → LangChain führt alle 3 Tools aus</span></pre>
+      </div>
+
+      <div style="height:30px; display:flex; align-items:center; color:var(--accent); font-size:18px;">↓</div>
+
+      <div style="width:100%; max-width:680px; background:var(--surface2); border:1px solid #34d39944; border-radius:12px; padding:16px 20px; margin-bottom:4px;">
+        <div style="font-size:11px; color:var(--accent3); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Schritt 3 — Tool-Ergebnisse kommen zurück</div>
+        <pre style="font-family:'Cascadia Code',monospace; font-size:12px; line-height:1.7;"><span class="c-comment">// LangChain fügt ToolMessages zur History hinzu:</span>
+{ <span class="c-string">"role"</span>: <span class="c-string">"tool"</span>, <span class="c-string">"name"</span>: <span class="c-string">"explain_code_tool"</span>,
+  <span class="c-string">"content"</span>: <span class="c-string">"Der Code gibt Zahlen 0-4 aus."</span> }
+{ <span class="c-string">"role"</span>: <span class="c-string">"tool"</span>, <span class="c-string">"name"</span>: <span class="c-string">"debug_code_tool"</span>,
+  <span class="c-string">"content"</span>: <span class="c-string">"Kein Fehler gefunden."</span> }
+{ <span class="c-string">"role"</span>: <span class="c-string">"tool"</span>, <span class="c-string">"name"</span>: <span class="c-string">"exercise_tool"</span>,
+  <span class="c-string">"content"</span>: <span class="c-string">"Schreibe eine Schleife 1-10..."</span> }</pre>
+      </div>
+
+      <div style="height:30px; display:flex; align-items:center; color:var(--accent); font-size:18px;">↓</div>
+
+      <div style="width:100%; max-width:680px; background:var(--surface2); border:1px solid #f59e0b44; border-radius:12px; padding:16px 20px; margin-bottom:4px;">
+        <div style="font-size:11px; color:var(--accent4); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Schritt 4 — LLM fasst zusammen (kein tool_calls mehr)</div>
+        <pre style="font-family:'Cascadia Code',monospace; font-size:12px; line-height:1.7;"><span class="c-string">"content"</span>: <span class="c-string">"Erklärung: Der Code gibt Zahlen 0 bis 4 aus...
+Fehler gefunden: nein
+Fehlertyp: Kein Fehler
+Verbesserungsvorschlag: Kein Fehler gefunden.
+Nächste Übung: Schreibe eine Schleife 1-10..."</span>
+
+<span class="c-string">"tool_calls"</span>: []   <span class="c-comment">← leer = Loop stoppt</span></pre>
+      </div>
+
+      <div style="height:30px; display:flex; align-items:center; color:var(--accent3); font-size:18px;">↓</div>
+
+      <div style="width:100%; max-width:680px; background:#34d3991a; border:1px solid #34d39966; border-radius:12px; padding:16px 20px;">
+        <div style="font-size:11px; color:var(--accent3); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Schritt 5 — _parse_agent_output() liest die Felder</div>
+        <pre style="font-family:'Cascadia Code',monospace; font-size:12px; line-height:1.7;"><span class="c-var">text</span> = <span class="c-var">result</span>[<span class="c-string">"messages"</span>][-<span class="c-type">1</span>].<span class="c-param">content</span>   <span class="c-comment">← letzte Nachricht</span>
+<span class="c-keyword">return</span> <span class="c-func">_parse_agent_output</span>(<span class="c-var">text</span>)       <span class="c-comment">← text → dict</span>
+
+<span class="c-comment">// Ergebnis:</span>
+{
+  <span class="c-string">"explanation"</span>:  <span class="c-string">"Der Code gibt Zahlen 0 bis 4 aus."</span>,
+  <span class="c-string">"error_found"</span>:  <span class="c-keyword">False</span>,
+  <span class="c-string">"error_type"</span>:   <span class="c-string">"Kein Fehler"</span>,
+  <span class="c-string">"suggestion"</span>:   <span class="c-string">"Kein Fehler gefunden."</span>,
+  <span class="c-string">"next_exercise"</span>:<span class="c-string">"Schreibe eine Schleife 1-10..."</span>
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+  <!-- WUNSCH & ERFÜLLUNG -->
+  <div class="section-title">LLM wünscht — LangChain erfüllt</div>
+
+  <style>
+    .wunsch-scene {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 48px;
+    }
+
+    /* Characters */
+    .characters {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 24px;
+      align-items: center;
+      width: 100%;
+      max-width: 860px;
+      margin-bottom: 40px;
+    }
+
+    .character {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      position: relative;
+    }
+
+    .avatar.llm {
+      background: linear-gradient(135deg, #1a2040, #252d4a);
+      border: 2px solid #5b8dee66;
+      box-shadow: 0 0 30px #5b8dee33;
+      animation: pulse-blue 3s ease-in-out infinite;
+    }
+
+    .avatar.langchain {
+      background: linear-gradient(135deg, #1a2a20, #1e3428);
+      border: 2px solid #34d39966;
+      box-shadow: 0 0 30px #34d39933;
+      animation: pulse-green 3s ease-in-out infinite;
+      animation-delay: 1.5s;
+    }
+
+    @keyframes pulse-blue {
+      0%, 100% { box-shadow: 0 0 20px #5b8dee22; }
+      50%       { box-shadow: 0 0 40px #5b8dee66; }
+    }
+    @keyframes pulse-green {
+      0%, 100% { box-shadow: 0 0 20px #34d39922; }
+      50%       { box-shadow: 0 0 40px #34d39966; }
+    }
+
+    .char-name {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .char-role {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      max-width: 140px;
+      line-height: 1.4;
+    }
+
+    .vs-divider {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .vs-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, var(--border), transparent);
+    }
+
+    /* Exchange rows */
+    .exchange {
+      width: 100%;
+      max-width: 860px;
+      margin-bottom: 12px;
+    }
+
+    .exchange-row {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr;
+      gap: 0;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .bubble {
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 13px;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .bubble.llm-says {
+      background: linear-gradient(135deg, #1a2040, #1e2850);
+      border: 1px solid #5b8dee44;
+      color: var(--text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .bubble.langchain-says {
+      background: linear-gradient(135deg, #0f2820, #122e22);
+      border: 1px solid #34d39944;
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .bubble.empty { background: transparent; border: none; }
+
+    .bubble .wish-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .bubble.llm-says .wish-label    { color: var(--accent); }
+    .bubble.langchain-says .wish-label { color: var(--accent3); }
+
+    .bubble strong { color: var(--text); }
+    .bubble code {
+      background: var(--code-bg);
+      color: var(--accent3);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: 'Cascadia Code', monospace;
+      font-size: 12px;
+    }
+
+    .arrow-mid {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      position: relative;
+    }
+
+    .arrow-mid .arrow-line {
+      width: 50px;
+      height: 2px;
+      background: linear-gradient(to right, #5b8dee, #34d399);
+      position: relative;
+    }
+
+    .arrow-mid .arrow-line::after {
+      content: '▶';
+      position: absolute;
+      right: -8px;
+      top: -9px;
+      font-size: 14px;
+      color: #34d399;
+    }
+
+    .arrow-mid .arrow-line.left::after {
+      content: '◀';
+      left: -8px;
+      right: auto;
+      color: var(--accent);
+    }
+
+    /* Round counter */
+    .round-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+    }
+    .round-badge .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+
+    /* Tool pills */
+    .tool-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .tool-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface2);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-family: 'Cascadia Code', monospace;
+    }
+    .tool-pill.blue   { border: 1px solid #5b8dee44; color: var(--accent); }
+    .tool-pill.red    { border: 1px solid #f8717144; color: var(--accent5); }
+    .tool-pill.green  { border: 1px solid #34d39944; color: var(--accent3); }
+
+    /* Done banner */
+    .done-banner {
+      width: 100%;
+      max-width: 860px;
+      background: linear-gradient(135deg, #34d3991a, #5b8dee1a);
+      border: 1px solid #34d39944;
+      border-radius: 14px;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .done-banner .done-icon { font-size: 32px; }
+    .done-banner h3 { font-size: 14px; color: var(--accent3); margin-bottom: 4px; }
+    .done-banner p  { font-size: 12px; color: var(--muted); }
+
+    /* Divider between rounds */
+    .round-divider {
+      width: 100%;
+      max-width: 860px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--border), transparent);
+      margin: 16px 0;
+    }
+  </style>
+
+  <div class="wunsch-scene">
+
+    <!-- Characters -->
+    <div class="characters">
+      <div class="character">
+        <div class="avatar llm">🤖</div>
+        <div class="char-name" style="color:var(--accent)">LLM</div>
+        <div class="char-role">Denkt, plant, wünscht sich Tools — kann aber selbst nichts ausführen</div>
+      </div>
+
+      <div class="vs-divider">
+        <div class="vs-line"></div>
+        <span>vs</span>
+        <div class="vs-line"></div>
+      </div>
+
+      <div class="character">
+        <div class="avatar langchain">⚙️</div>
+        <div class="char-name" style="color:var(--accent3)">LangChain</div>
+        <div class="char-role">Hört zu, führt aus, liefert Ergebnisse zurück</div>
+      </div>
+    </div>
+
+    <!-- Round 1 -->
+    <div class="exchange">
+      <div class="round-badge"><div class="dot" style="background:var(--accent)"></div> Runde 1</div>
+
+      <div class="exchange-row">
+        <div class="bubble llm-says">
+          <span class="wish-label">🤖 LLM wünscht sich</span>
+          Ich habe den Code analysiert. Ich brauche eine Erklärung, einen Debug-Check und eine Übung.
+          <div class="tool-pills">
+            <span class="tool-pill blue">📖 explain_code_tool</span>
+            <span class="tool-pill red">🐛 debug_code_tool</span>
+            <span class="tool-pill green">🎯 exercise_tool</span>
+          </div>
+        </div>
+        <div class="arrow-mid"><div class="arrow-line"></div></div>
+        <div class="bubble langchain-says">
+          <span class="wish-label">⚙️ LangChain antwortet</span>
+          Verstanden. Ich führe alle 3 Tools aus…<br>
+          <code>explain_code_tool("for i in range...")</code><br>
+          <code>debug_code_tool("for i in range...")</code><br>
+          <code>exercise_tool("for i in range...")</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="round-divider"></div>
+
+    <!-- Round 2 -->
+    <div class="exchange">
+      <div class="round-badge"><div class="dot" style="background:var(--accent3)"></div> Runde 2 — Ergebnisse zurück</div>
+
+      <div class="exchange-row">
+        <div class="bubble empty"></div>
+        <div class="arrow-mid"><div class="arrow-line left"></div></div>
+        <div class="bubble langchain-says">
+          <span class="wish-label">⚙️ LangChain liefert Ergebnisse</span>
+          <strong>explain_code_tool:</strong> "Der Code gibt Zahlen 0–4 aus."<br>
+          <strong>debug_code_tool:</strong> "Kein Fehler gefunden."<br>
+          <strong>exercise_tool:</strong> "Schreibe eine Schleife 1–10..."
+        </div>
+      </div>
+    </div>
+
+    <div class="round-divider"></div>
+
+    <!-- Round 3 -->
+    <div class="exchange">
+      <div class="round-badge"><div class="dot" style="background:var(--accent4)"></div> Runde 3 — LLM fasst zusammen</div>
+
+      <div class="exchange-row">
+        <div class="bubble llm-says">
+          <span class="wish-label">🤖 LLM antwortet — kein Wunsch mehr</span>
+          Ich habe alle Informationen.<br><br>
+          <code>tool_calls: []</code> ← leer!<br><br>
+          <strong>Erklärung:</strong> Der Code gibt 0–4 aus.<br>
+          <strong>Fehler gefunden:</strong> nein<br>
+          <strong>Nächste Übung:</strong> Schleife 1–10...
+        </div>
+        <div class="arrow-mid"></div>
+        <div class="bubble empty"></div>
+      </div>
+    </div>
+
+    <div class="round-divider"></div>
+
+    <!-- Done -->
+    <div class="done-banner">
+      <div class="done-icon">✅</div>
+      <div>
+        <h3>Loop beendet — LangChain erkennt leeres tool_calls</h3>
+        <p>Das Ergebnis geht an <code style="background:var(--code-bg); color:var(--accent3); padding:1px 6px; border-radius:4px;">_parse_agent_output()</code> → dict mit 5 Feldern → Frontend zeigt es an</p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>

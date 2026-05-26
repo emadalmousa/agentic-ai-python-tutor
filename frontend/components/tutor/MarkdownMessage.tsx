@@ -9,9 +9,10 @@ interface Props {
   content: string
   dark: boolean
   isUser?: boolean
+  onInsertCode?: (code: string) => void
 }
 
-export default function MarkdownMessage({ content, dark, isUser }: Props) {
+export default function MarkdownMessage({ content, dark, isUser, onInsertCode }: Props) {
   const prose = isUser
     ? "text-white text-sm leading-relaxed"
     : dark
@@ -22,6 +23,7 @@ export default function MarkdownMessage({ content, dark, isUser }: Props) {
     code({ className, children, ...props }) {
       const match = /language-(\w+)/.exec(className || "")
       const isBlock = !!match
+      const codeText = String(children).replace(/\n$/, "")
 
       if (isBlock) {
         return (
@@ -30,6 +32,19 @@ export default function MarkdownMessage({ content, dark, isUser }: Props) {
               <span className={`text-xs font-mono ${dark ? "text-indigo-400" : "text-indigo-600"}`}>
                 {match[1]}
               </span>
+              {onInsertCode && match[1] === "python" && (
+                <button
+                  onClick={() => onInsertCode(codeText)}
+                  className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                    dark
+                      ? "text-indigo-300 hover:bg-indigo-500/20 hover:text-indigo-200"
+                      : "text-indigo-600 hover:bg-indigo-100"
+                  }`}
+                  title="Code in Editor übernehmen"
+                >
+                  In Editor
+                </button>
+              )}
             </div>
             <SyntaxHighlighter
               style={dark ? oneDark : oneLight}
@@ -37,7 +52,7 @@ export default function MarkdownMessage({ content, dark, isUser }: Props) {
               PreTag="div"
               customStyle={{ margin: 0, borderRadius: 0, fontSize: "0.75rem" }}
             >
-              {String(children).replace(/\n$/, "")}
+              {codeText}
             </SyntaxHighlighter>
           </div>
         )

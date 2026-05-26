@@ -1,3 +1,9 @@
+import os
+import re
+
+from langchain.agents import create_agent
+
+from agent.config import get_llm
 from agent.tools.explain_tool import explain_code_tool
 from agent.tools.debug_tool import debug_code_tool
 from agent.tools.exercise_tool import exercise_tool
@@ -7,26 +13,98 @@ class ServiceUnavailableError(Exception):
     pass
 
 
-def run_analysis(code: str, question: str | None = None) -> dict:
-    """Ruft explain, debug und exercise Tools auf, gibt strukturiertes Ergebnis zurück."""
+_SYSTEM_PROMPT = """\
+Du bist ein Python-Tutor für Anfänger. Halte alle Antworten kurz und einfach.
+
+Du hast Zugriff auf folgende Werkzeuge:
+- explain_code_tool: Erklärt Python-Code kurz auf Deutsch.
+- debug_code_tool: Findet Fehler im Code.
+- exercise_tool: Generiert eine kurze Übungsaufgabe.
+- rag_tool: Sucht im Lernmaterial (nur wenn verfügbar).
+
+Analysiere den Code:
+1. Rufe explain_code_tool auf.
+2. Rufe debug_code_tool auf.
+3. Rufe exercise_tool auf.
+
+Gib deine Antwort GENAU in diesem Format aus — KURZ und EINFACH:
+
+Erklärung: <2-3 Sätze, einfache Sprache>
+Fehler gefunden: <ja oder nein>
+Fehlertyp: <kurz oder "Kein Fehler">
+Verbesserungsvorschlag: <1 Satz oder "Kein Fehler gefunden.">
+Nächste Übung: <kurze Aufgabe, max. 3 Sätze>
+"""
+
+
+def _parse_agent_output(text: str) -> dict:
+    """Extrahiert die 5 Pflichtfelder aus der Agenten-Antwort. Gibt Defaults zurück wenn Felder fehlen."""
+    def extract(label: str) -> str | None:
+        pattern = rf"(?i){re.escape(label)}[:\s]+(.+?)(?=\n[A-ZÄÖÜa-zäöü][^\n]*:|$)"
+        match = re.search(pattern, text, re.DOTALL)
+        return match.group(1).strip() if match else None
+
+    explanation = extract("Erklärung") or text
+    error_found_raw = (extract("Fehler gefunden") or "nein").lower()
+    error_type = extract("Fehlertyp") or "Kein Fehler"
+    suggestion = extract("Verbesserungsvorschlag") or "Keine Angabe"
+    next_exercise = extract("Nächste Übung")
+
+    return {
+        "explanation": explanation,
+        "error_found": "ja" in error_found_raw,
+        "error_type": error_type,
+        "suggestion": suggestion,
+        "next_exercise": next_exercise,
+    }
+
+
+def _build_tools() -> list:
+    """Erstellt die Tool-Liste; rag_tool wird nur eingebunden wenn der Vektorstore existiert."""
+    tools = [explain_code_tool, debug_code_tool, exercise_tool]
+    vectorstore_path = os.getenv(
+        "RAG_VECTORSTORE_PATH",
+        os.path.join(os.path.dirname(__file__), "..", "vectorstore"),
+    )
+    if os.path.isdir(vectorstore_path):
+        from agent.tools.rag_tool import rag_tool
+        tools.append(rag_tool)
+    return tools
+
+
+def _get_rag_sources(code: str) -> list[str]:
+    """Gibt relevante RAG-Quellen zurück, wenn ein Vektorstore vorhanden ist."""
     try:
-        explanation = explain_code_tool.invoke({"code": code, "question": question})
-        debug_result = debug_code_tool.invoke({"code": code})
-        next_exercise = exercise_tool.invoke({
-            "code": code,
-            "error_found": debug_result["error_found"],
-            "suggestion": debug_result["suggestion"],
+        from agent.rag.vectorstore import load, query as vs_query
+
+        index_data = load()
+        if index_data is None:
+            return []
+        top_k = int(os.getenv("RAG_TOP_K", "3"))
+        return vs_query(index_data, code, top_k=top_k)
+    except Exception:
+        return []
+
+
+def run_analysis(code: str) -> dict:
+    """ReAct-Agent analysiert den Code mit allen verfügbaren Tools und gibt ein strukturiertes Ergebnis zurück."""
+    try:
+        llm = get_llm()
+        tools = _build_tools()
+        agent = create_agent(llm, tools, system_prompt=_SYSTEM_PROMPT)
+        result = agent.invoke({
+            "messages": [("human", f"Analysiere diesen Python-Code:\n```python\n{code}\n```")]
         })
-        return {
-            "explanation": explanation,
-            "error_found": debug_result["error_found"],
-            "error_type": debug_result.get("error_type", "Kein Fehler"),
-            "suggestion": debug_result["suggestion"],
-            "next_exercise": next_exercise,
-        }
+        messages = result.get("messages", [])
+        final_text = messages[-1].content if messages else ""
+        parsed = _parse_agent_output(final_text)
+        parsed["sources"] = _get_rag_sources(code)
+        return parsed
     except Exception as e:
         if _is_connection_error(e):
-            raise ServiceUnavailableError("Ollama ist nicht erreichbar. Bitte starte die KI-Engine.") from e
+            raise ServiceUnavailableError(
+                "LLM ist nicht erreichbar. Bitte prüfe die KI-Engine-Konfiguration."
+            ) from e
         raise
 
 

@@ -1,0 +1,1812 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase 2 — LangChain Agent & Backend</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    /* ── Light Mode ───────────────────────────────────────── */
+    body.light-mode {
+      --bg:      #f1f5f9;
+      --surface: #ffffff;
+      --card:    #f8fafc;
+      --border:  rgba(99,102,241,0.2);
+      --text:    #0f172a;
+      --muted:   #64748b;
+    }
+    body.light-mode .nav {
+      background: rgba(241,245,249,0.95);
+    }
+    body.light-mode .flow-node {
+      color: #0f172a;
+    }
+    body.light-mode .code-block,
+    body.light-mode .code-card {
+      background: #1e293b;
+    }
+    body.light-mode #img-overlay {
+      background: rgba(0,0,0,0.6);
+    }
+
+    /* ── Tastatur-Fokus Transition für Phase-2-Karten ─────── */
+    .tool-card-p2, .loop-step-item, .rag-step, .rag-fact-card,
+    .fe-item, .endpoint-item, .be-info-card, .wunsch-row {
+      transition: transform 0.3s, background 0.3s, box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
+    }
+
+    /* ── Diagram fullscreen overlay ───────────────────────── */
+    #diag-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.88);
+      z-index: 99;
+      cursor: zoom-out;
+    }
+    #diag-overlay.active { display: block; }
+
+    #diag-fullscreen {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 54vw;
+      height: 94vh;
+      z-index: 100;
+      border-radius: 16px;
+      overflow-y: auto;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      box-shadow: 0 32px 80px rgba(0,0,0,.8);
+      padding: clamp(24px,3vw,44px) clamp(28px,3.5vw,52px);
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+    }
+    #diag-fullscreen.active { display: flex; }
+
+    .fc-left { cursor: zoom-in; }
+    .fc-left:hover { outline: 2px solid rgba(99,102,241,0.4); border-radius: 14px; }
+
+    #diag-close-hint {
+      position: fixed;
+      bottom: 28px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: rgba(255,255,255,0.65);
+      font-size: 0.75rem;
+      padding: 5px 14px;
+      border-radius: 20px;
+      z-index: 101;
+      pointer-events: none;
+    }
+
+    /* ── Image fullscreen on click ────────────────────────── */
+    #img-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.92);
+      z-index: 99;
+      cursor: zoom-out;
+    }
+    #img-overlay.active { display: block; }
+
+    #img-zoom-box {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 92vw;
+      height: 92vh;
+      z-index: 100;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,.8);
+    }
+    #img-zoom-box.active { display: block; }
+    #img-zoom-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: top;
+      background: #0d0f17;
+    }
+
+    .img-card { cursor: zoom-in; }
+
+    /* ── Phase 2 extra styles ─────────────────────────────── */
+
+    /* Agent loop diagram */
+    .agent-loop-wrapper {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: clamp(14px, 2vw, 28px);
+    }
+
+    .loop-steps {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 14px);
+      justify-content: center;
+    }
+
+    .loop-step-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(10px, 1.3vh, 18px) clamp(14px, 1.6vw, 22px);
+      display: flex;
+      align-items: center;
+      gap: clamp(10px, 1.2vw, 16px);
+    }
+
+    .loop-step-num {
+      width: clamp(32px, 3.5vw, 44px);
+      height: clamp(32px, 3.5vw, 44px);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: clamp(0.9rem, 1.1vw, 1.1rem);
+      flex-shrink: 0;
+    }
+
+    .loop-step-num.blue   { background: rgba(99,102,241,0.15);  color: var(--accent);  border: 1px solid rgba(99,102,241,0.35); }
+    .loop-step-num.purple { background: rgba(167,139,250,0.15); color: var(--accent2); border: 1px solid rgba(167,139,250,0.35); }
+    .loop-step-num.teal   { background: rgba(56,189,248,0.15);  color: var(--accent3); border: 1px solid rgba(56,189,248,0.35); }
+    .loop-step-num.green  { background: rgba(52,211,153,0.15);  color: var(--success); border: 1px solid rgba(52,211,153,0.35); }
+    .loop-step-num.red    { background: rgba(248,113,113,0.15); color: #f87171;        border: 1px solid rgba(248,113,113,0.35); }
+
+    .loop-step-text h4 {
+      font-family: var(--font-heading);
+      font-size: clamp(1rem, 1.2vw, 1.25rem);
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .loop-step-text p {
+      font-size: clamp(0.85rem, 1vw, 1.05rem);
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* Wunsch/Erfüllung visual */
+    .wunsch-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(16px, 2vh, 28px) clamp(16px, 2vw, 28px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(10px, 1.3vh, 18px);
+      justify-content: center;
+    }
+
+    .wunsch-title {
+      font-family: var(--font-heading);
+      font-size: clamp(0.85rem, 1vw, 1rem);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .wunsch-row {
+      display: grid;
+      grid-template-columns: 1fr 40px 1fr;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wunsch-bubble {
+      border-radius: 12px;
+      padding: clamp(10px, 1.2vh, 16px) clamp(12px, 1.4vw, 18px);
+      font-size: clamp(0.85rem, 1vw, 1.05rem);
+      line-height: 1.5;
+    }
+
+    .wunsch-bubble.llm {
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-bottom-right-radius: 3px;
+    }
+
+    .wunsch-bubble.lc {
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,0.25);
+      border-bottom-left-radius: 3px;
+    }
+
+    .wunsch-bubble .who {
+      font-family: var(--font-heading);
+      font-size: clamp(0.7rem, 0.85vw, 0.88rem);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    .wunsch-bubble.llm .who { color: var(--accent2); }
+    .wunsch-bubble.lc  .who { color: var(--success); }
+
+    .wunsch-bubble p { color: var(--muted); }
+    .wunsch-bubble strong { color: var(--text); }
+
+    .wunsch-arrow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.2rem;
+      color: var(--accent2);
+    }
+
+    .wunsch-divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Tools grid */
+    .tools-4-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: clamp(10px, 1.2vw, 18px);
+      flex: 1;
+      min-height: 0;
+    }
+
+    .tool-card-p2 {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(14px, 1.8vh, 24px) clamp(14px, 1.6vw, 22px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 14px);
+    }
+
+    .tool-card-p2.t1 { border-top: 3px solid var(--accent); }
+    .tool-card-p2.t2 { border-top: 3px solid #f87171; }
+    .tool-card-p2.t3 { border-top: 3px solid var(--success); }
+    .tool-card-p2.t4 { border-top: 3px solid var(--accent2); }
+
+    .tool-icon-p2 {
+      width: clamp(40px, 4.5vw, 56px);
+      height: clamp(40px, 4.5vw, 56px);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1.2rem, 1.6vw, 1.8rem);
+    }
+
+    .tool-card-p2.t1 .tool-icon-p2 { background: rgba(99,102,241,0.12); }
+    .tool-card-p2.t2 .tool-icon-p2 { background: rgba(248,113,113,0.12); }
+    .tool-card-p2.t3 .tool-icon-p2 { background: rgba(52,211,153,0.12); }
+    .tool-card-p2.t4 .tool-icon-p2 { background: rgba(167,139,250,0.12); }
+
+    .tool-name-p2 {
+      font-family: var(--font-heading);
+      font-size: clamp(1rem, 1.2vw, 1.25rem);
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .tool-file {
+      font-size: clamp(0.7rem, 0.85vw, 0.88rem);
+      color: var(--muted);
+      font-family: 'Courier New', monospace;
+    }
+
+    .tool-desc-p2 {
+      font-size: clamp(0.85rem, 1vw, 1.05rem);
+      color: var(--muted);
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .tool-what {
+      font-size: clamp(0.75rem, 0.9vw, 0.92rem);
+      font-family: var(--font-heading);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 100px;
+      width: fit-content;
+    }
+
+    .tool-card-p2.t1 .tool-what { background: rgba(99,102,241,0.1);  color: var(--accent); }
+    .tool-card-p2.t2 .tool-what { background: rgba(248,113,113,0.1); color: #f87171; }
+    .tool-card-p2.t3 .tool-what { background: rgba(52,211,153,0.1);  color: var(--success); }
+    .tool-card-p2.t4 .tool-what { background: rgba(167,139,250,0.1); color: var(--accent2); }
+
+    /* RAG pipeline */
+    .rag-wrapper {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: clamp(14px, 2vw, 28px);
+    }
+
+    .rag-flow {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(16px, 2vh, 28px) clamp(20px, 2.5vw, 32px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(4px, 0.5vh, 8px);
+      justify-content: center;
+    }
+
+    .rag-step {
+      display: flex;
+      align-items: center;
+      gap: clamp(10px, 1.2vw, 16px);
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: clamp(8px, 1vh, 14px) clamp(12px, 1.4vw, 18px);
+    }
+
+    .rag-step-icon {
+      width: clamp(32px, 3.5vw, 44px);
+      height: clamp(32px, 3.5vw, 44px);
+      min-width: clamp(32px, 3.5vw, 44px);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1rem, 1.3vw, 1.3rem);
+    }
+
+    .rag-step h4 {
+      font-family: var(--font-heading);
+      font-size: clamp(0.9rem, 1.1vw, 1.1rem);
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .rag-step p {
+      font-size: clamp(0.8rem, 0.95vw, 1rem);
+      color: var(--muted);
+    }
+
+    .rag-arrow {
+      width: 2px;
+      height: clamp(10px, 1.2vh, 16px);
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .rag-arrow::after {
+      content: '▼';
+      position: absolute;
+      bottom: -9px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.45rem;
+      color: var(--accent2);
+    }
+
+    .rag-facts {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 14px);
+      justify-content: center;
+    }
+
+    .rag-fact-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(10px, 1.3vh, 18px) clamp(14px, 1.6vw, 22px);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .rag-fact-icon {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .rag-fact-card h4 {
+      font-family: var(--font-heading);
+      font-size: clamp(0.9rem, 1.1vw, 1.1rem);
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .rag-fact-card p {
+      font-size: clamp(0.8rem, 0.95vw, 1rem);
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    /* Frontend slide */
+    .frontend-wrapper {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: clamp(14px, 2vw, 28px);
+    }
+
+    .fe-features {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 14px);
+      justify-content: center;
+    }
+
+    .fe-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(10px, 1.3vh, 18px) clamp(14px, 1.6vw, 22px);
+      display: flex;
+      align-items: center;
+      gap: clamp(10px, 1.2vw, 16px);
+    }
+
+    .fe-icon {
+      width: clamp(36px, 4vw, 50px);
+      height: clamp(36px, 4vw, 50px);
+      min-width: clamp(36px, 4vw, 50px);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1rem, 1.4vw, 1.4rem);
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.2);
+    }
+
+    .fe-item h4 {
+      font-family: var(--font-heading);
+      font-size: clamp(0.9rem, 1.1vw, 1.1rem);
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .fe-item p {
+      font-size: clamp(0.8rem, 0.95vw, 1rem);
+      color: var(--muted);
+    }
+
+    .fe-stack-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(16px, 2vh, 28px) clamp(18px, 2.2vw, 30px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(10px, 1.2vh, 16px);
+    }
+
+    .fe-stack-title {
+      font-family: var(--font-heading);
+      font-size: clamp(0.85rem, 1vw, 1rem);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .fe-stack-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: clamp(8px, 1vh, 12px) 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .fe-stack-row:last-child { border-bottom: none; }
+
+    .fe-stack-badge {
+      font-family: var(--font-heading);
+      font-size: clamp(0.65rem, 0.78vw, 0.8rem);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 6px;
+      white-space: nowrap;
+      min-width: clamp(72px, 8vw, 100px);
+      text-align: center;
+    }
+
+    .fe-stack-name {
+      font-size: clamp(0.85rem, 1vw, 1.05rem);
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .fe-stack-desc {
+      font-size: clamp(0.75rem, 0.88vw, 0.92rem);
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    /* Backend arch slide */
+    .backend-wrapper {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: clamp(14px, 2vw, 28px);
+    }
+
+    .endpoint-list {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 12px);
+      justify-content: center;
+    }
+
+    .endpoint-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: clamp(8px, 1.1vh, 14px) clamp(12px, 1.4vw, 18px);
+      display: grid;
+      grid-template-columns: auto auto 1fr;
+      align-items: center;
+      gap: clamp(8px, 1vw, 14px);
+    }
+
+    .http-method {
+      font-family: var(--font-heading);
+      font-size: clamp(0.65rem, 0.78vw, 0.8rem);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 3px 9px;
+      border-radius: 6px;
+    }
+
+    .http-method.post { background: rgba(52,211,153,0.12); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+
+    .endpoint-path {
+      font-family: 'Courier New', monospace;
+      font-size: clamp(0.8rem, 0.95vw, 1rem);
+      color: var(--accent2);
+    }
+
+    .endpoint-desc {
+      font-size: clamp(0.8rem, 0.95vw, 1rem);
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .backend-info {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 14px);
+      justify-content: center;
+    }
+
+    .be-info-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(12px, 1.5vh, 20px) clamp(14px, 1.6vw, 22px);
+    }
+
+    .be-info-card h4 {
+      font-family: var(--font-heading);
+      font-size: clamp(0.9rem, 1.1vw, 1.1rem);
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .be-info-card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .be-info-card ul li {
+      font-size: clamp(0.8rem, 0.95vw, 1rem);
+      color: var(--muted);
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .be-info-card ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.7rem;
+      top: 2px;
+    }
+
+    /* Danke slide */
+    #slide-9 {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 4vh 8vw;
+      background:
+        radial-gradient(ellipse 55% 60% at 28% 40%, rgba(52,211,153,0.10) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 45% at 76% 65%, rgba(99,102,241,0.10) 0%, transparent 70%),
+        var(--surface);
+    }
+
+    .danke-icon {
+      font-size: clamp(3rem, 6vw, 5rem);
+      margin-bottom: clamp(16px, 2vh, 28px);
+      display: block;
+      animation: bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+
+    .danke-chips {
+      display: flex;
+      gap: clamp(10px, 1.5vw, 20px);
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: clamp(28px, 3.5vh, 48px);
+    }
+
+    .danke-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: clamp(8px, 1vh, 14px) clamp(16px, 2vw, 28px);
+      border-radius: 100px;
+      font-family: var(--font-heading);
+      font-size: clamp(0.85rem, 1vw, 1.05rem);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .danke-chip.c1 { background: rgba(99,102,241,0.1);  border: 1px solid rgba(99,102,241,0.3);  color: var(--accent2); }
+    .danke-chip.c2 { background: rgba(52,211,153,0.1);  border: 1px solid rgba(52,211,153,0.3);  color: var(--success); }
+    .danke-chip.c3 { background: rgba(56,189,248,0.1);  border: 1px solid rgba(56,189,248,0.3);  color: var(--accent3); }
+    .danke-chip.c4 { background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3); color: var(--accent2); }
+
+    .danke-qa {
+      margin-top: clamp(20px, 3vh, 40px);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: clamp(10px, 1.4vh, 18px) clamp(24px, 3vw, 40px);
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.28);
+      border-radius: 14px;
+      font-size: clamp(1rem, 1.2vw, 1.2rem);
+      color: var(--muted);
+    }
+
+    .danke-qa strong { color: var(--accent2); }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <span class="slide-counter" id="counter">Slide 1 / 8</span>
+
+      <div class="dot-nav" id="dots">
+        <button class="dot active" data-target="1"></button>
+        <button class="dot" data-target="2"></button>
+        <button class="dot" data-target="3"></button>
+        <button class="dot" data-target="4"></button>
+        <button class="dot" data-target="5"></button>
+        <button class="dot" data-target="6"></button>
+        <button class="dot" data-target="7"></button>
+        <button class="dot" data-target="8"></button>
+        <button class="dot" data-target="9"></button>
+      </div>
+
+      <button class="nav-btn" id="btn-prev" disabled>◀ Zurück</button>
+      <button class="nav-btn" id="btn-next">Weiter ▶</button>
+      <button class="nav-btn fs-btn" id="btn-fs" title="Vollbild">⛶</button>
+      <button class="nav-btn fs-btn" id="btn-theme" title="Dark/Light Modus">☀️</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- SLIDE 1 — Start -->
+    <section class="slide active" id="slide-1">
+      <div class="slide-accent-bar"></div>
+      <h1 class="title-main">Phase 2<br>LangChain Agent<br>& Backend</h1>
+      <p class="title-sub">Agentic AI Python Tutor — Sprint 2 &amp; Sprint 3</p>
+      <div class="title-tagline">
+        🤖 LLM wünscht — LangChain erfüllt
+      </div>
+      <div class="title-dots">
+        <div class="title-dot-item">
+          <div class="icon icon-agent">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <span>Agent</span>
+        </div>
+        <div class="title-dot-item">
+          <div class="icon icon-ai">
+            <i class="fa-solid fa-brain"></i>
+          </div>
+          <span>LLM</span>
+        </div>
+        <div class="title-dot-item">
+          <div class="icon icon-personal">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <span>Tools</span>
+        </div>
+        <div class="title-dot-item">
+          <div class="icon icon-python">
+            <i class="fa-solid fa-book-open"></i>
+          </div>
+          <span>RAG + Seiten</span>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- SLIDE 3 — Systemkomponenten -->
+    <section class="slide" id="slide-2" data-num="02 / 09">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Agenda</span>
+        <h2 class="slide-title">Was haben wir <em>gebaut?</em></h2>
+      </div>
+      <div class="features-grid">
+
+        <!-- 1 UI -->
+        <div class="feature-card" style="border-top:3px solid var(--accent3);">
+          <div class="feat-icon blue">
+            <i class="fa-solid fa-display" style="color:var(--accent3);"></i>
+          </div>
+          <span class="feat-label">01 — Interface</span>
+          <div class="feat-title">UI zur Interaktion</div>
+          <p class="feat-desc">Next.js Frontend — Student schreibt Code, stellt Fragen, lädt PDF hoch und sieht sofort die Antwort des Agents.</p>
+        </div>
+
+        <!-- 2 FastAPI -->
+        <div class="feature-card" style="border-top:3px solid var(--accent);">
+          <div class="feat-icon indigo">
+            <i class="fa-solid fa-bolt" style="color:var(--accent);"></i>
+          </div>
+          <span class="feat-label">02 — Backend</span>
+          <div class="feat-title">FastAPI Endpoint</div>
+          <p class="feat-desc">Empfängt Requests vom Frontend und leitet sie an den Agent weiter. Endpunkte: <em style="color:var(--accent2)">/analyze, /chat, /run, /upload</em></p>
+        </div>
+
+        <!-- 3 LangChain Agent -->
+        <div class="feature-card feature-special" style="border-top:3px solid var(--accent2);">
+          <div class="feat-icon indigo">
+            <i class="fa-solid fa-robot" style="color:var(--accent2);"></i>
+          </div>
+          <span class="feat-label">03 — Kern</span>
+          <div class="feat-title">LangChain Agent</div>
+          <p class="feat-desc">Orchestriert den Tool-Loop — LLM entscheidet selbst welche Tools aufgerufen werden bis die Antwort fertig ist.</p>
+        </div>
+
+        <!-- 4 Tools -->
+        <div class="feature-card" style="border-top:3px solid #34d399;">
+          <div class="feat-icon teal">
+            <i class="fa-solid fa-screwdriver-wrench" style="color:#34d399;"></i>
+          </div>
+          <span class="feat-label">04 — Tools</span>
+          <div class="feat-title">Spezialisierte Tools</div>
+          <p class="feat-desc">4 Tools: <em style="color:var(--accent2)">explain</em> · <em style="color:#f87171">debug</em> · <em style="color:#34d399">exercise</em> · <em style="color:var(--accent2)">rag</em> — jedes mit eigenem LLM-Prompt.</p>
+        </div>
+
+        <!-- 5 OpenAI -->
+        <div class="feature-card" style="border-top:3px solid #ffffff;">
+          <div class="feat-icon" style="background:rgba(255,255,255,0.08); width:clamp(40px,4.5vw,60px); height:clamp(40px,4.5vw,60px); border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.15);">
+            <svg viewBox="0 0 41 41" style="width:clamp(22px,2.8vw,34px); height:clamp(22px,2.8vw,34px);" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M37.532 16.87a9.963 9.963 0 0 0-.856-8.184 10.078 10.078 0 0 0-10.855-4.835 9.964 9.964 0 0 0-6.505-3.499 10.079 10.079 0 0 0-10.244 4.932 9.967 9.967 0 0 0-6.659 4.834 10.08 10.08 0 0 0 1.24 11.817 9.965 9.965 0 0 0 .856 8.185 10.079 10.079 0 0 0 10.855 4.835 9.965 9.965 0 0 0 6.505 3.499 10.079 10.079 0 0 0 10.244-4.932 9.967 9.967 0 0 0 6.659-4.834 10.079 10.079 0 0 0-1.24-11.817zm-17.009 23.799a7.473 7.473 0 0 1-4.801-1.735c.061-.033.168-.091.237-.134l7.964-4.6a1.294 1.294 0 0 0 .655-1.134V19.054l3.366 1.944a.12.12 0 0 1 .066.092v9.299a7.505 7.505 0 0 1-7.487 7.38zM4.661 30.369a7.471 7.471 0 0 1-.894-5.023c.06.036.162.099.237.141l7.964 4.6a1.297 1.297 0 0 0 1.308 0l9.724-5.614v3.888a.12.12 0 0 1-.048.103L14.921 33.2a7.505 7.505 0 0 1-10.26-2.831zm-2.301-16.54A7.469 7.469 0 0 1 6.27 10.08c0 .068-.004.19-.004.274v9.201a1.294 1.294 0 0 0 .654 1.132l9.723 5.614-3.366 1.944a.12.12 0 0 1-.114.012L5.2 23.169a7.505 7.505 0 0 1-2.84-9.34zm27.688 6.441-9.724-5.615 3.367-1.943a.121.121 0 0 1 .114-.012l7.962 4.587a7.505 7.505 0 0 1-1.158 13.528v-9.476a1.293 1.293 0 0 0-.561-1.069zm3.35-5.043c-.059-.037-.162-.099-.236-.141l-7.965-4.6a1.298 1.298 0 0 0-1.308 0l-9.723 5.614v-3.888a.12.12 0 0 1 .048-.103l7.962-4.587a7.505 7.505 0 0 1 11.222 7.705zm-21.063 6.929-3.367-1.944a.12.12 0 0 1-.065-.092v-9.299a7.505 7.505 0 0 1 12.293-5.756c-.061.033-.168.091-.237.134l-7.965 4.6a1.294 1.294 0 0 0-.654 1.132l-.005 11.225zm1.829-3.943 4.33-2.501 4.332 2.5v4.999l-4.331 2.5-4.331-2.5V18.213z" fill="#ffffff"/>
+            </svg>
+          </div>
+          <span class="feat-label">05 — LLM</span>
+          <div class="feat-title">OpenAI · GPT</div>
+          <p class="feat-desc">GPT-4o über die OpenAI API (Standard) — Ollama/llama3.2 als lokaler Fallback wenn kein API Key gesetzt.</p>
+        </div>
+
+        <!-- 6 RAG -->
+        <div class="feature-card" style="border-top:3px solid var(--warn);">
+          <div class="feat-icon amber">
+            <i class="fa-solid fa-book-open" style="color:var(--warn);"></i>
+          </div>
+          <span class="feat-label">06 — Wissen</span>
+          <div class="feat-title">RAG Pipeline</div>
+          <p class="feat-desc">PDF → Chunks mit Seitennummer → FAISS Vector Store. Seitenreferenz ("Seite 9") direkt abrufbar + semantische Suche kombiniert.</p>
+        </div>
+
+
+
+      </div>
+    </section>
+
+    <!-- SLIDE 4 — Frontend kurz -->
+    <section class="slide" id="slide-3" data-num="03 / 09">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Frontend — kurz</span>
+        <h2 class="slide-title">Was der Student <em>sieht und macht</em></h2>
+      </div>
+      <div class="frontend-wrapper">
+
+        <div class="fe-features">
+          <div class="fe-item">
+            <div class="fe-icon">✏️</div>
+            <div>
+              <h4>Code-Editor</h4>
+              <p>Python-Code schreiben und direkt im Browser ausführen</p>
+            </div>
+          </div>
+          <div class="fe-item">
+            <div class="fe-icon">🔍</div>
+            <div>
+              <h4>Code analysieren</h4>
+              <p>Ein Klick — Agent erklärt, findet Fehler, gibt Übung</p>
+            </div>
+          </div>
+          <div class="fe-item">
+            <div class="fe-icon">💬</div>
+            <div>
+              <h4>Chat mit dem Tutor</h4>
+              <p>Fragen stellen mit vollem Code-Kontext — nur Python-Fragen erlaubt</p>
+            </div>
+          </div>
+          <div class="fe-item">
+            <div class="fe-icon">📄</div>
+            <div>
+              <h4>PDF hochladen</h4>
+              <p>Eigenes Kursmaterial einbinden — Agent nutzt es bei Antworten</p>
+            </div>
+          </div>
+          <div class="fe-item">
+            <div class="fe-icon">▶️</div>
+            <div>
+              <h4>Code ausführen</h4>
+              <p>Python-Code wird sicher im Backend ausgeführt, Output sofort angezeigt</p>
+            </div>
+          </div>
+          <div class="fe-item">
+            <div class="fe-icon">💾</div>
+            <div>
+              <h4>„In Editor" Button</h4>
+              <p>Python-Code aus Chat-Antworten per Klick in den Editor übernehmen und sofort ausführen</p>
+            </div>
+          </div>
+          <div class="fe-item">
+            <div class="fe-icon">🏷️</div>
+            <div>
+              <h4>Material-Badge im Header</h4>
+              <p>Nach PDF-Upload zeigt der Chat-Header den Dateinamen — sichtbar dass Lernmaterial aktiv ist</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="img-card" style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; display:flex; align-items:center; justify-content:center;">
+          <img src="UI.png" alt="App Screenshot"
+            style="width:100%; height:100%; object-fit:cover; object-position:top; display:block;" />
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SLIDE 5 — Backend Architektur -->
+    <section class="slide" id="slide-4" data-num="04 / 09">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Backend</span>
+        <h2 class="slide-title">FastAPI — <em>warum ideal für KI-Agents</em></h2>
+      </div>
+      <div class="backend-wrapper">
+
+        <!-- Linke Seite: Endpoints -->
+        <div class="endpoint-list">
+          <div style="font-family:var(--font-heading); font-size:clamp(0.8rem,0.95vw,1rem); font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">
+            API Endpunkte — /tutor/*
+          </div>
+          <div class="endpoint-item">
+            <span class="http-method post">POST</span>
+            <span class="endpoint-path">/tutor/analyze</span>
+            <span class="endpoint-desc">Code → Agent → 5 Felder zurück</span>
+          </div>
+          <div class="endpoint-item">
+            <span class="http-method post">POST</span>
+            <span class="endpoint-path">/tutor/chat</span>
+            <span class="endpoint-desc">Frage + Code + Verlauf → Antwort</span>
+          </div>
+          <div class="endpoint-item">
+            <span class="http-method post">POST</span>
+            <span class="endpoint-path">/tutor/run</span>
+            <span class="endpoint-desc">Code ausführen → stdout / stderr</span>
+          </div>
+          <div class="endpoint-item">
+            <span class="http-method post">POST</span>
+            <span class="endpoint-path">/tutor/upload-material</span>
+            <span class="endpoint-desc">PDF → Chunks → FAISS Vector Store</span>
+          </div>
+        </div>
+
+        <!-- Rechte Seite: Vorteile FastAPI -->
+        <div class="backend-info">
+          <div style="font-family:var(--font-heading); font-size:clamp(0.8rem,0.95vw,1rem); font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">
+            Vorteile FastAPI für KI-Agents
+          </div>
+
+          <div class="be-info-card">
+            <h4><span style="color:var(--accent)">⚡</span> Async — kein Blockieren</h4>
+            <ul>
+              <li><code style="color:var(--accent3);">upload-material</code> ist <code style="color:var(--accent3);">async def</code> — PDF-Upload blockiert den Server nicht</li>
+              <li>Chat, Analyze und Run sind <code style="color:var(--accent3);">sync def</code> — LLM-Calls laufen direkt durch</li>
+            </ul>
+          </div>
+          <div class="be-info-card">
+            <h4><span style="color:var(--accent2)">🛡️</span> Pydantic Validierung</h4>
+            <ul>
+              <li>Automatische Typprüfung bei jedem Request</li>
+              <li>Fehler werden sofort erkannt — kein falscher Input zum Agent</li>
+            </ul>
+          </div>
+          <div class="be-info-card">
+            <h4><span style="color:var(--accent3)">🎯</span> Klare Trennung</h4>
+            <ul>
+              <li>Jeder Endpoint hat eine Aufgabe — kein gemischter Code</li>
+              <li>Agent-Logik bleibt im Backend — Frontend sendet nur Daten</li>
+            </ul>
+          </div>
+          <div class="be-info-card">
+            <h4><span style="color:var(--success)">🔒</span> Sicherheit</h4>
+            <ul>
+              <li>Code-Ausführung isoliert mit Timeout (10 Sekunden)</li>
+              <li>Off-Topic Classifier blockt irrelevante Anfragen</li>
+              <li>Regex erkennt „Seite 9"-Referenzen → direkte Seitensuche statt FAISS</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SLIDE 6 — LangChain Agent -->
+    <section class="slide" id="slide-5" data-num="05 / 09">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Kern der Architektur</span>
+        <h2 class="slide-title">LangChain Agent — <em>wie er denkt</em></h2>
+      </div>
+
+      <style>
+        /* ── Slide 5: Flowchart v4 ──────────────────────── */
+        .fc-grid {
+          flex: 1;
+          min-height: 0;
+          display: grid;
+          grid-template-columns: 1fr 1.05fr;
+          gap: clamp(14px,2vw,26px);
+        }
+
+        /* ─ shared node ─ */
+        .fc-node {
+          border-radius: 12px;
+          padding: clamp(7px,0.9vh,12px) clamp(10px,1.2vw,16px);
+          text-align: center;
+        }
+        .fc-node .ni { font-size: clamp(1.1rem,1.4vw,1.55rem); margin-bottom: 3px; }
+        .fc-node h4  { font-family:var(--font-heading); font-size:clamp(0.76rem,0.9vw,0.98rem); font-weight:800; margin-bottom:2px; }
+        .fc-node p   { font-size:clamp(0.62rem,0.72vw,0.78rem); color:var(--muted); line-height:1.35; }
+        .fc-node code{ font-size:.85em; background:rgba(255,255,255,0.07); padding:1px 5px; border-radius:4px; color:var(--accent3); }
+
+        .fc-node.n-student { background:rgba(99,102,241,0.1);  border:2px solid rgba(99,102,241,0.45); }
+        .fc-node.n-student h4 { color:var(--accent); }
+        .fc-node.n-llm     { background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(167,139,250,0.12)); border:2px solid rgba(99,102,241,0.5); }
+        .fc-node.n-llm h4  { color:var(--accent); }
+        .fc-node.n-dec     { background:rgba(245,158,11,0.1);  border:2px solid rgba(245,158,11,0.55); }
+        .fc-node.n-dec h4  { color:#f59e0b; }
+        .fc-node.n-tool    { background:rgba(52,211,153,0.1);  border:2px solid rgba(52,211,153,0.45); }
+        .fc-node.n-tool h4 { color:var(--success); }
+        .fc-node.n-end     { background:rgba(248,113,113,0.1); border:2px solid rgba(248,113,113,0.45); }
+        .fc-node.n-end h4  { color:#f87171; }
+        .fc-node.n-cfg     { background:rgba(56,189,248,0.07); border:1.5px solid rgba(56,189,248,0.3); }
+        .fc-node.n-cfg h4  { color:var(--accent3); }
+
+        /* ─ arrows ─ */
+        .fc-arr { display:flex; flex-direction:column; align-items:center; }
+        .fc-arr .al { width:2px; height:clamp(10px,1.3vh,16px); }
+        .fc-arr .ah { width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; }
+        .fc-arr.blue   .al,.fc-arr.blue   .ah::before  { background:rgba(99,102,241,0.55); }
+        .fc-arr.blue   .al { background:rgba(99,102,241,0.55); }
+        .fc-arr.blue   .ah { border-top:8px solid rgba(99,102,241,0.55); }
+        .fc-arr.yellow .al { background:rgba(245,158,11,0.55); }
+        .fc-arr.yellow .ah { border-top:8px solid rgba(245,158,11,0.55); }
+        .fc-arr.green  .al { background:rgba(52,211,153,0.55); }
+        .fc-arr.green  .ah { border-top:8px solid rgba(52,211,153,0.55); }
+        .fc-arr.red    .al { background:rgba(248,113,113,0.55); }
+        .fc-arr.red    .ah { border-top:8px solid rgba(248,113,113,0.55); }
+        .fc-arr.purple .al { background:rgba(167,139,250,0.55); }
+        .fc-arr.purple .ah { border-top:8px solid rgba(167,139,250,0.55); }
+
+        /* ─ LEFT column ─ */
+        .fc-left { display:flex; flex-direction:column; align-items:stretch; gap:0; }
+
+        /* ═══ LOOP ZONE — farbiger Hintergrundbereich ═══ */
+        .fc-loop-zone {
+          background: rgba(167,139,250,0.07);
+          border: 2px dashed rgba(167,139,250,0.45);
+          border-radius: 16px;
+          padding: clamp(8px,1vh,12px) clamp(10px,1.2vw,14px);
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0;
+          position: relative;
+        }
+        .fc-loop-label {
+          position: absolute;
+          top: -11px; left: 14px;
+          background: var(--bg);
+          padding: 0 8px;
+          font-family: var(--font-heading);
+          font-size: clamp(0.6rem,0.68vw,0.74rem);
+          font-weight: 700;
+          color: var(--accent2);
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        /* Branch row inside loop */
+        .fc-branches {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-top: 4px;
+        }
+        .fc-bcol { display:flex; flex-direction:column; align-items:center; }
+
+        /* Loop-back arrow row */
+        .fc-loopback {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 6px;
+          padding: 5px 10px;
+          background: rgba(167,139,250,0.1);
+          border: 1px dashed rgba(167,139,250,0.5);
+          border-radius: 20px;
+          align-self: center;
+        }
+        .fc-loopback span { font-size:clamp(0.6rem,0.68vw,0.74rem); color:var(--accent2); font-weight:700; }
+
+        /* ─ RIGHT column: chat bubbles + config ─ */
+        .fc-right { display:flex; flex-direction:column; gap: clamp(7px,0.9vh,11px); }
+
+        .fc-chat-zone {
+          background: rgba(99,102,241,0.05);
+          border: 1.5px solid rgba(99,102,241,0.2);
+          border-radius: 14px;
+          padding: clamp(8px,1vh,12px) clamp(10px,1.2vw,14px);
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .fc-chat-title {
+          font-family: var(--font-heading);
+          font-size: clamp(0.66rem,0.76vw,0.82rem);
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          text-align: center;
+          padding-bottom: 6px;
+          border-bottom: 1px solid var(--border);
+          background: linear-gradient(90deg, var(--accent2), var(--accent3));
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .fc-msg { display:grid; grid-template-columns:22px 1fr; gap:6px; align-items:start; }
+        .fc-msg-icon { font-size:1rem; margin-top:1px; }
+        .fc-msg-bubble {
+          border-radius: 10px;
+          padding: 5px 9px;
+          font-size: clamp(0.62rem,0.72vw,0.78rem);
+          line-height: 1.4;
+        }
+        .fc-msg-bubble.llm  { background:rgba(99,102,241,0.1);  border:1px solid rgba(99,102,241,0.3);  color:var(--text); }
+        .fc-msg-bubble.lc   { background:rgba(52,211,153,0.1);  border:1px solid rgba(52,211,153,0.3);  color:var(--text); }
+        .fc-msg-bubble.done { background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.3); color:var(--text); }
+        .fc-msg-bubble .who { display:block; font-weight:700; font-size:.85em; margin-bottom:2px; }
+        .fc-msg-bubble.llm  .who { color:var(--accent2); }
+        .fc-msg-bubble.lc   .who { color:var(--success); }
+        .fc-msg-bubble.done .who { color:#f87171; }
+        .fc-msg-bubble strong { color:var(--text); }
+        .fc-msg-bubble code  { font-size:.85em; background:rgba(255,255,255,0.07); padding:1px 4px; border-radius:3px; color:var(--accent3); }
+
+        .fc-sep { height:1px; background:var(--border); margin:2px 0; }
+      </style>
+
+      <div class="fc-grid">
+
+        <!-- ══ LEFT: Flowchart ══ -->
+        <div class="fc-left">
+
+          <!-- START -->
+          <div class="fc-node n-student" style="align-self:stretch;">
+            <div class="ni">👨‍🎓</div>
+            <h4>Student schickt Code</h4>
+            <p>Code als Nachricht an den Agent</p>
+          </div>
+
+          <div class="fc-arr blue" style="align-self:center;"><div class="al"></div><div class="ah"></div></div>
+
+          <!-- LLM — außerhalb der Schleife (erster Aufruf) -->
+          <div class="fc-node n-llm" style="align-self:stretch;">
+            <div class="ni">🧠</div>
+            <h4>LLM (GPT-4o) liest Prompt + Tools</h4>
+            <p><code>_SYSTEM_PROMPT</code> + <code>tools = [explain, debug, exercise, rag]</code></p>
+          </div>
+
+          <div class="fc-arr yellow" style="align-self:center;"><div class="al"></div><div class="ah"></div></div>
+
+          <!-- ══ LOOP ZONE ══ -->
+          <div class="fc-loop-zone">
+            <span class="fc-loop-label">↺ Agent-Loop — wiederholt sich</span>
+
+            <!-- Entscheidung -->
+            <div class="fc-node n-dec" style="align-self:stretch;">
+              <div class="ni">❓</div>
+              <h4>Enthält die Antwort tool_calls?</h4>
+              <p>LangChain prüft das Antwort-Objekt des LLM</p>
+            </div>
+
+            <!-- Branches -->
+            <div class="fc-branches">
+
+              <!-- JA -->
+              <div class="fc-bcol">
+                <div class="fc-arr green"><div class="al"></div><div class="ah"></div></div>
+                <div class="fc-node n-tool" style="width:100%">
+                  <div class="ni">✅ 🔧</div>
+                  <h4>JA — Tool ausführen</h4>
+                  <p>LangChain ruft Tool auf<br>Ergebnis → zurück ans LLM</p>
+                </div>
+                <div class="fc-arr purple"><div class="al" style="height:10px"></div><div class="ah"></div></div>
+                <div style="font-size:clamp(0.58rem,0.66vw,0.7rem);color:var(--accent2);font-weight:700;text-align:center;">LLM antwortet erneut</div>
+              </div>
+
+              <!-- NEIN -->
+              <div class="fc-bcol">
+                <div class="fc-arr red"><div class="al"></div><div class="ah"></div></div>
+                <div class="fc-node n-end" style="width:100%">
+                  <div class="ni">🛑 📋</div>
+                  <h4>NEIN — Loop stoppt</h4>
+                  <p><code>messages[-1]</code><br>→ <code>_parse_agent_output()</code><br>→ Antwort an Student</p>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Loop-back indicator -->
+            <div class="fc-loopback">
+              <span>↺ &nbsp;Loop läuft solange <code style="color:var(--accent3);font-size:.9em;">tool_calls</code> nicht leer ist</span>
+            </div>
+
+          </div><!-- end loop-zone -->
+
+        </div>
+
+        <!-- ══ RIGHT: Chat + Config ══ -->
+        <div class="fc-right">
+
+          <!-- Config-Karten oben -->
+          <div class="fc-node n-cfg">
+            <h4>⚙️ _SYSTEM_PROMPT</h4>
+            <p>Steuert Sprache, Tonalität und Antwortformat — definiert das Verhalten des Agents</p>
+          </div>
+
+          <div class="fc-node" style="background:rgba(56,189,248,0.07);border:1.5px solid rgba(56,189,248,0.35);">
+            <h4 style="color:var(--accent3);">📦 Was sind tool_calls?</h4>
+            <p style="text-align:left;">
+              Das LLM antwortet nicht mit Text — sondern mit einem <strong style="color:var(--text)">JSON-Objekt</strong>:<br><br>
+              <code style="display:block;background:rgba(255,255,255,0.05);border-radius:6px;padding:5px 8px;line-height:1.7;font-size:0.85em;">
+                "tool_calls": [{<br>
+                &nbsp;&nbsp;"name": <span style="color:#86efac">"explain_code_tool"</span>,<br>
+                &nbsp;&nbsp;"args": { "code": "..." }<br>
+                }]
+              </code><br>
+              LangChain liest dieses Feld und führt das Tool aus. Ist <code>tool_calls</code> leer → Loop stoppt.
+            </p>
+          </div>
+
+          <!-- Chat-Dialog als Teil des Diagramms -->
+          <div class="fc-chat-zone" style="flex:1;">
+            <div class="fc-chat-title">🤖 LLM wünscht sich — ⚙️ LangChain erfüllt</div>
+
+            <div class="fc-msg">
+              <span class="fc-msg-icon">🤖</span>
+              <div class="fc-msg-bubble llm">
+                <span class="who">LLM — Wunsch (tool_calls)</span>
+                Ich brauche <strong>explain_code_tool</strong> und <strong>debug_code_tool</strong> für diesen Code.
+              </div>
+            </div>
+
+            <div class="fc-msg">
+              <span class="fc-msg-icon">⚙️</span>
+              <div class="fc-msg-bubble lc">
+                <span class="who">LangChain — führt aus</span>
+                Tools werden aufgerufen… Ergebnis: <strong>„Code gibt 0–4 aus. Kein Fehler."</strong>
+              </div>
+            </div>
+
+            <div class="fc-sep"></div>
+
+            <div class="fc-msg">
+              <span class="fc-msg-icon">🤖</span>
+              <div class="fc-msg-bubble llm">
+                <span class="who">LLM — nächster Wunsch (tool_calls)</span>
+                Danke. Jetzt brauche ich noch <strong>exercise_tool</strong>.
+              </div>
+            </div>
+
+            <div class="fc-msg">
+              <span class="fc-msg-icon">⚙️</span>
+              <div class="fc-msg-bubble lc">
+                <span class="who">LangChain — führt aus</span>
+                Übung generiert: <strong>„Schreibe eine Schleife von 1–10."</strong>
+              </div>
+            </div>
+
+            <div class="fc-sep"></div>
+
+            <div class="fc-msg">
+              <span class="fc-msg-icon">🛑</span>
+              <div class="fc-msg-bubble done">
+                <span class="who">LLM — fertig, tool_calls = [] → Loop stoppt</span>
+                <strong>Erklärung:</strong> Schleife 0–4 &nbsp;|&nbsp; <strong>Fehler:</strong> nein &nbsp;|&nbsp; <strong>Übung:</strong> Schleife 1–10
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7 — Die 4 Tools -->
+    <section class="slide" id="slide-6" data-num="06 / 09">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Agent Tools</span>
+        <h2 class="slide-title">Die <em>4 Tools</em> des Agents</h2>
+      </div>
+      <div class="tools-4-grid">
+
+        <div class="tool-card-p2 t1">
+          <div class="tool-icon-p2">📖</div>
+          <div class="tool-name-p2">explain_code_tool</div>
+          <div class="tool-file">agent/tools/explain_tool.py</div>
+          <p class="tool-desc-p2">Erklärt den Code auf Deutsch in 3–4 Sätzen. Was macht er, wie funktioniert er, einfache Sprache für Anfänger.</p>
+          <span class="tool-what">Erklärung</span>
+        </div>
+
+        <div class="tool-card-p2 t2">
+          <div class="tool-icon-p2">🐛</div>
+          <div class="tool-name-p2">debug_code_tool</div>
+          <div class="tool-file">agent/tools/debug_tool.py</div>
+          <p class="tool-desc-p2">Analysiert den Code auf Syntax- und Logikfehler. Gibt Fehlertyp und konkreten Verbesserungsvorschlag zurück.</p>
+          <span class="tool-what">Fehler finden</span>
+        </div>
+
+        <div class="tool-card-p2 t3">
+          <div class="tool-icon-p2">🎯</div>
+          <div class="tool-name-p2">exercise_tool</div>
+          <div class="tool-file">agent/tools/exercise_tool.py</div>
+          <p class="tool-desc-p2">Generiert eine passende Übungsaufgabe basierend auf dem Code des Studenten — maximal 3 Sätze, direkt anwendbar.</p>
+          <span class="tool-what">Übung</span>
+        </div>
+
+        <div class="tool-card-p2 t4">
+          <div class="tool-icon-p2">📚</div>
+          <div class="tool-name-p2">rag_tool</div>
+          <div class="tool-file">agent/tools/rag_tool.py</div>
+          <p class="tool-desc-p2">Sucht im FAISS Vector Store nach relevanten Stellen. Im /analyze-Agent verwendet. Im /chat läuft <code>_get_rag_context()</code> direkt: erst Seitensuche, dann semantische FAISS-Suche — Ergebnisse kombiniert.</p>
+          <span class="tool-what">Optional</span>
+        </div>
+
+      </div>
+
+      <div style="margin-top: clamp(10px,1.2vh,16px); background:var(--card); border:1px solid var(--border); border-radius:10px; padding: clamp(10px,1.2vh,16px) clamp(14px,1.6vw,22px); display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.1rem;">💡</span>
+        <p style="font-size:clamp(0.8rem,0.95vw,1rem); color:var(--muted); line-height:1.4;">
+          <strong style="color:var(--text);">Wie das LLM das richtige Tool wählt:</strong>
+          Jedes Tool hat einen Docstring — dieser Docstring ist die Beschreibung die das LLM bekommt.
+          Das LLM liest ihn und entscheidet selbst. <strong style="color:var(--accent2);">Guter Docstring = korrektes Tool.</strong>
+        </p>
+      </div>
+    </section>
+
+    <!-- SLIDE 8 — RAG Pipeline -->
+    <section class="slide" id="slide-7" data-num="07 / 09">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">RAG — Retrieval Augmented Generation</span>
+        <h2 class="slide-title">PDF → <em>Wissen für den Agent</em></h2>
+      </div>
+      <div class="rag-wrapper">
+
+        <div class="rag-flow">
+          <div class="arch-flow-title">Upload-Pipeline</div>
+
+          <div class="rag-step">
+            <div class="rag-step-icon" style="background:rgba(251,146,60,0.12); color:var(--warn);">📄 🔍</div>
+            <div>
+              <h4>1 · PDF hochladen &amp; Text extrahieren</h4>
+              <p>POST /tutor/upload-material → <code>extract_pages()</code> gibt <strong style="color:var(--text)">(Seitennummer, Text)</strong> Tupel pro Seite zurück</p>
+            </div>
+          </div>
+          <div class="rag-arrow"></div>
+
+          <div class="rag-step">
+            <div class="rag-step-icon" style="background:rgba(99,102,241,0.12); color:var(--accent2);">✂️ 🧮</div>
+            <div>
+              <h4>2 · Splitten &amp; Embeddings</h4>
+              <p><code>split_pages()</code> → <strong style="color:var(--text)">(Chunk-Text, Seitennummer)</strong> · Jeder Chunk wird als Vektor eingebettet</p>
+            </div>
+          </div>
+          <div class="rag-arrow"></div>
+
+          <div class="rag-step">
+            <div class="rag-step-icon" style="background:rgba(52,211,153,0.12); color:var(--success);">💾 🤖</div>
+            <div>
+              <h4>3 · Speichern &amp; Suchen</h4>
+              <p>FAISS Vector Store lokal · Bei Anfrage: Seitenzahl erkannt → <code>get_page()</code> + FAISS-Semantiksuche kombiniert</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rag-facts">
+          <div class="rag-fact-card">
+            <div class="rag-fact-icon">🎯 📐</div>
+            <div>
+              <h4>Was ist RAG &amp; wie funktioniert Ähnlichkeitssuche?</h4>
+              <p>Das LLM sucht zuerst im eigenen Material nach relevanten Stellen. Fragen und Chunks werden als Vektoren gespeichert — FAISS findet die thematisch nächsten in Millisekunden.</p>
+            </div>
+          </div>
+          <div class="rag-fact-card">
+            <div class="rag-fact-icon">🔌 🏠</div>
+            <div>
+              <h4>Optional · GPT-4o Standard · Ollama Fallback</h4>
+              <p>rag_tool nur aktiv wenn FAISS-Index vorhanden. Standard: OpenAI GPT-4o. Fallback: Ollama/llama3.2 lokal wenn kein API Key gesetzt.</p>
+            </div>
+          </div>
+          <div class="rag-fact-card">
+            <div class="rag-fact-icon">📐 🔎</div>
+            <div>
+              <h4>Seitenreferenz + Semantik kombiniert</h4>
+              <p>„Erkläre Seite 9" → Regex extrahiert Seitennummer → <code>get_page()</code> direkt + FAISS-Suche parallel — Ergebnisse zusammengeführt, Duplikate entfernt.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SLIDE 9 — Agent vs. Chatbot -->
+    <section class="slide" id="slide-8" data-num="08 / 09">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header" style="text-align:center; padding: 0 clamp(32px, 5vw, 80px);">
+        <span class="slide-label">Warum kein Chatbot?</span>
+        <h2 class="slide-title">Agent vs. <em>ChatGPT / Chatbot</em></h2>
+      </div>
+
+      <style>
+        /* ── Slide 8: Agent vs Chatbot — 3 Zeilen ───────── */
+        .vs2-grid {
+          flex: 1;
+          min-height: 0;
+          display: grid;
+          grid-template-columns: 1fr 44px 1fr;
+          gap: clamp(20px, 3vw, 40px);
+          align-items: stretch;
+          padding: 0 clamp(32px, 5vw, 80px) clamp(20px, 3vh, 40px);
+        }
+
+        .vs2-col {
+          display: flex;
+          flex-direction: column;
+          gap: clamp(14px, 2vh, 28px);
+        }
+
+        .vs2-header {
+          border-radius: 14px;
+          padding: clamp(14px,1.8vh,24px) clamp(20px,2.4vw,32px);
+          text-align: center;
+        }
+        .vs2-header .vs2-icon { font-size: clamp(2rem,2.8vw,3rem); margin-bottom: 6px; }
+        .vs2-header h3 {
+          font-family: var(--font-heading);
+          font-size: clamp(1rem,1.3vw,1.4rem);
+          font-weight: 800;
+          margin-bottom: 4px;
+        }
+        .vs2-header p { font-size: clamp(0.8rem,0.95vw,1rem); color: var(--muted); }
+        .vs2-header.chatbot { background:rgba(100,116,139,0.1); border:2px solid rgba(100,116,139,0.3); }
+        .vs2-header.chatbot h3 { color: #94a3b8; }
+        .vs2-header.agent { background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(52,211,153,0.1)); border:2px solid rgba(99,102,241,0.5); }
+        .vs2-header.agent h3 { color: var(--accent); }
+
+        .vs2-card {
+          flex: 1;
+          border-radius: 14px;
+          padding: clamp(14px,1.8vh,24px) clamp(18px,2.2vw,28px);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          justify-content: center;
+        }
+        .vs2-card.bot { background:rgba(100,116,139,0.07); border:1px solid rgba(100,116,139,0.2); }
+        .vs2-card.agt { background:rgba(99,102,241,0.08);  border:1px solid rgba(99,102,241,0.28); }
+
+        .vs2-card .vs2-label {
+          font-family: var(--font-heading);
+          font-size: clamp(0.7rem,0.82vw,0.88rem);
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          margin-bottom: 2px;
+        }
+        .vs2-card.bot .vs2-label { color: #64748b; }
+        .vs2-card.agt .vs2-label { color: var(--accent2); }
+
+        .vs2-card p {
+          font-size: clamp(0.88rem,1.05vw,1.12rem);
+          color: var(--muted);
+          line-height: 1.5;
+          margin: 0;
+        }
+        .vs2-card.agt p { color: var(--text); }
+        .vs2-card.agt strong { color: var(--accent); }
+
+        /* center divider */
+        .vs2-divider {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 0;
+        }
+        .vs2-line { flex: 1; width: 1px; background: var(--border); }
+        .vs2-badge {
+          width: clamp(36px,4vw,52px);
+          height: clamp(36px,4vw,52px);
+          border-radius: 50%;
+          background: var(--surface);
+          border: 2px solid var(--border);
+          display: flex; align-items: center; justify-content: center;
+          font-family: var(--font-heading);
+          font-size: clamp(0.7rem,0.85vw,0.9rem);
+          font-weight: 800;
+          color: var(--muted);
+          flex-shrink: 0;
+        }
+      </style>
+
+      <div class="vs2-grid">
+
+        <!-- Chatbot Spalte -->
+        <div class="vs2-col">
+          <div class="vs2-header chatbot">
+            <div class="vs2-icon">💬</div>
+            <h3>ChatGPT / Chatbot</h3>
+            <p>Reagiert auf Text — antwortet mit Text</p>
+          </div>
+          <div class="vs2-card bot">
+            <span class="vs2-label">🧠 Verarbeitung</span>
+            <p>LLM generiert Antwort <strong style="color:var(--text)">direkt</strong> — kein Werkzeug, keine Zwischenschritte</p>
+          </div>
+          <div class="vs2-card bot">
+            <span class="vs2-label">🔁 Loop</span>
+            <p>Keiner — eine Frage, eine Antwort, fertig</p>
+          </div>
+          <div class="vs2-card bot">
+            <span class="vs2-label">📤 Ausgabe</span>
+            <p>Ein freier Textblock — keine feste Struktur, keine spezialisierten Aktionen</p>
+          </div>
+        </div>
+
+        <!-- VS Trennlinie -->
+        <div class="vs2-divider">
+          <div class="vs2-line"></div>
+          <div class="vs2-badge">VS</div>
+          <div class="vs2-line"></div>
+        </div>
+
+        <!-- Agent Spalte -->
+        <div class="vs2-col">
+          <div class="vs2-header agent">
+            <div class="vs2-icon">🤖</div>
+            <h3>Unser LangChain Agent</h3>
+            <p>Plant, handelt, überprüft — eigenständig</p>
+          </div>
+          <div class="vs2-card agt">
+            <span class="vs2-label">🧠 Verarbeitung</span>
+            <p>LLM entscheidet welche <strong>Tools</strong> gebraucht werden — explain · debug · exercise · rag</p>
+          </div>
+          <div class="vs2-card agt">
+            <span class="vs2-label">🔁 Loop</span>
+            <p>Läuft bis <code style="color:var(--accent3);background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">tool_calls</code> leer ist — mehrere Runden möglich</p>
+          </div>
+          <div class="vs2-card agt">
+            <span class="vs2-label">📤 Ausgabe</span>
+            <p><strong>5 strukturierte Felder:</strong> Erklärung · Fehler gefunden · Fehlertyp · Hinweis · Übung</p>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- SLIDE 10 — Danke -->
+    <section class="slide" id="slide-9">
+      <div class="slide-accent-bar"></div>
+
+      <span class="danke-icon">🎓</span>
+
+      <h1 class="title-main" style="font-size:clamp(2.4rem,5vw,4.8rem);">Danke!</h1>
+      <p class="title-sub">Phase 2 — LangChain Agent & Backend</p>
+
+      <div class="danke-chips">
+        <div class="danke-chip c1">
+          <i class="fa-solid fa-robot"></i>
+          LangChain Agent
+        </div>
+        <div class="danke-chip c2">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+          4 spezialisierte Tools
+        </div>
+        <div class="danke-chip c3">
+          <i class="fa-solid fa-server"></i>
+          FastAPI Backend
+        </div>
+        <div class="danke-chip c4">
+          <i class="fa-solid fa-book-open"></i>
+          RAG Pipeline
+        </div>
+        <div class="danke-chip c2">
+          <i class="fa-solid fa-file-pdf"></i>
+          Seiten-RAG Sprint 3
+        </div>
+      </div>
+
+      <div style="display:flex; gap:clamp(12px,1.5vw,20px); justify-content:center; flex-wrap:wrap; margin-top:clamp(16px,2vh,28px);">
+        <a href="https://agentic-ai-python-tutor.vercel.app" target="_blank"
+           style="display:flex; align-items:center; gap:10px; padding:clamp(10px,1.2vh,16px) clamp(20px,2.5vw,32px); border-radius:14px; background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(52,211,153,0.1)); border:2px solid rgba(99,102,241,0.45); text-decoration:none; transition:transform 0.2s,box-shadow 0.2s;"
+           onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 32px rgba(99,102,241,0.3)'"
+           onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <i class="fa-solid fa-display" style="color:var(--accent2); font-size:1.2rem;"></i>
+          <span style="font-family:var(--font-heading); font-weight:700; font-size:clamp(0.85rem,1vw,1.05rem); color:var(--accent2);">Live Demo</span>
+          <span style="font-size:clamp(0.75rem,0.88vw,0.92rem); color:var(--muted);">agentic-ai-python-tutor.vercel.app</span>
+        </a>
+        <a href="https://github.com/emadalmousa/agentic-ai-python-tutor" target="_blank"
+           style="display:flex; align-items:center; gap:10px; padding:clamp(10px,1.2vh,16px) clamp(20px,2.5vw,32px); border-radius:14px; background:rgba(255,255,255,0.04); border:1px solid var(--border); text-decoration:none; transition:transform 0.2s,box-shadow 0.2s;"
+           onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.3)'"
+           onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <i class="fa-brands fa-github" style="color:var(--text); font-size:1.2rem;"></i>
+          <span style="font-family:var(--font-heading); font-weight:700; font-size:clamp(0.85rem,1vw,1.05rem); color:var(--text);">GitHub</span>
+          <span style="font-size:clamp(0.75rem,0.88vw,0.92rem); color:var(--muted);">emadalmousa/agentic-ai-python-tutor</span>
+        </a>
+      </div>
+
+      <div class="danke-qa">
+        <i class="fa-solid fa-comments" style="color:var(--accent2);"></i>
+        <span>Fragen? → <strong>Jetzt Q&A</strong></span>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="img-overlay"></div>
+  <div id="img-zoom-box"><img src="" alt="zoom" /></div>
+  <div id="diag-overlay"></div>
+  <div id="diag-fullscreen"></div>
+  <div id="diag-close-hint">Klick · Escape · Enter — zum Schließen</div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+    const counter = document.getElementById('counter');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnFS = document.getElementById('btn-fs');
+
+    const CARD_SEL = '.problem-card, .feature-card, .sprint-card, .dod-box, .agenda-item, .journey-step, .tech-item, .arch-flow, .tool-card-p2, .loop-step-item, .rag-step, .rag-fact-card, .fe-item, .endpoint-item, .be-info-card, .wunsch-row';
+
+    let current = 0;
+    let stepIndex = 0;
+
+    function getCards() {
+      return Array.from(slides[current].querySelectorAll(CARD_SEL));
+    }
+
+    function setStep(idx) {
+      const cards = getCards();
+      stepIndex = idx;
+      if (idx === 0 || cards.length === 0) {
+        slides[current].classList.remove('has-focus');
+        cards.forEach(c => c.classList.remove('card-focus'));
+      } else {
+        slides[current].classList.add('has-focus');
+        cards.forEach((c, i) => c.classList.toggle('card-focus', i === idx - 1));
+      }
+    }
+
+    function clearStep() {
+      const cards = getCards();
+      stepIndex = 0;
+      slides[current].classList.remove('has-focus');
+      cards.forEach(c => c.classList.remove('card-focus'));
+    }
+
+    function goTo(n) {
+      clearStep();
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+      current = Math.max(0, Math.min(n, slides.length - 1));
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+      counter.textContent = `Slide ${current + 1} / ${slides.length}`;
+      btnPrev.disabled = current === 0;
+      btnNext.disabled = current === slides.length - 1;
+      document.documentElement.style.fontSize = current === 0 ? '130%' : '149.5%';
+    }
+
+    btnPrev.addEventListener('click', () => goTo(current - 1));
+    btnNext.addEventListener('click', () => goTo(current + 1));
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => goTo(Number(dot.dataset.target) - 1));
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        const cards = getCards();
+        if (cards.length > 0 && stepIndex < cards.length) {
+          setStep(stepIndex + 1);
+        } else {
+          goTo(current + 1);
+        }
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        if (stepIndex > 0) {
+          setStep(stepIndex - 1);
+        } else {
+          goTo(current - 1);
+        }
+      }
+      if (event.key === 'Escape') {
+        if (stepIndex > 0) {
+          clearStep();
+        } else if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+      }
+      if (event.key === 'f' || event.key === 'F') toggleFS();
+    });
+
+    function toggleFS() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        btnFS.textContent = '✕';
+        btnFS.title = 'Vollbild beenden';
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        btnFS.textContent = '⛶';
+        btnFS.title = 'Vollbild';
+      }
+    });
+
+    btnFS.addEventListener('click', toggleFS);
+
+    const btnTheme = document.getElementById('btn-theme');
+    btnTheme.addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+      btnTheme.textContent = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
+    });
+
+    const overlay = document.getElementById('img-overlay');
+    const zoomBox = document.getElementById('img-zoom-box');
+    const zoomImg = zoomBox.querySelector('img');
+
+    function openZoom(src) {
+      zoomImg.src = src;
+      overlay.classList.add('active');
+      zoomBox.classList.add('active');
+    }
+
+    function closeZoom() {
+      overlay.classList.remove('active');
+      zoomBox.classList.remove('active');
+    }
+
+    document.querySelectorAll('.img-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const src = card.querySelector('img').src;
+        openZoom(src);
+      });
+    });
+
+    overlay.addEventListener('click', closeZoom);
+    zoomBox.addEventListener('click', closeZoom);
+
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'Escape' || e.key === 'Enter') && zoomBox.classList.contains('active')) {
+        closeZoom();
+        e.stopPropagation();
+      }
+    });
+
+    /* ── Diagram fullscreen ─────────────────────────── */
+    const diagOverlay   = document.getElementById('diag-overlay');
+    const diagFullscreen = document.getElementById('diag-fullscreen');
+    const diagHint      = document.getElementById('diag-close-hint');
+
+    function openDiagram() {
+      const src = document.querySelector('.fc-left');
+      if (!src) return;
+      diagFullscreen.innerHTML = src.outerHTML;
+      const clone = diagFullscreen.querySelector('.fc-left');
+      if (clone) { clone.style.cursor = 'default'; clone.style.outline = 'none'; }
+      diagOverlay.classList.add('active');
+      diagFullscreen.classList.add('active');
+      diagHint.style.display = 'block';
+    }
+
+    function closeDiagram() {
+      diagOverlay.classList.remove('active');
+      diagFullscreen.classList.remove('active');
+      diagHint.style.display = 'none';
+    }
+
+    document.querySelector('.fc-left')?.addEventListener('click', openDiagram);
+    diagOverlay.addEventListener('click', closeDiagram);
+    diagFullscreen.addEventListener('click', closeDiagram);
+
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'Escape' || e.key === 'Enter') && diagFullscreen.classList.contains('active')) {
+        closeDiagram();
+        e.stopPropagation();
+      }
+    });
+
+    diagHint.style.display = 'none';
+  </script>
+
+</body>
+</html>

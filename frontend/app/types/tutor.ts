@@ -1,6 +1,5 @@
 export interface CodeRequest {
   code: string
-  question?: string
 }
 
 export interface TutorResponse {
