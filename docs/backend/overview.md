@@ -1,6 +1,6 @@
 # Backend — Übersicht
 
-Das Backend ist eine FastAPI-Anwendung (`backend/main.py`) mit vier HTTP-Endpunkten. Die KI-Logik liegt vollständig im `agent/`-Paket; der Rest sind Routing, Schemas und kleine Service-Adapter.
+Das Backend ist eine FastAPI-Anwendung (`backend/main.py`) mit drei HTTP-Endpunkten. Die KI-Logik liegt vollständig im `agent/`-Paket; der Rest sind Routing, Schemas und kleine Service-Adapter.
 
 ## Verzeichnisstruktur
 
@@ -14,17 +14,12 @@ backend/
 │   └── schemas.py              Pydantic-Modelle für alle Requests und Responses
 │
 ├── agent/
-│   ├── config.py               LLM- und Embedding-Factory (Provider-Auswahl)
+│   ├── config.py               LLM-Factory (Provider-Auswahl)
 │   ├── tutor_agent.py          ReAct-Agent-Orchestrator (run_analysis)
-│   ├── tools/
-│   │   ├── explain_tool.py     Tool: Code erklären
-│   │   ├── debug_tool.py       Tool: Fehler analysieren
-│   │   ├── exercise_tool.py    Tool: Übung generieren
-│   │   └── rag_tool.py         Tool: Lernmaterial durchsuchen
-│   └── rag/
-│       ├── loader.py           PDF → Text (pypdf)
-│       ├── splitter.py         Text → Chunks
-│       └── vectorstore.py      Chunks → FAISS-Index (speichern / laden / suchen)
+│   └── tools/
+│       ├── explain_tool.py     Tool: Code erklären
+│       ├── debug_tool.py       Tool: Fehler analysieren
+│       └── exercise_tool.py    Tool: Übung generieren
 │
 ├── routers/
 │   └── tutor.py                Alle HTTP-Endpunkte
@@ -46,7 +41,6 @@ backend/
 |---------|-----|--------------|
 | GET | `/` | Health-Check |
 | POST | `/tutor/analyze` | Code analysieren (ReAct-Agent) |
-| POST | `/tutor/upload-material` | PDF hochladen → FAISS-Index aufbauen |
 | POST | `/tutor/run` | Code direkt ausführen (subprocess, kein LLM) |
 | POST | `/tutor/chat` | Chat mit History + Off-Topic-Filter |
 
@@ -58,10 +52,6 @@ backend/
 | `LLM_MODEL` | `gpt-4o` | OpenAI-Modell für Analyse und Chat |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama-Server-URL |
 | `OLLAMA_MODEL` | `llama3.2` | Ollama-Modell |
-| `RAG_CHUNK_SIZE` | `500` | Zeichen pro Text-Chunk |
-| `RAG_CHUNK_OVERLAP` | `50` | Überlapp zwischen Chunks |
-| `RAG_TOP_K` | `3` | Anzahl zurückgegebener FAISS-Treffer |
-| `RAG_VECTORSTORE_PATH` | `backend/vectorstore/` | Speicherort FAISS-Index |
 
 ## Dateien im Detail
 
@@ -70,7 +60,6 @@ backend/
 - [agent/config.py](config.md)
 - [agent/tutor_agent.py](tutor_agent.md)
 - [agent/tools/](tools.md)
-- [agent/rag/](rag.md)
 - [routers/tutor.py](router.md)
 - [services/](services.md)
 - [tests/](tests.md)

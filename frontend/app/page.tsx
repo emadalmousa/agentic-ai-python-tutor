@@ -14,10 +14,9 @@ export default function Home() {
   const [code, setCode] = useState("for i in range(5)\n    print(i)")
   const {
     history, input, setInput,
-    loading, analyzing, uploading, materialName,
+    loading, analyzing,
     error,
     send, analyze, reset,
-    openFilePicker, handleFileInput, fileInputRef,
     bottomRef,
   } = useChat(code)
   const { output, loading: running, run } = useCodeRunner()
@@ -57,16 +56,11 @@ export default function Home() {
             input={input}
             loading={loading}
             analyzing={analyzing}
-            uploading={uploading}
-            materialName={materialName}
             error={error}
             bottomRef={bottomRef}
-            fileInputRef={fileInputRef}
             onInput={setInput}
             onSend={send}
             onReset={reset}
-            onOpenFilePicker={openFilePicker}
-            onFileInput={handleFileInput}
             onInsertCode={setCode}
             dark={dark}
           />

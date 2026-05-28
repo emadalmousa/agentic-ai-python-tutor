@@ -27,12 +27,11 @@ Einzige öffentlich genutzte Funktion. Gibt immer ein Dict mit diesen Schlüssel
 
 ```python
 {
-    "explanation": str,       # Erklärung auf Deutsch
-    "error_found": bool,      # True wenn Fehler gefunden
-    "error_type": str,        # "Syntaxfehler" | "Logikfehler" | "Kein Fehler"
-    "suggestion": str,        # Verbesserungshinweis
-    "next_exercise": str|None,# Übungsaufgabe
-    "sources": list[str],     # RAG-Quellen (leer wenn kein PDF hochgeladen)
+    "explanation": str,        # Erklärung auf Deutsch
+    "error_found": bool,       # True wenn Fehler gefunden
+    "error_type": str,         # "Syntaxfehler" | "Logikfehler" | "Kein Fehler"
+    "suggestion": str,         # Verbesserungshinweis
+    "next_exercise": str|None, # Übungsaufgabe
 }
 ```
 
@@ -52,7 +51,7 @@ Wird in `main.py` als HTTP 503 zurückgegeben. Wird ausgelöst wenn das LLM eine
 
 ### `_build_tools() -> list`
 
-Erstellt die Tool-Liste für den Agenten. `rag_tool` wird nur hinzugefügt wenn der FAISS-Vectorstore-Ordner existiert. Dadurch funktioniert die Analyse auch ohne hochgeladenes Lernmaterial.
+Gibt die feste Tool-Liste zurück: `[explain_code_tool, debug_code_tool, exercise_tool]`.
 
 ### `_parse_agent_output(text: str) -> dict`
 
@@ -66,10 +65,6 @@ Extrahiert die 5 Pflichtfelder aus dem Free-Text der Agent-Antwort via Regex. De
 | `suggestion` | `"Keine Angabe"` |
 | `next_exercise` | `None` |
 
-### `_get_rag_sources(code: str) -> list[str]`
-
-Sucht im FAISS-Index nach Textstellen die zum Code passen. Gibt `[]` zurück wenn kein Index vorhanden ist oder ein Fehler auftritt (vollständig defensiv).
-
 ### `_is_connection_error(e: Exception) -> bool`
 
 Prüft ob eine Exception ein Verbindungsproblem ist (ConnectionError, Timeout etc.). Entscheidet ob `ServiceUnavailableError` ausgelöst werden soll.
@@ -80,12 +75,10 @@ Prüft ob eine Exception ein Verbindungsproblem ist (ConnectionError, Timeout et
 run_analysis(code)
     │
     ├── get_llm()              → LLM-Instanz holen (OpenAI oder Ollama)
-    ├── _build_tools()         → [explain_code_tool, debug_code_tool, exercise_tool, (rag_tool)]
+    ├── _build_tools()         → [explain_code_tool, debug_code_tool, exercise_tool]
     ├── create_agent(llm, tools, system_prompt)   → LangGraph CompiledStateGraph
     ├── agent.invoke({"messages": [...]})          → ReAct-Loop läuft
-    ├── _parse_agent_output(final_text)            → dict mit 5 Feldern
-    ├── _get_rag_sources(code)                     → sources-Liste
-    └── return {... + "sources": [...]}
+    └── _parse_agent_output(final_text)            → dict mit 5 Feldern
 ```
 
 ## System-Prompt

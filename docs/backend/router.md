@@ -16,30 +16,9 @@ Ruft `run_analysis(request.code)` auf und baut daraus eine `TutorResponse`.
 
 **Request:** `{"code": "for i in range(5)\n    print(i)"}`
 
-**Response:** `TutorResponse` mit allen 6 Feldern inkl. `sources`
+**Response:** `TutorResponse` mit allen 5 Feldern
 
 **Fehlerfall:** Wenn `run_analysis` eine `ServiceUnavailableError` wirft → HTTP 503 (wird in `main.py` abgefangen).
-
----
-
-### `POST /tutor/upload-material` — PDF hochladen
-
-```python
-@router.post("/upload-material", response_model=UploadResponse)
-async def upload_material(file: UploadFile = File(...)) -> UploadResponse
-```
-
-Nimmt eine PDF-Datei entgegen, verarbeitet sie durch die RAG-Pipeline und speichert den FAISS-Index.
-
-**Ablauf:**
-1. Prüft Content-Type und Dateiendung (nur `.pdf` erlaubt → HTTP 400 sonst)
-2. Prüft ob Datei nicht leer ist → HTTP 400 sonst
-3. `extract_text(pdf_bytes)` → Text extrahieren
-4. `split_text(text)` → Chunks erzeugen
-5. `build_and_save(chunks)` → FAISS-Index speichern
-6. Gibt `{"status": "ok", "chunks": N}` zurück
-
-**Response:** `{"status": "ok", "chunks": 142}`
 
 ---
 

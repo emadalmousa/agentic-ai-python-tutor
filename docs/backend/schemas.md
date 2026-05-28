@@ -31,7 +31,6 @@ class TutorResponse(BaseModel):
     error_type: str = "Kein Fehler"
     suggestion: str
     next_exercise: str | None = None
-    sources: list[str] = []
 ```
 
 | Feld | Typ | Default | Beschreibung |
@@ -41,7 +40,6 @@ class TutorResponse(BaseModel):
 | `error_type` | `str` | `"Kein Fehler"` | `"Syntaxfehler"` / `"Logikfehler"` / `"Kein Fehler"` |
 | `suggestion` | `str` | — | Fehlerbeschreibung oder Verbesserungshinweis |
 | `next_exercise` | `str\|None` | `None` | Übungsaufgabe vom `exercise_tool` |
-| `sources` | `list[str]` | `[]` | Relevante Textstellen aus hochgeladenem Lernmaterial (RAG) |
 
 ---
 
@@ -120,20 +118,3 @@ class RunResponse(BaseModel):
 | `stdout` | `str` | Ausgabe des Programms |
 | `stderr` | `str` | Fehlermeldungen (leer wenn kein Fehler) |
 | `exit_code` | `int` | `0` = Erfolg, `1` = Fehler |
-
----
-
-### `UploadResponse`
-
-Antwort von `POST /tutor/upload-material`.
-
-```python
-class UploadResponse(BaseModel):
-    status: str
-    chunks: int
-```
-
-| Feld | Typ | Beschreibung |
-|------|-----|--------------|
-| `status` | `str` | `"ok"` wenn erfolgreich |
-| `chunks` | `int` | Anzahl der erstellten Text-Chunks im FAISS-Index |

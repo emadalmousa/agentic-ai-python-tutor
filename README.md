@@ -29,7 +29,6 @@ Dieses System löst das Problem mit einem **KI-Agenten**, der automatisch:
 - Python-Code **erklärt** (Schritt für Schritt)
 - **Fehler erkennt** und Lösungshinweise gibt
 - **Übungsaufgaben generiert**, die zum aktuellen Lernstand passen
-- **PDF-Lernmaterial** einbindet und bei der Analyse berücksichtigt (RAG)
 
 Der Kern ist ein **LangChain-Agent**, der bei jeder Anfrage die passenden Tools aufruft.
 
@@ -43,7 +42,6 @@ Der Kern ist ein **LangChain-Agent**, der bei jeder Anfrage die passenden Tools 
 ├── README.md                  ← Diese Dokumentation
 ├── .gitignore
 ├── start.sh                   ← Startet Backend, Frontend und Ollama
-├── dataflow.html              ← Visueller Datenfluss der App
 │
 └── backend/
     │
@@ -52,20 +50,15 @@ Der Kern ist ein **LangChain-Agent**, der bei jeder Anfrage die passenden Tools 
     ├── .env.example           ← Template für Konfiguration
     │
     ├── models/
-    │   └── schemas.py         ← CodeRequest, TutorResponse, UploadResponse
+    │   └── schemas.py         ← CodeRequest, TutorResponse, ChatRequest, ChatResponse
     │
     ├── agent/                 ← KI-Orchestrierung
-    │   ├── config.py          ← LLM-Factory: get_llm(), get_embeddings()
+    │   ├── config.py          ← LLM-Factory: get_llm(), get_classifier_llm()
     │   ├── tutor_agent.py     ← Orchestrator: run_analysis()
-    │   ├── tools/
-    │   │   ├── explain_tool.py  ← Code erklären
-    │   │   ├── debug_tool.py    ← Fehler analysieren
-    │   │   ├── exercise_tool.py ← Übung generieren
-    │   │   └── rag_tool.py      ← Lernmaterial durchsuchen (RAG)
-    │   └── rag/
-    │       ├── loader.py        ← PDF-Text extrahieren
-    │       ├── splitter.py      ← Text in Chunks aufteilen
-    │       └── vectorstore.py   ← FAISS-Index speichern/laden/suchen
+    │   └── tools/
+    │       ├── explain_tool.py  ← Code erklären
+    │       ├── debug_tool.py    ← Fehler analysieren
+    │       └── exercise_tool.py ← Übung generieren
     │
     ├── services/
     │   ├── code_explainer.py  ← Adapter → run_analysis()
@@ -110,11 +103,6 @@ class TutorResponse(BaseModel):
     error_type: str = "Kein Fehler"
     suggestion: str
     next_exercise: str | None = None
-    sources: list[str] = []        # RAG-Quellen (leer wenn kein PDF hochgeladen)
-
-class UploadResponse(BaseModel):
-    status: str
-    chunks: int
 ```
 
 ---
@@ -122,9 +110,8 @@ class UploadResponse(BaseModel):
 ### `backend/agent/config.py`
 
 ```python
-def get_llm():          # OpenAI (gpt-4o) wenn Key vorhanden, sonst Ollama
+def get_llm()            # OpenAI (gpt-4o) wenn Key vorhanden, sonst Ollama
 def get_classifier_llm() # gpt-4o-mini oder Ollama — für Off-Topic-Filter
-def get_embeddings()    # OpenAIEmbeddings oder OllamaEmbeddings — für RAG
 ```
 
 Einzige Stelle wo Provider gewählt wird. Alle Tools rufen `get_llm()` auf — kein Provider-Wissen im Tool selbst.
@@ -136,12 +123,10 @@ Einzige Stelle wo Provider gewählt wird. Alle Tools rufen `get_llm()` auf — k
 ```python
 def run_analysis(code: str) -> dict:
     llm = get_llm()
-    tools = _build_tools()          # explain + debug + exercise + rag_tool (wenn Index vorhanden)
+    tools = _build_tools()          # explain + debug + exercise
     agent = create_agent(llm, tools, system_prompt=_SYSTEM_PROMPT)
     result = agent.invoke({"messages": [("human", f"Analysiere: {code}")]})
-    parsed = _parse_agent_output(result["messages"][-1].content)
-    parsed["sources"] = _get_rag_sources(code)
-    return parsed
+    return _parse_agent_output(result["messages"][-1].content)
 ```
 
 **ReAct-Agent** (`create_agent` aus LangChain 1.3.x / LangGraph): der Agent entscheidet selbst welche Tools er aufruft.
@@ -157,19 +142,6 @@ Fängt Verbindungsfehler → `ServiceUnavailableError`.
 | `explain_code_tool` | `code: str` | `str` | Schritt-für-Schritt-Erklärung auf Deutsch |
 | `debug_code_tool` | `code: str` | `dict` | `{error_found, error_type, suggestion}` als JSON |
 | `exercise_tool` | `code, error_found, suggestion` | `str` | Passende Übungsaufgabe |
-| `rag_tool` | `query: str` | `str` | Sucht relevante Stellen im hochgeladenen Lernmaterial |
-
----
-
-### `backend/agent/rag/`
-
-| Datei | Was sie macht |
-|---|---|
-| `loader.py` | Extrahiert Text aus PDF-Bytes (`pypdf`) |
-| `splitter.py` | Teilt Text in Chunks (500 Zeichen, 50 Overlap) |
-| `vectorstore.py` | FAISS-Index: `build_and_save()`, `load()`, `query()` |
-
-Vektorstore wird in `backend/vectorstore/` gespeichert. Wenn kein PDF hochgeladen: `sources = []`.
 
 ---
 
@@ -178,7 +150,6 @@ Vektorstore wird in `backend/vectorstore/` gespeichert. Wenn kein PDF hochgelade
 | Endpoint | Was er macht |
 |---|---|
 | `POST /tutor/analyze` | Code analysieren — ruft `run_analysis()` auf |
-| `POST /tutor/upload-material` | PDF hochladen → FAISS-Index aufbauen |
 | `POST /tutor/run` | Code direkt ausführen (subprocess, kein LLM) |
 | `POST /tutor/chat` | Chat mit History + Off-Topic-Filter |
 
@@ -189,14 +160,10 @@ Vektorstore wird in `backend/vectorstore/` gespeichert. Wenn kein PDF hochgelade
 | Datei | Funktion | Eingabe | Ausgabe |
 |---|---|---|---|
 | `agent/config.py` | `get_llm()` | — | `ChatOpenAI` oder `ChatOllama` |
-| `agent/config.py` | `get_embeddings()` | — | `OpenAIEmbeddings` oder `OllamaEmbeddings` |
 | `agent/tutor_agent.py` | `run_analysis(code)` | `str` | `dict` |
 | `agent/tools/explain_tool.py` | `explain_code_tool(code)` | `str` | `str` |
 | `agent/tools/debug_tool.py` | `debug_code_tool(code)` | `str` | `dict` |
 | `agent/tools/exercise_tool.py` | `exercise_tool(code, error_found, suggestion)` | `str, bool, str` | `str` |
-| `agent/tools/rag_tool.py` | `rag_tool(query)` | `str` | `str` |
-| `agent/rag/vectorstore.py` | `build_and_save(chunks)` | `list[str]` | — |
-| `agent/rag/vectorstore.py` | `query(index, text, top_k)` | — | `list[str]` |
 | `routers/tutor.py` | `analyze_code(request)` | `CodeRequest` | `TutorResponse` |
 
 ---
@@ -217,26 +184,15 @@ Browser / Frontend
                   │         │  ReAct-Loop (Reason → Act → Observe):
                   │         ├──► explain_code_tool  → LLM → Erklärung (str)
                   │         ├──► debug_code_tool    → LLM → {error_found, error_type, suggestion}
-                  │         ├──► exercise_tool      → LLM → Übungsaufgabe (str)
-                  │         └──► rag_tool           → FAISS → PDF-Stellen (wenn vorhanden)
+                  │         └──► exercise_tool      → LLM → Übungsaufgabe (str)
                   │
-                  ├──► _parse_agent_output(final_text) → dict mit 5 Feldern
-                  └──► _get_rag_sources(code) → sources: list[str]
+                  └──► _parse_agent_output(final_text) → dict mit 5 Feldern
         │
         ▼
     TutorResponse {
         explanation, error_found, error_type,
-        suggestion, next_exercise, sources
+        suggestion, next_exercise
     }
-```
-
-**PDF hochladen:**
-```
-POST /tutor/upload-material  (PDF-Datei)
-    → loader.py: Text extrahieren
-    → splitter.py: Text in Chunks aufteilen
-    → vectorstore.py: FAISS-Index aufbauen + speichern
-    → ab jetzt: sources in jeder /analyze-Antwort befüllt
 ```
 
 ---
@@ -277,7 +233,6 @@ uvicorn main:app --reload
 |---|---|---|
 | GET | `/` | Health Check |
 | POST | `/tutor/analyze` | Code analysieren |
-| POST | `/tutor/upload-material` | PDF als Lernmaterial hochladen |
 | POST | `/tutor/run` | Code direkt ausführen |
 | POST | `/tutor/chat` | Chat mit dem Tutor |
 
@@ -299,17 +254,6 @@ POST /tutor/analyze
   "error_found": true,
   "error_type": "Syntaxfehler",
   "suggestion": "Fehlender Doppelpunkt ':' nach der for-Schleife.",
-  "next_exercise": "🎯 Aufgabe: Korrigiere die Schleife...",
-  "sources": ["Seite 12: Eine for-Schleife braucht einen Doppelpunkt..."]
+  "next_exercise": "🎯 Aufgabe: Korrigiere die Schleife..."
 }
-```
-
-**PDF hochladen:**
-```bash
-curl -X POST http://localhost:8000/tutor/upload-material \
-  -F "file=@python_buch.pdf"
-```
-
-```json
-{ "status": "ok", "chunks": 142 }
 ```

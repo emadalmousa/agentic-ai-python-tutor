@@ -2,8 +2,8 @@ import subprocess
 import sys
 import tempfile
 import os
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from models.schemas import CodeRequest, TutorResponse, ChatRequest, ChatResponse, ChatMessage, RunRequest, RunResponse, UploadResponse
+from fastapi import APIRouter, HTTPException
+from models.schemas import CodeRequest, TutorResponse, ChatRequest, ChatResponse, ChatMessage, RunRequest, RunResponse
 from agent.tutor_agent import run_analysis
 from agent.config import get_llm, get_classifier_llm
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -20,36 +20,8 @@ def analyze_code(request: CodeRequest) -> TutorResponse:
         error_type=result.get("error_type", "Kein Fehler"),
         suggestion=result["suggestion"],
         next_exercise=result["next_exercise"],
-        sources=result.get("sources", []),
     )
 
-
-@router.post("/upload-material", response_model=UploadResponse)
-async def upload_material(file: UploadFile = File(...)) -> UploadResponse:
-    """Lädt ein PDF als Lernmaterial hoch und speichert es als FAISS-Index."""
-    content_type = file.content_type or ""
-    filename = file.filename or ""
-    if content_type != "application/pdf" and not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Nur PDF-Dateien sind erlaubt.")
-
-    pdf_bytes = await file.read()
-    if not pdf_bytes:
-        raise HTTPException(status_code=400, detail="Die hochgeladene Datei ist leer.")
-
-    try:
-        from agent.rag.loader import extract_pages
-        from agent.rag.splitter import split_pages
-        from agent.rag.vectorstore import build_and_save
-
-        pages = extract_pages(pdf_bytes)
-        chunks = split_pages(pages)
-        build_and_save(chunks)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Fehler beim Verarbeiten der PDF: {e}")
-
-    return UploadResponse(status="ok", chunks=len(chunks))
 
 
 @router.post("/run", response_model=RunResponse)
@@ -75,29 +47,18 @@ def run_code(request: RunRequest) -> RunResponse:
         os.unlink(tmp_path)
 
 
-import re as _re
-
 _CLASSIFY_SYSTEM = SystemMessage(content=(
     "Du klassifizierst Nachrichten im Kontext eines Python-Tutors. "
-    "Der Schüler hat Python-Code im Editor und kann ein Lernmaterial (PDF) hochgeladen haben. "
-    "Antworte NUR mit 'ja' wenn die Nachricht eine Frage zum Code, zur Programmierung, "
-    "zu Python-Konzepten, zu Lernmaterial-Seiten oder zum Lernmaterial sein könnte. "
-    "Antworte NUR mit 'nein' bei Fragen die eindeutig nichts mit Programmierung oder dem Lernmaterial zu tun haben (z.B. Wetter, Sport, Kochen). "
+    "Antworte NUR mit 'ja' wenn die Nachricht eine Frage zum Code, zur Programmierung oder "
+    "zu Python-Konzepten sein könnte. "
+    "Antworte NUR mit 'nein' bei Fragen die eindeutig nichts mit Programmierung zu tun haben (z.B. Wetter, Sport, Kochen). "
     "Kein weiterer Text."
 ))
 
 OFF_TOPIC_REPLY = (
-    "Ich bin dein Python-Tutor und kann nur bei Python, Programmierung und deinem Lernmaterial helfen. "
-    "Hast du eine Frage zu deinem Code oder dem PDF? 🐍"
+    "Ich bin dein Python-Tutor und kann nur bei Python und Programmierung helfen. "
+    "Hast du eine Frage zu deinem Code? 🐍"
 )
-
-# Erkennt Muster wie "Seite 9", "page 9", "seite9", "s. 9"
-_PAGE_PATTERN = _re.compile(r"\b(?:seite|page|s\.)\s*(\d+)\b", _re.IGNORECASE)
-
-
-def _extract_page_number(message: str) -> int | None:
-    match = _PAGE_PATTERN.search(message)
-    return int(match.group(1)) if match else None
 
 
 def _is_python_related(message: str, code: str) -> bool:
@@ -105,53 +66,6 @@ def _is_python_related(message: str, code: str) -> bool:
     context = f"Code des Schülers:\n```python\n{code}\n```\n\nFrage: {message}" if code.strip() else message
     response = llm.invoke([_CLASSIFY_SYSTEM, HumanMessage(content=context)])
     return response.content.strip().lower().startswith("ja")
-
-
-def _get_rag_context(message: str) -> str:
-    """Gibt relevante Passagen aus dem Vectorstore zurück.
-
-    Kombiniert immer beide Strategien:
-    1. Wenn Seitenzahl erkannt → alle Chunks dieser Seite (direkte Suche)
-    2. Semantische FAISS-Suche nach dem Inhalt der Frage
-    Duplikate werden entfernt, Seiteninhalt steht zuerst.
-    """
-    try:
-        from agent.rag.vectorstore import load, query_with_pages, get_page
-
-        index_data = load()
-        if index_data is None:
-            return ""
-
-        seen: set[str] = set()
-        results: list[tuple[str, int]] = []
-
-        page_num = _extract_page_number(message)
-        if page_num is not None:
-            page_chunks = get_page(index_data, page_num)
-            if not page_chunks:
-                results.append((f"Seite {page_num} wurde im Lernmaterial nicht gefunden.", 0))
-            for item in page_chunks:
-                if item[0] not in seen:
-                    seen.add(item[0])
-                    results.append(item)
-
-        top_k = int(os.getenv("RAG_TOP_K", "3"))
-        for item in query_with_pages(index_data, message, top_k=top_k):
-            if item[0] not in seen:
-                seen.add(item[0])
-                results.append(item)
-
-        if not results:
-            return ""
-
-        parts = []
-        for text, page in results:
-            ref = f"[Seite {page}]" if page > 0 else ""
-            parts.append(f"{ref}\n{text}" if ref else text)
-
-        return "\n\n---\n\n".join(parts)
-    except Exception:
-        return ""
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -165,20 +79,11 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     llm = get_llm()
 
-    rag_context = _get_rag_context(request.message)
-
     system_text = (
         "Du bist ein freundlicher Python-Tutor für Anfänger. "
         "Antworte klar, geduldig und auf Deutsch. Gib bei Bedarf Codebeispiele.\n"
         f"Aktueller Code des Schülers:\n```python\n{request.code}\n```"
     )
-    if rag_context:
-        system_text += (
-            "\n\nInhalt aus dem hochgeladenen Lernmaterial "
-            "(erkläre diesen Inhalt wenn der Schüler danach fragt, "
-            "extrahiere Code-Beispiele als ausführbare Python-Blöcke):\n\n"
-            + rag_context
-        )
 
     messages = [SystemMessage(content=system_text)]
     for msg in request.history:

@@ -1,7 +1,7 @@
 # agent/tools/
 
 **Pfad:** `backend/agent/tools/`
-**Zweck:** Vier LangChain-Tools die vom ReAct-Agenten aufgerufen werden können. Jedes Tool ist eine mit `@tool` dekorierte Funktion — der Agent sieht die Docstring-Beschreibung und entscheidet selbst ob und wann er das Tool aufruft.
+**Zweck:** Drei LangChain-Tools die vom ReAct-Agenten aufgerufen werden können. Jedes Tool ist eine mit `@tool` dekorierte Funktion — der Agent sieht die Docstring-Beschreibung und entscheidet selbst ob und wann er das Tool aufruft.
 
 ## Gemeinsames Muster
 
@@ -104,31 +104,3 @@ def exercise_tool(code: str, error_found: bool, suggestion: str) -> str
 **Eingabe:** `{"code": "...", "error_found": true, "suggestion": "..."}`
 
 **Ausgabe:** Formatierter Aufgabentext auf Deutsch
-
----
-
-## rag_tool
-
-**Datei:** `agent/tools/rag_tool.py`
-
-```python
-@tool
-def rag_tool(query: str) -> str
-```
-
-**Aufgabe:** Sucht in hochgeladenen Lernmaterialien (FAISS-Index) nach relevanten Textstellen.
-
-**Wann wird es dem Agenten angeboten:** Nur wenn der FAISS-Vectorstore-Ordner existiert (geprüft in `tutor_agent._build_tools()`). Ohne hochgeladenes PDF ist das Tool nicht verfügbar.
-
-**Eingabe:** `{"query": "Was ist eine for-Schleife?"}`
-
-**Ausgabe:**
-- Wenn Treffer gefunden: die Top-K relevantesten Textpassagen, getrennt durch `---`
-- Wenn kein Index: `"Es wurden noch keine Lernmaterialien hochgeladen."`
-- Wenn keine Treffer: `"Keine relevanten Textstellen gefunden."`
-
-**Wie die Suche funktioniert:**
-1. `load()` aus `vectorstore.py` lädt den FAISS-Index
-2. Die Query wird in einen Vektor umgewandelt (Embedding)
-3. FAISS sucht die `top_k` ähnlichsten Vektoren (L2-Distanz)
-4. Die zugehörigen Text-Chunks werden zurückgegeben
