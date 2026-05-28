@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export phase2.html slides to PowerPoint and PDF."""
+"""Export phase1.html slides to PowerPoint and PDF."""
 import os
 import time
 from pathlib import Path
@@ -10,9 +10,9 @@ from pptx.dml.color import RGBColor
 from PIL import Image
 
 BASE = Path(__file__).parent
-HTML = BASE / "presentation" / "phase2.html"
+HTML = BASE / "presentation" / "phase1.html"
 OUT_DIR = BASE / "presentation"
-SLIDE_COUNT = 9
+SLIDE_COUNT = 7
 WIDTH, HEIGHT = 1920, 1080
 
 def take_screenshots():
@@ -54,13 +54,13 @@ def build_pptx(imgs):
         )
         print(f"  PPTX: {path.name}")
 
-    out = OUT_DIR / "phase2_presentation.pptx"
+    out = OUT_DIR / "phase1_presentation.pptx"
     prs.save(str(out))
     return out
 
 def build_pdf(imgs):
     from PIL import Image as PILImage
-    out = OUT_DIR / "phase2_presentation.pdf"
+    out = OUT_DIR / "phase1_presentation.pdf"
 
     pil_imgs = [PILImage.open(str(p)).convert("RGB") for p in imgs]
     first = pil_imgs[0]
