@@ -9,24 +9,19 @@ interface Props {
   input: string
   loading: boolean
   analyzing?: boolean
-  uploading?: boolean
-  materialName?: string | null
   error: string | null
   bottomRef: React.RefObject<HTMLDivElement | null>
-  fileInputRef: React.RefObject<HTMLInputElement | null>
   onInput: (v: string) => void
   onSend: () => void
   onReset: () => void
-  onOpenFilePicker: () => void
-  onFileInput: (e: React.ChangeEvent<HTMLInputElement>) => void
   onInsertCode?: (code: string) => void
   dark: boolean
 }
 
 export default function ChatPanel({
-  history, input, loading, analyzing, uploading, materialName,
-  error, bottomRef, fileInputRef,
-  onInput, onSend, onReset, onOpenFilePicker, onFileInput, onInsertCode, dark,
+  history, input, loading, analyzing,
+  error, bottomRef,
+  onInput, onSend, onReset, onInsertCode, dark,
 }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -44,7 +39,7 @@ export default function ChatPanel({
     }
   }
 
-  const busy    = loading || analyzing || uploading
+  const busy    = loading || analyzing
   const bg      = dark ? "bg-[#0a1628]"     : "bg-white"
   const border  = dark ? "border-[#1e2f45]" : "border-gray-200"
   const msgBg   = dark ? "bg-[#111e30]"     : "bg-gray-50"
@@ -61,11 +56,6 @@ export default function ChatPanel({
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-indigo-500" />
           <span className={`text-sm font-semibold ${textCol}`}>Python Tutor</span>
-          {materialName && (
-            <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${dark ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-              📚 {materialName}
-            </span>
-          )}
         </div>
         {history.length > 0 && (
           <button
@@ -83,7 +73,7 @@ export default function ChatPanel({
           <div className={`text-center mt-12 ${subCol} text-sm`}>
             <div className="text-3xl mb-3">🤖</div>
             <p className="font-medium mb-1">Hallo! Ich bin dein Python-Tutor.</p>
-            <p className="text-xs">Stell eine Frage, analysiere deinen Code oder lade ein PDF hoch.</p>
+            <p className="text-xs">Stell eine Frage oder analysiere deinen Code.</p>
           </div>
         )}
 
@@ -124,7 +114,6 @@ export default function ChatPanel({
                 <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:"300ms"}} />
               </div>
               {analyzing && <span className={`text-xs ${subCol}`}>Analysiere Code…</span>}
-              {uploading && <span className={`text-xs ${subCol}`}>PDF wird hochgeladen…</span>}
             </div>
           </div>
         )}
@@ -139,22 +128,6 @@ export default function ChatPanel({
       {/* Eingabe */}
       <div className={`px-4 py-3 border-t ${border}`}>
         <div className={`flex gap-2 items-end rounded-2xl border ${inputBg} px-3 py-2`}>
-
-          {/* Paperclip: PDF hochladen */}
-          <button
-            onClick={onOpenFilePicker}
-            disabled={busy}
-            title="PDF-Lernmaterial hochladen"
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all flex-shrink-0 mb-0.5 disabled:opacity-30 disabled:cursor-not-allowed ${
-              dark
-                ? "text-gray-500 hover:text-amber-400 hover:bg-amber-500/10"
-                : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"
-            }`}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-            </svg>
-          </button>
 
           <textarea
             ref={textareaRef}
@@ -181,19 +154,7 @@ export default function ChatPanel({
           </button>
         </div>
 
-        <p className={`text-center text-xs mt-1.5 ${subCol}`}>
-          PDF anhängen für kontextbasierte Analyse
-        </p>
       </div>
-
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf"
-        className="hidden"
-        onChange={onFileInput}
-      />
     </div>
   )
 }

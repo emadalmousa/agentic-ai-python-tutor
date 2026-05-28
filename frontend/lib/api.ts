@@ -1,4 +1,4 @@
-import type { CodeRequest, TutorResponse, ChatRequest, ChatResponse, RunRequest, RunResponse, UploadResponse } from "@/types/tutor"
+import type { CodeRequest, TutorResponse, ChatRequest, ChatResponse, RunRequest, RunResponse } from "@/types/tutor"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"
 
@@ -32,16 +32,3 @@ export async function runCode(payload: RunRequest): Promise<RunResponse> {
   return res.json()
 }
 
-export async function uploadMaterial(file: File): Promise<UploadResponse> {
-  const form = new FormData()
-  form.append("file", file)
-  const res = await fetch(`${API_URL}/tutor/upload-material`, {
-    method: "POST",
-    body: form,
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.detail ?? `Upload-Fehler: ${res.status}`)
-  }
-  return res.json()
-}

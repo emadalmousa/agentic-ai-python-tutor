@@ -44,21 +44,6 @@ Gibt ein günstiges/schnelles Modell für Ja/Nein-Klassifikation zurück. Wird v
 | OpenAI | `gpt-4o-mini` | `OPENAI_API_KEY` gültig (ca. 15× günstiger als gpt-4o) |
 | Ollama | `llama3.2` | Fallback |
 
----
-
-### `get_embeddings()`
-
-```python
-def get_embeddings() -> OpenAIEmbeddings | OllamaEmbeddings
-```
-
-Gibt ein Embedding-Modell zurück. Wird ausschließlich von `agent/rag/vectorstore.py` aufgerufen, um Text-Chunks und Suchanfragen in Vektoren umzuwandeln.
-
-| Provider | Modell | Bedingung |
-|----------|--------|-----------|
-| OpenAI | `text-embedding-ada-002` (Standard) | `OPENAI_API_KEY` gültig |
-| Ollama | `llama3.2` | Fallback |
-
 ## Umgebungsvariablen
 
 | Variable | Default | Wirkung |
@@ -66,7 +51,7 @@ Gibt ein Embedding-Modell zurück. Wird ausschließlich von `agent/rag/vectorsto
 | `OPENAI_API_KEY` | — | Wenn gesetzt und gültig: OpenAI-Pfad aktiv |
 | `LLM_MODEL` | `gpt-4o` | OpenAI-Modell für `get_llm()` |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama-Server-URL |
-| `OLLAMA_MODEL` | `llama3.2` | Ollama-Modell für alle drei Funktionen |
+| `OLLAMA_MODEL` | `llama3.2` | Ollama-Modell für beide Funktionen |
 
 ## Warum dieser Aufbau?
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { sendChatMessage, analyzeCode, uploadMaterial } from "@/lib/api"
+import { sendChatMessage, analyzeCode } from "@/lib/api"
 import type { ChatMessage, TutorResponse } from "@/types/tutor"
 
 function formatAnalysis(r: TutorResponse): string {
@@ -23,11 +23,8 @@ export function useChat(code: string) {
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [materialName, setMaterialName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -70,49 +67,17 @@ export function useChat(code: string) {
     }
   }
 
-  async function uploadPdf(file: File) {
-    if (uploading) return
-    setError(null)
-    setUploading(true)
-    setMaterialName(file.name)
-    try {
-      const data = await uploadMaterial(file)
-      const msg: ChatMessage = {
-        role: "assistant",
-        content: `📚 **Lernmaterial geladen:** ${file.name}\n\n${data.chunks} Abschnitte verarbeitet. Ab jetzt nutze ich dieses Material als Kontext bei der Code-Analyse.`,
-      }
-      setHistory(prev => [...prev, msg])
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "PDF-Upload fehlgeschlagen.")
-      setMaterialName(null)
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  function openFilePicker() {
-    fileInputRef.current?.click()
-  }
-
-  function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) uploadPdf(file)
-    e.target.value = ""
-  }
-
   function reset() {
     setHistory([])
     setInput("")
     setError(null)
-    setMaterialName(null)
   }
 
   return {
     history, input, setInput,
-    loading, analyzing, uploading, materialName,
+    loading, analyzing,
     error,
     send, analyze, reset,
-    openFilePicker, handleFileInput, fileInputRef,
     bottomRef,
   }
 }
