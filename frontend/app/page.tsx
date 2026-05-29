@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Header from "@/components/tutor/Header"
+import Navbar from "@/components/tutor/Navbar"
 import CodeEditor from "@/components/tutor/CodeEditor"
 import EditorFooter from "@/components/tutor/EditorFooter"
 import ChatPanel from "@/components/tutor/ChatPanel"
@@ -29,7 +29,7 @@ export default function Home() {
   return (
     <div className={`${bg} h-screen flex flex-col overflow-hidden`}>
 
-      <Header dark={dark} onToggleDark={() => setDark(!dark)} />
+      <Navbar dark={dark} onToggleDark={() => setDark(!dark)} />
 
       <div className="flex flex-1 min-h-0">
 
