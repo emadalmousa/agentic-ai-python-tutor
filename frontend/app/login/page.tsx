@@ -4,14 +4,20 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
+import { useCallback } from "react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, continueAsGuest } = useAuth()
   const router = useRouter()
+
+  const handleGuest = useCallback(() => {
+    continueAsGuest()
+    router.push("/")
+  }, [continueAsGuest, router])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -109,6 +115,23 @@ export default function LoginPage() {
               Registrieren
             </Link>
           </p>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#1e2f45]" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-[#0d1b2e] px-3 text-gray-600">oder</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGuest}
+            className="w-full border border-[#1e2f45] hover:border-[#2d4a6b] hover:bg-[#0a1628] text-gray-400 hover:text-gray-200 font-medium text-sm rounded-lg px-4 py-3 transition-all"
+          >
+            Als Gast fortfahren
+          </button>
         </form>
 
         {/* Demo hint */}

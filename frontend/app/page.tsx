@@ -1,15 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Navbar from "@/components/tutor/Navbar"
 import CodeEditor from "@/components/tutor/CodeEditor"
 import EditorFooter from "@/components/tutor/EditorFooter"
 import ChatPanel from "@/components/tutor/ChatPanel"
 import { useChat } from "@/hooks/useChat"
 import { useCodeRunner } from "@/hooks/useCodeRunner"
+import { useAuth } from "@/context/AuthContext"
 
 export default function Home() {
   const [dark, setDark] = useState(true)
+  const { isAuthenticated } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push("/login")
+    }
+  }, [isAuthenticated, router])
+
+  if (!isAuthenticated) return null
 
   const [code, setCode] = useState("for i in range(5)\n    print(i)")
   const {

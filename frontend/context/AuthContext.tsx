@@ -24,9 +24,11 @@ export interface RegisterData {
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
+  isGuest: boolean
   login: (email: string, password: string) => Promise<boolean>
   register: (data: RegisterData) => Promise<boolean>
   logout: () => void
+  continueAsGuest: () => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -45,8 +47,11 @@ const DEFAULT_USER: User = {
 
 const DEFAULT_PASSWORD = "password123"
 
+const GUEST_KEY = "python_tutor_guest"
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [isGuest, setIsGuest] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -57,6 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         localStorage.removeItem(STORAGE_KEY)
       }
+    } else if (localStorage.getItem(GUEST_KEY) === "true") {
+      setIsGuest(true)
     }
     setMounted(true)
   }, [])
@@ -105,9 +112,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true
   }
 
+  const continueAsGuest = () => {
+    setIsGuest(true)
+    localStorage.setItem(GUEST_KEY, "true")
+  }
+
   const logout = () => {
     setUser(null)
+    setIsGuest(false)
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(GUEST_KEY)
   }
 
   if (!mounted) {
@@ -116,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, login, register, logout }}
+      value={{ user, isAuthenticated: !!user || isGuest, isGuest, login, register, logout, continueAsGuest }}
     >
       {children}
     </AuthContext.Provider>
