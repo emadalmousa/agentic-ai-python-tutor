@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function Navbar({ dark, onToggleDark }: Props) {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isGuest, logout } = useAuth()
   const router = useRouter()
 
   const handleLogout = () => {
@@ -39,10 +39,10 @@ export default function Navbar({ dark, onToggleDark }: Props) {
       </div>
 
       <nav className="flex items-center gap-2">
-        {isAuthenticated ? (
+        {user ? (
           <>
             <Link
-              href="/"
+              href="/tutor"
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 dark
                   ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
@@ -71,15 +71,36 @@ export default function Navbar({ dark, onToggleDark }: Props) {
             >
               Logout
             </button>
-            {user && (
-              <div
-                className={`ml-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                  dark ? "bg-blue-600/20 text-blue-400" : "bg-blue-100 text-blue-700"
-                }`}
-              >
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <div
+              className={`ml-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                dark ? "bg-blue-600/20 text-blue-400" : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+          </>
+        ) : isGuest ? (
+          <>
+            <Link
+              href="/tutor"
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                dark
+                  ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              }`}
+            >
+              Tutor
+            </Link>
+            <Link
+              href="/login"
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                dark
+                  ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              }`}
+            >
+              Login
+            </Link>
           </>
         ) : (
           <>

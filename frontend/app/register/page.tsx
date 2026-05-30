@@ -23,14 +23,14 @@ export default function RegisterPage() {
   const [goal, setGoal] = useState(GOALS[0])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { register, isAuthenticated } = useAuth()
+  const { register, user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/")
+    if (user) {
+      router.push("/tutor")
     }
-  }, [isAuthenticated, router])
+  }, [user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,14 +54,14 @@ export default function RegisterPage() {
     setLoading(true)
     const success = await register({ name, email, password, level, goal })
     if (success) {
-      router.push("/")
+      router.push("/tutor")
     } else {
       setError("Ein Konto mit dieser E-Mail existiert bereits.")
     }
     setLoading(false)
   }
 
-  if (isAuthenticated) return null
+  if (user) return null
 
   return (
     <div className="min-h-screen bg-[#060e1c] flex items-center justify-center px-4 py-12">

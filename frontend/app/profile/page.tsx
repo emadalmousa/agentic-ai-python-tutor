@@ -1,8 +1,17 @@
 "use client"
 
-import { useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/context/AuthContext"
+import { useAuth, Level } from "@/context/AuthContext"
+
+const LEVELS: Level[] = ["Anfänger", "Mittel", "Fortgeschritten"]
+const GOALS = [
+  "Python Grundlagen",
+  "Debugging",
+  "Prüfungsvorbereitung",
+  "Objektorientierung",
+  "Datenstrukturen",
+]
 
 const LEARNED_TOPICS = ["Variablen", "Schleifen", "Bedingungen"]
 const WEAKNESSES = ["Syntaxfehler", "Einrückung"]
@@ -10,16 +19,21 @@ const NEXT_GOAL = "Funktionen"
 const PROGRESS_PERCENT = 45
 
 export default function ProfilePage() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
 
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState("")
+  const [editLevel, setEditLevel] = useState<Level>("Anfänger")
+  const [editGoal, setEditGoal] = useState("")
+
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!user) {
       router.push("/login")
     }
-  }, [isAuthenticated, router])
+  }, [user, router])
 
-  if (!isAuthenticated || !user) return null
+  if (!user) return null
 
   const levelColor = {
     "Anfänger": "bg-green-900/30 text-green-400 border-green-800/40",
@@ -27,12 +41,28 @@ export default function ProfilePage() {
     "Fortgeschritten": "bg-purple-900/30 text-purple-400 border-purple-800/40",
   }[user.level]
 
+  const handleEditOpen = () => {
+    setEditName(user.name)
+    setEditLevel(user.level)
+    setEditGoal(user.goal)
+    setIsEditing(true)
+  }
+
+  const handleEditSave = () => {
+    updateUser({ name: editName, level: editLevel, goal: editGoal })
+    setIsEditing(false)
+  }
+
+  const handleEditCancel = () => {
+    setIsEditing(false)
+  }
+
   return (
     <div className="min-h-screen bg-[#060e1c] text-white">
       {/* Navbar spacer - the Navbar is rendered in page.tsx / layout, profile uses its own back-nav */}
       <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 border-b bg-[#080f1e]/95 border-[#1e2f45] backdrop-blur-sm">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/tutor")}
           className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -50,8 +80,18 @@ export default function ProfilePage() {
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-blue-500/20">
             {user.name.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">{user.name}</h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-white">{user.name}</h1>
+              {!isEditing && (
+                <button
+                  onClick={handleEditOpen}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[#1e2f45] text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200 transition-all"
+                >
+                  Bearbeiten
+                </button>
+              )}
+            </div>
             <p className="text-sm text-gray-400">{user.email}</p>
             <div className="flex items-center gap-2 mt-1.5">
               <span className={`text-xs px-2.5 py-0.5 rounded-full border ${levelColor}`}>
@@ -63,6 +103,74 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Edit form */}
+        {isEditing && (
+          <div className="bg-[#0d1b2e] border border-[#1e2f45] rounded-xl p-6 mb-6 space-y-4">
+            <h2 className="text-sm font-medium text-gray-300">Profil bearbeiten</h2>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Name
+              </label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Erfahrungslevel
+              </label>
+              <select
+                value={editLevel}
+                onChange={(e) => setEditLevel(e.target.value as Level)}
+                className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none"
+              >
+                {LEVELS.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Lernziel
+              </label>
+              <select
+                value={editGoal}
+                onChange={(e) => setEditGoal(e.target.value)}
+                className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none"
+              >
+                {GOALS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                onClick={handleEditSave}
+                className="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition-all"
+              >
+                Speichern
+              </button>
+              <button
+                onClick={handleEditCancel}
+                className="px-4 py-2 rounded-lg text-xs font-medium border border-[#1e2f45] text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200 transition-all"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-4 mb-6">

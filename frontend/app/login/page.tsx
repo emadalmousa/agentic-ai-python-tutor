@@ -11,19 +11,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { login, isAuthenticated, continueAsGuest } = useAuth()
+  const { login, user, continueAsGuest } = useAuth()
   const router = useRouter()
 
   const handleGuest = useCallback(() => {
     continueAsGuest()
-    router.push("/")
+    router.push("/tutor")
   }, [continueAsGuest, router])
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/")
+    if (user) {
+      router.push("/tutor")
     }
-  }, [isAuthenticated, router])
+  }, [user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,14 +38,14 @@ export default function LoginPage() {
 
     const success = await login(email, password)
     if (success) {
-      router.push("/")
+      router.push("/tutor")
     } else {
       setError("Ungültige E-Mail oder Passwort.")
     }
     setLoading(false)
   }
 
-  if (isAuthenticated) return null
+  if (user) return null
 
   return (
     <div className="min-h-screen bg-[#060e1c] flex items-center justify-center px-4">

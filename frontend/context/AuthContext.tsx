@@ -29,6 +29,7 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<boolean>
   logout: () => void
   continueAsGuest: () => void
+  updateUser: (updates: Partial<Pick<User, "name" | "level" | "goal">>) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -49,24 +50,30 @@ const DEFAULT_PASSWORD = "password123"
 
 const GUEST_KEY = "python_tutor_guest"
 
+function readStoredUser(): User | null {
+  if (typeof window === "undefined") return null
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (!stored) return null
+  try {
+    return JSON.parse(stored) as User
+  } catch {
+    localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+}
+
+function readStoredGuest(): boolean {
+  if (typeof window === "undefined") return false
+  return localStorage.getItem(GUEST_KEY) === "true"
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isGuest, setIsGuest] = useState(false)
+  const [user, setUser] = useState<User | null>(readStoredUser)
+  const [isGuest, setIsGuest] = useState<boolean>(readStoredGuest)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored))
-      } catch {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    } else if (localStorage.getItem(GUEST_KEY) === "true") {
-      setIsGuest(true)
-    }
-    setMounted(true)
-  }, [])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true) }, [])
 
   const getUsers = (): Record<string, { user: User; password: string }> => {
     try {
@@ -117,6 +124,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(GUEST_KEY, "true")
   }
 
+  const updateUser = (updates: Partial<Pick<User, "name" | "level" | "goal">>) => {
+    if (!user) return
+    const updated = { ...user, ...updates }
+    setUser(updated)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    const users = getUsers()
+    if (users[user.email]) {
+      users[user.email].user = updated
+      localStorage.setItem(USERS_KEY, JSON.stringify(users))
+    }
+  }
+
   const logout = () => {
     setUser(null)
     setIsGuest(false)
@@ -130,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user || isGuest, isGuest, login, register, logout, continueAsGuest }}
+      value={{ user, isAuthenticated: !!user || isGuest, isGuest, login, register, logout, continueAsGuest, updateUser }}
     >
       {children}
     </AuthContext.Provider>
