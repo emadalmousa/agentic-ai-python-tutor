@@ -3,7 +3,17 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from routers.tutor import router as tutor_router
+from routers.auth import router as auth_router
+from routers.progress import router as progress_router
 from agent.tutor_agent import ServiceUnavailableError
+
+# Import all models so that create_all finds them
+import models  # noqa: F401 — registers User and LearningSession with Base
+
+from core.database import Base, engine
+
+# Auto-create tables on startup (SQLite / demo — no migration needed)
+Base.metadata.create_all(bind=engine)
 
 # FastAPI-Anwendung erstellen
 app = FastAPI(title="Agentic AI Python Tutor System")
@@ -16,8 +26,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Tutor-Router einbinden — registriert alle /tutor/... Endpunkte
+# Router einbinden
 app.include_router(tutor_router)
+app.include_router(auth_router)
+app.include_router(progress_router)
 
 
 @app.exception_handler(ServiceUnavailableError)

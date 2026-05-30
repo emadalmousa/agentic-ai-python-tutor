@@ -9,3 +9,6 @@ python-dotenv
 faiss-cpu
 pypdf
 python-multipart
+sqlalchemy
+python-jose[cryptography]
+passlib[bcrypt]

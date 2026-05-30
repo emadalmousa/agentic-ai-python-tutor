@@ -34,32 +34,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-const STORAGE_KEY = "python_tutor_auth"
-const USERS_KEY = "python_tutor_users"
+const TOKEN_KEY = "ki_tutor_token"
+const GUEST_KEY = "ki_tutor_guest"
 
-const DEFAULT_USER: User = {
-  id: "1",
-  name: "Anna Schmidt",
-  email: "student@example.com",
-  level: "Mittel",
-  goal: "Prüfungsvorbereitung",
-  analyzedCount: 12,
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-const DEFAULT_PASSWORD = "password123"
-
-const GUEST_KEY = "python_tutor_guest"
-
-function readStoredUser(): User | null {
+function getToken(): string | null {
   if (typeof window === "undefined") return null
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (!stored) return null
-  try {
-    return JSON.parse(stored) as User
-  } catch {
-    localStorage.removeItem(STORAGE_KEY)
-    return null
-  }
+  return localStorage.getItem(TOKEN_KEY)
 }
 
 function readStoredGuest(): boolean {
@@ -67,56 +49,93 @@ function readStoredGuest(): boolean {
   return localStorage.getItem(GUEST_KEY) === "true"
 }
 
+async function fetchMe(token: string): Promise<User | null> {
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return {
+      id: String(data.id),
+      name: data.name,
+      email: data.email,
+      level: data.level as Level,
+      goal: data.goal,
+      analyzedCount: data.analyzed_count ?? 0,
+    }
+  } catch {
+    return null
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(readStoredUser)
+  const [user, setUser] = useState<User | null>(null)
   const [isGuest, setIsGuest] = useState<boolean>(readStoredGuest)
   const [mounted, setMounted] = useState(false)
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    const token = getToken()
 
-  const getUsers = (): Record<string, { user: User; password: string }> => {
-    try {
-      const raw = localStorage.getItem(USERS_KEY)
-      if (raw) return JSON.parse(raw)
-    } catch {}
-    // Seed with default user
-    const seed = {
-      [DEFAULT_USER.email]: { user: DEFAULT_USER, password: DEFAULT_PASSWORD },
-    }
-    localStorage.setItem(USERS_KEY, JSON.stringify(seed))
-    return seed
-  }
+    const init = token
+      ? fetchMe(token).then((resolved) => {
+          if (resolved) {
+            setUser(resolved)
+          } else {
+            localStorage.removeItem(TOKEN_KEY)
+          }
+        })
+      : Promise.resolve()
+
+    init.then(() => setMounted(true))
+  }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const users = getUsers()
-    const entry = users[email.toLowerCase()]
-    if (entry && entry.password === password) {
-      setUser(entry.user)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entry.user))
-      return true
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      if (!res.ok) return false
+      const { access_token } = await res.json()
+      localStorage.setItem(TOKEN_KEY, access_token)
+      const resolved = await fetchMe(access_token)
+      if (resolved) {
+        setUser(resolved)
+        return true
+      }
+      return false
+    } catch {
+      return false
     }
-    return false
   }
 
   const register = async (data: RegisterData): Promise<boolean> => {
-    const users = getUsers()
-    if (users[data.email.toLowerCase()]) {
-      return false // already exists
+    try {
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          level: data.level,
+          goal: data.goal,
+        }),
+      })
+      if (!res.ok) return false
+      const { access_token } = await res.json()
+      localStorage.setItem(TOKEN_KEY, access_token)
+      const resolved = await fetchMe(access_token)
+      if (resolved) {
+        setUser(resolved)
+        return true
+      }
+      return false
+    } catch {
+      return false
     }
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      name: data.name,
-      email: data.email.toLowerCase(),
-      level: data.level,
-      goal: data.goal,
-      analyzedCount: 0,
-    }
-    users[newUser.email] = { user: newUser, password: data.password }
-    localStorage.setItem(USERS_KEY, JSON.stringify(users))
-    setUser(newUser)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser))
-    return true
   }
 
   const continueAsGuest = () => {
@@ -124,22 +143,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(GUEST_KEY, "true")
   }
 
-  const updateUser = (updates: Partial<Pick<User, "name" | "level" | "goal">>) => {
-    if (!user) return
-    const updated = { ...user, ...updates }
-    setUser(updated)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    const users = getUsers()
-    if (users[user.email]) {
-      users[user.email].user = updated
-      localStorage.setItem(USERS_KEY, JSON.stringify(users))
+  const updateUser = async (updates: Partial<Pick<User, "name" | "level" | "goal">>) => {
+    const token = getToken()
+    if (!user || !token) return
+    try {
+      const res = await fetch(`${API_URL}/auth/me`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updates),
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setUser({
+        id: String(data.id),
+        name: data.name,
+        email: data.email,
+        level: data.level as Level,
+        goal: data.goal,
+        analyzedCount: data.analyzed_count ?? 0,
+      })
+    } catch {
+      // network error — ignore silently
     }
   }
 
   const logout = () => {
     setUser(null)
     setIsGuest(false)
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(GUEST_KEY)
   }
 
@@ -149,7 +183,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user || isGuest, isGuest, login, register, logout, continueAsGuest, updateUser }}
+      value={{
+        user,
+        isAuthenticated: !!user || isGuest,
+        isGuest,
+        login,
+        register,
+        logout,
+        continueAsGuest,
+        updateUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

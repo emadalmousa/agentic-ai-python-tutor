@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from "react"
 import { sendChatMessage, analyzeCode, uploadMaterial } from "@/lib/api"
 import type { ChatMessage, TutorResponse } from "@/types/tutor"
+import { useAuth } from "@/context/AuthContext"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 function formatAnalysis(r: TutorResponse): string {
   const status = r.error_found ? `🔴 **${r.error_type}**` : "🟢 **Kein Fehler gefunden**"
@@ -18,7 +21,30 @@ function formatAnalysis(r: TutorResponse): string {
   return md
 }
 
+async function saveSession(payload: {
+  code: string
+  topics: string[]
+  errors: string[]
+  chat_messages: { role: string; content: string }[]
+}) {
+  const token = localStorage.getItem("ki_tutor_token")
+  if (!token) return
+  try {
+    await fetch(`${API_URL}/progress/session`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    // network error — ignore silently, session tracking is non-critical
+  }
+}
+
 export function useChat(code: string) {
+  const { user } = useAuth()
   const [history, setHistory] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -44,6 +70,16 @@ export function useChat(code: string) {
     try {
       const data = await sendChatMessage({ code, message: msg, history })
       setHistory(data.history)
+
+      if (user) {
+        const lastTwo = data.history.slice(-2)
+        await saveSession({
+          code,
+          topics: [],
+          errors: [],
+          chat_messages: lastTwo.map((m) => ({ role: m.role, content: m.content })),
+        })
+      }
     } catch {
       setError("Backend nicht erreichbar.")
       setHistory(history)
@@ -62,6 +98,19 @@ export function useChat(code: string) {
       const data = await analyzeCode({ code })
       const formatted = formatAnalysis(data)
       setHistory(prev => [...prev, { role: "assistant", content: formatted }])
+
+      if (user) {
+        const errors = data.error_found && data.error_type ? [data.error_type] : []
+        await saveSession({
+          code,
+          topics: [],
+          errors,
+          chat_messages: [
+            { role: "user", content: "🔍 Code analysieren" },
+            { role: "assistant", content: formatted },
+          ],
+        })
+      }
     } catch {
       setError("Analyse fehlgeschlagen. Ist das Backend erreichbar?")
       setHistory(prev => prev.slice(0, -1))
