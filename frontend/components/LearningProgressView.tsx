@@ -5,6 +5,8 @@ import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import { getLearningProgress, analyzeSkill, deleteAnalysisEvents } from "@/lib/api"
 import type { ProgressResponse, SkillAnalyzeResponse, SkillProgress } from "@/types/tutor"
+import ExerciseModal from "@/components/ExerciseModal"
+import SkillTestModal from "@/components/SkillTestModal"
 
 const TOKEN_KEY = "ki_tutor_token"
 function getToken(): string {
@@ -154,6 +156,7 @@ export default function LearningProgressView() {
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState<string | null>(null)
   const [selectedSkill, setSelectedSkill] = useState<SkillProgress | null>(null)
+  const [showSkillTest, setShowSkillTest] = useState(false)
   const [refreshTick, setRefreshTick]   = useState(0)
 
   // Analyse-Panel
@@ -244,8 +247,23 @@ export default function LearningProgressView() {
     )
   }
 
-  // Unused state log suppression — selectedSkill will be wired to modal in Phase 6
-  void selectedSkill
+  function handleSkillScoreUpdate(skillKey: string, newScore: number) {
+    setProgress((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        skills: prev.skills.map((s) =>
+          s.skill_key === skillKey ? { ...s, score: newScore } : s,
+        ),
+      }
+    })
+  }
+
+  function handleTestPassed(skillKey: string) {
+    // Refresh progress to get newly unlocked skills
+    void skillKey
+    refreshProgress()
+  }
 
   return (
     <div className={`${bg} flex-1 overflow-y-auto`}>
@@ -493,6 +511,28 @@ export default function LearningProgressView() {
         )}
 
       </div>
+
+      {/* Exercise Modal */}
+      {selectedSkill && selectedSkill.is_unlocked && !showSkillTest && (
+        <ExerciseModal
+          skill={selectedSkill}
+          onClose={() => setSelectedSkill(null)}
+          onSkillScoreUpdate={handleSkillScoreUpdate}
+          onStartSkillTest={() => setShowSkillTest(true)}
+        />
+      )}
+
+      {/* Skill Test Modal */}
+      {selectedSkill && showSkillTest && (
+        <SkillTestModal
+          skill={selectedSkill}
+          onClose={() => {
+            setShowSkillTest(false)
+            setSelectedSkill(null)
+          }}
+          onTestPassed={handleTestPassed}
+        />
+      )}
     </div>
   )
 }
