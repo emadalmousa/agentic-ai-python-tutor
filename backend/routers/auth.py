@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.security import create_access_token, decode_access_token, hash_password, verify_password
-from models.user import User
+from models.user import User, Role
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -44,6 +44,7 @@ class UserResponse(BaseModel):
     email: str
     level: str
     goal: str
+    role: str
     analyzed_count: int = 0
 
     model_config = {"from_attributes": True}
@@ -76,6 +77,7 @@ def _user_to_response(user: User, db: Session) -> UserResponse:
         email=user.email,
         level=user.level,
         goal=user.goal,
+        role=user.role,
         analyzed_count=analyzed_count,
     )
 
@@ -87,12 +89,16 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == data.email.lower()).first():
         raise HTTPException(status_code=400, detail="E-Mail bereits registriert")
 
+    is_first_user = db.query(User).count() == 0
+    role = Role.ADMIN if is_first_user else Role.USER
+
     user = User(
         email=data.email.lower(),
         name=data.name,
         hashed_password=hash_password(data.password),
         level=data.level,
         goal=data.goal,
+        role=role,
     )
     db.add(user)
     db.commit()

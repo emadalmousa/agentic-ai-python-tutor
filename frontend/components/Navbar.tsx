@@ -1,17 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
+import { useTheme } from "@/context/ThemeContext"
 
-interface Props {
-  dark: boolean
-  onToggleDark: () => void
-}
-
-export default function Navbar({ dark, onToggleDark }: Props) {
+export default function Navbar() {
   const { user, isGuest, logout } = useAuth()
+  const { dark, toggleDark } = useTheme()
   const router = useRouter()
+  const pathname = usePathname()
+  const onTutor = pathname === "/tutor"
+  const onProfile = pathname === "/profile"
 
   const handleLogout = () => {
     logout()
@@ -41,26 +41,30 @@ export default function Navbar({ dark, onToggleDark }: Props) {
       <nav className="flex items-center gap-2">
         {user ? (
           <>
-            <Link
-              href="/tutor"
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                dark
-                  ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
-                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-              }`}
-            >
-              Tutor
-            </Link>
-            <Link
-              href="/profile"
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                dark
-                  ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
-                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-              }`}
-            >
-              Profil
-            </Link>
+            {!onTutor && (
+              <Link
+                href="/tutor"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  dark
+                    ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                }`}
+              >
+                Tutor
+              </Link>
+            )}
+            {!onProfile && (
+              <Link
+                href="/profile"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  dark
+                    ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                }`}
+              >
+                Profil
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -81,16 +85,18 @@ export default function Navbar({ dark, onToggleDark }: Props) {
           </>
         ) : isGuest ? (
           <>
-            <Link
-              href="/tutor"
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                dark
-                  ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
-                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-              }`}
-            >
-              Tutor
-            </Link>
+            {!onTutor && (
+              <Link
+                href="/tutor"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  dark
+                    ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                }`}
+              >
+                Tutor
+              </Link>
+            )}
             <Link
               href="/login"
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -130,7 +136,7 @@ export default function Navbar({ dark, onToggleDark }: Props) {
         <div className={`ml-2 w-px h-5 ${dark ? "bg-[#1e2f45]" : "bg-gray-200"}`} />
 
         <button
-          onClick={onToggleDark}
+          onClick={toggleDark}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
             dark
               ? "border-[#2d3f55] text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"

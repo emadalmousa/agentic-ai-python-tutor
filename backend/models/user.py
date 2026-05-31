@@ -13,6 +13,11 @@ class Level(str, enum.Enum):
     ADVANCED = "Fortgeschritten"
 
 
+class Role(str, enum.Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -22,6 +27,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     level = Column(String, default="Anfänger")
     goal = Column(String, default="Python Grundlagen")
+    role = Column(String, default=Role.USER, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     sessions = relationship("LearningSession", back_populates="user")

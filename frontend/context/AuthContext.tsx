@@ -4,12 +4,15 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 
 export type Level = "Anfänger" | "Mittel" | "Fortgeschritten"
 
+export type Role = "admin" | "user"
+
 export interface User {
   id: string
   name: string
   email: string
   level: Level
   goal: string
+  role: Role
   analyzedCount: number
 }
 
@@ -62,6 +65,7 @@ async function fetchMe(token: string): Promise<User | null> {
       email: data.email,
       level: data.level as Level,
       goal: data.goal,
+      role: (data.role ?? "user") as Role,
       analyzedCount: data.analyzed_count ?? 0,
     }
   } catch {
@@ -124,15 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           goal: data.goal,
         }),
       })
-      if (!res.ok) return false
-      const { access_token } = await res.json()
-      localStorage.setItem(TOKEN_KEY, access_token)
-      const resolved = await fetchMe(access_token)
-      if (resolved) {
-        setUser(resolved)
-        return true
-      }
-      return false
+      return res.ok
     } catch {
       return false
     }
@@ -163,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: data.email,
         level: data.level as Level,
         goal: data.goal,
+        role: (data.role ?? "user") as Role,
         analyzedCount: data.analyzed_count ?? 0,
       })
     } catch {
