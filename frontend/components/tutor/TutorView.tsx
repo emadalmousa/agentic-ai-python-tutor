@@ -10,8 +10,33 @@ import { useCodeRunner } from "@/hooks/useCodeRunner"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 
+const LEVEL_COMPLEXITY: Record<string, string> = {
+  beginner:     "Erkläre alles sehr einfach für absolute Anfänger. Verwende kurze, klare Sätze. Zeige einfache Beispiele mit print() und einfachen Werten.",
+  intermediate: "Erkläre auf mittlerem Niveau. Zeige praxisnahe Beispiele mit realistischen Anwendungsfällen.",
+  advanced:     "Erkläre tiefgehend mit komplexen Beispielen, Best Practices und typischen Fehlerquellen.",
+}
+
 function readExerciseRedirect(): { code: string; history: import("@/types/tutor").ChatMessage[] } {
-  const DEFAULT_CODE = "for i in range(5)\n    print(i)"
+  const DEFAULT_CODE = "# Schreibe hier deinen Python-Code..."
+
+  // Check for topic explanation request
+  try {
+    const topicRaw = localStorage.getItem("ki_tutor_explain_topic")
+    if (topicRaw) {
+      const { skill_label, level } = JSON.parse(topicRaw) as { skill_key: string; skill_label: string; level: string }
+      localStorage.removeItem("ki_tutor_explain_topic")
+      const complexity = LEVEL_COMPLEXITY[level] ?? LEVEL_COMPLEXITY.beginner
+      const prompt = `Erkläre mir das Thema **${skill_label}** in Python vollständig.\n\n${complexity}\n\nStruktur deiner Erklärung:\n1. Was ist ${skill_label}? (kurze Definition)\n2. Warum braucht man das?\n3. Syntax / Grundstruktur\n4. Mindestens 3 Beispiele mit steigendem Schwierigkeitsgrad\n5. Häufige Fehler und wie man sie vermeidet\n6. Kurze Zusammenfassung`
+      return {
+        code: DEFAULT_CODE,
+        history: [{ role: "user", content: prompt }],
+      }
+    }
+  } catch {
+    localStorage.removeItem("ki_tutor_explain_topic")
+  }
+
+  // Check for exercise redirect
   try {
     const raw = localStorage.getItem("ki_tutor_exercise_redirect")
     if (!raw) return { code: DEFAULT_CODE, history: [] }
@@ -50,6 +75,7 @@ export default function TutorView() {
   useEffect(() => {
     if (!isAuthenticated) router.replace("/login")
   }, [isAuthenticated, router])
+
 
   if (!isAuthenticated) return null
 

@@ -1,8 +1,50 @@
 "use client"
 
-import { useRef, useEffect, KeyboardEvent } from "react"
+import { useRef, useEffect, useState, KeyboardEvent } from "react"
 import type { ChatMessage } from "@/types/tutor"
 import MarkdownMessage from "./MarkdownMessage"
+
+const THINKING_MESSAGES = [
+  { after: 0,  text: "Ich lese deine Frage..." },
+  { after: 2,  text: "Ich bereite die Antwort vor..." },
+  { after: 5,  text: "Fast fertig, ich formuliere die Erklärung..." },
+  { after: 9,  text: "Noch einen Moment, ich überprüfe die Beispiele..." },
+  { after: 14, text: "Gleich fertig..." },
+  { after: 20, text: "Das ist eine ausführliche Antwort — fast da..." },
+  { after: 28, text: "Ich bin dran, danke für deine Geduld ✨" },
+]
+
+function ThinkingIndicator({ dark, subCol }: { dark: boolean; subCol: string }) {
+  const [msgIndex, setMsgIndex] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    setMsgIndex(0)
+    setElapsed(0)
+    const interval = setInterval(() => {
+      setElapsed((prev) => {
+        const next = prev + 1
+        const nextIdx = THINKING_MESSAGES.findLastIndex((m) => m.after <= next)
+        setMsgIndex(nextIdx >= 0 ? nextIdx : 0)
+        return next
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const msg = THINKING_MESSAGES[msgIndex]
+
+  return (
+    <div className={`px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 ${dark ? "bg-[#111e30]" : "bg-gray-50"}`}>
+      <div className="flex gap-1 items-center shrink-0">
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+      </div>
+      <span className={`text-xs transition-all duration-500 ${subCol}`}>{msg.text}</span>
+    </div>
+  )
+}
 
 interface Props {
   history: ChatMessage[]
@@ -114,18 +156,30 @@ export default function ChatPanel({
         {/* Typing-Indikator */}
         {busy && (
           <div className="flex justify-start">
-            <div className="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center text-xs mr-2 mt-0.5">
+            <div className="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center text-xs mr-2 mt-0.5 shrink-0">
               🤖
             </div>
-            <div className={`${msgBg} px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2`}>
-              <div className="flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:"0ms"}} />
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:"150ms"}} />
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:"300ms"}} />
+            {analyzing ? (
+              <div className={`${msgBg} px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2`}>
+                <div className="flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className={`text-xs ${subCol}`}>Analysiere Code…</span>
               </div>
-              {analyzing && <span className={`text-xs ${subCol}`}>Analysiere Code…</span>}
-              {uploading && <span className={`text-xs ${subCol}`}>PDF wird hochgeladen…</span>}
-            </div>
+            ) : uploading ? (
+              <div className={`${msgBg} px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2`}>
+                <div className="flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className={`text-xs ${subCol}`}>PDF wird hochgeladen…</span>
+              </div>
+            ) : (
+              <ThinkingIndicator dark={dark} subCol={subCol} />
+            )}
           </div>
         )}
 

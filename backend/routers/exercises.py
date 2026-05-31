@@ -112,14 +112,13 @@ def get_exercises(
         is_locked = completion.is_locked if completion else False
 
         # Unlock logic: first exercise always visible;
-        # exercise N is visible only if exercise N-1 is completed (score_granted > 0)
+        # exercise N is visible only if exercise N-1 is fully solved (is_locked = True, i.e. RICHTIG)
         if ex["order"] == 1:
             is_unlocked = True
         else:
             prev_ex = raw_exercises[ex["order"] - 2]  # order is 1-based
             prev_completion = completions.get(prev_ex["id"])
-            prev_score = prev_completion.score_granted if prev_completion else 0
-            is_unlocked = prev_score > 0
+            is_unlocked = prev_completion.is_locked if prev_completion else False
 
         exercises_out.append(ExerciseOut(
             id=ex_id,

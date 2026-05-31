@@ -279,7 +279,7 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
                 <div className="space-y-3 animate-[fadeIn_300ms_ease-out]">
                   {result.result === "richtig" && (
                     <div className={`rounded-xl p-4 border-l-4 ${dark ? "bg-emerald-500/10 border-l-emerald-500 text-emerald-300" : "bg-emerald-50 border-l-emerald-500 text-emerald-800"}`}>
-                      <p className="font-semibold text-sm mb-1">&#10003; Richtig! +{result.score_change} Punkte</p>
+                      <p className="font-semibold text-sm mb-1">&#10003; Richtig! +{result.score_change / 10} Punkte</p>
                       {result.what_was_good && (
                         <p className={`text-sm ${dark ? "text-emerald-200/80" : "text-emerald-700"}`}>{result.what_was_good}</p>
                       )}
@@ -288,7 +288,7 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
 
                   {result.result === "teilweise" && (
                     <div className={`rounded-xl p-4 border-l-4 ${dark ? "bg-amber-500/10 border-l-amber-500 text-amber-300" : "bg-amber-50 border-l-amber-500 text-amber-800"}`}>
-                      <p className="font-semibold text-sm mb-1">&#9684; Teilweise richtig! +{result.score_change} Punkte</p>
+                      <p className="font-semibold text-sm mb-1">&#9684; Teilweise richtig! +{result.score_change / 10} Punkte</p>
                       {result.what_was_good && (
                         <p className={`text-sm mb-2 ${dark ? "text-amber-200/80" : "text-amber-700"}`}>{result.what_was_good}</p>
                       )}

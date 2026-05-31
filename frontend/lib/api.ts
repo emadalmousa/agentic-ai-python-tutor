@@ -5,6 +5,7 @@ import type {
   ExercisesResponse, SubmitExerciseRequest, SubmitExerciseResponse,
   HintRequest, HintResponse,
   SkillTestGenerateResponse, SkillTestSubmitRequest, SkillTestResult,
+  LevelTestGenerateResponse, LevelTestSubmitRequest, LevelTestResult, LevelKey,
 } from "@/types/tutor"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"
@@ -131,6 +132,36 @@ export async function submitSkillTest(payload: SkillTestSubmitRequest, token: st
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+// --- Level tests ---
+
+export async function generateLevelTest(level: LevelKey, token: string): Promise<LevelTestGenerateResponse> {
+  const res = await fetch(`${API_URL}/level-tests/generate`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ level }),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+export async function submitLevelTest(payload: LevelTestSubmitRequest, token: string): Promise<LevelTestResult> {
+  const res = await fetch(`${API_URL}/level-tests/submit`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+export async function getLevelTestStatus(level: LevelKey, token: string) {
+  const res = await fetch(`${API_URL}/level-tests/status/${level}`, {
+    headers: authHeaders(token),
   })
   if (!res.ok) throw new Error(`Backend error: ${res.status}`)
   return res.json()

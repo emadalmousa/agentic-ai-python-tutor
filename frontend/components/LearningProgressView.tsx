@@ -3,183 +3,259 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
-import { getLearningProgress, analyzeSkill, deleteAnalysisEvents } from "@/lib/api"
-import type { ProgressResponse, SkillAnalyzeResponse, SkillProgress } from "@/types/tutor"
-import ExerciseModal from "@/components/ExerciseModal"
+import { getLearningProgress } from "@/lib/api"
+import type { ProgressResponse, SkillProgress } from "@/types/tutor"
+import ExercisePanel from "@/components/ExercisePanel"
 import SkillTestModal from "@/components/SkillTestModal"
+import LevelTestModal from "@/components/LevelTestModal"
+import type { LevelKey } from "@/types/tutor"
 
-// Status-Konfiguration
-const STATUS_CONFIG = {
-  understood:     { label: "Verstanden",           color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",  bar: "bg-emerald-500" },
-  partial:        { label: "Teilweise verstanden",  color: "bg-amber-500/20 text-amber-400 border-amber-500/30",       bar: "bg-amber-500"   },
-  not_understood: { label: "Nicht verstanden",      color: "bg-red-500/20 text-red-400 border-red-500/30",             bar: "bg-red-500"     },
-}
-const STATUS_CONFIG_LIGHT = {
-  understood:     { label: "Verstanden",           color: "bg-emerald-100 text-emerald-700 border-emerald-200",  bar: "bg-emerald-500" },
-  partial:        { label: "Teilweise verstanden",  color: "bg-amber-100 text-amber-700 border-amber-200",       bar: "bg-amber-500"   },
-  not_understood: { label: "Nicht verstanden",      color: "bg-red-100 text-red-700 border-red-200",             bar: "bg-red-500"     },
-}
+// ─── Config ────────────────────────────────────────────────────────────────
 
-// User-Status-Konfiguration
-const USER_STATUS_CONFIG = {
-  "Anfänger":      { color: "bg-orange-500/20 text-orange-400 border-orange-500/30",     colorLight: "bg-orange-100 text-orange-700 border-orange-200"     },
-  "Fortgeschritten": { color: "bg-blue-500/20 text-blue-400 border-blue-500/30",         colorLight: "bg-blue-100 text-blue-700 border-blue-200"           },
-  "Profi":         { color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",  colorLight: "bg-emerald-100 text-emerald-700 border-emerald-200"  },
+const STATUS_CFG = {
+  dark: {
+    understood:     { label: "Verstanden",          bar: "bg-emerald-500", badge: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    partial:        { label: "Teilweise",            bar: "bg-amber-500",   badge: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+    not_understood: { label: "Nicht verstanden",     bar: "bg-red-500",     badge: "bg-red-500/20 text-red-400 border-red-500/30" },
+  },
+  light: {
+    understood:     { label: "Verstanden",          bar: "bg-emerald-500", badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+    partial:        { label: "Teilweise",            bar: "bg-amber-500",   badge: "bg-amber-100 text-amber-700 border-amber-200" },
+    not_understood: { label: "Nicht verstanden",     bar: "bg-red-500",     badge: "bg-red-100 text-red-700 border-red-200" },
+  },
 }
 
-function StatusBadge({ status, dark }: { status: string; dark: boolean }) {
-  const cfg = (dark ? STATUS_CONFIG : STATUS_CONFIG_LIGHT)[status as keyof typeof STATUS_CONFIG]
-    ?? (dark ? STATUS_CONFIG.not_understood : STATUS_CONFIG_LIGHT.not_understood)
+const LEVEL_META = {
+  beginner:     { label: "Anfänger",       icon: "🌱", accent: "blue" },
+  intermediate: { label: "Fortgeschritten", icon: "⚡", accent: "purple" },
+  advanced:     { label: "Profi",           icon: "🔥", accent: "orange" },
+}
+
+const USER_STATUS_STYLES = {
+  "Anfänger":      "bg-orange-500/20 text-orange-400 border-orange-500/40",
+  "Fortgeschritten": "bg-blue-500/20 text-blue-400 border-blue-500/40",
+  "Profi":         "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
+}
+const USER_STATUS_STYLES_LIGHT = {
+  "Anfänger":      "bg-orange-100 text-orange-700 border-orange-200",
+  "Fortgeschritten": "bg-blue-100 text-blue-700 border-blue-200",
+  "Profi":         "bg-emerald-100 text-emerald-700 border-emerald-200",
+}
+
+// ─── Small helpers ─────────────────────────────────────────────────────────
+
+function statusCfg(status: string, dark: boolean) {
+  const map = dark ? STATUS_CFG.dark : STATUS_CFG.light
+  return map[status as keyof typeof map] ?? map.not_understood
+}
+
+function Ring({ score, size = 80, dark }: { score: number; size?: number; dark: boolean }) {
+  const r = size / 2 - 7
+  const c = 2 * Math.PI * r
+  const color = score >= 75 ? "#10b981" : score >= 40 ? "#f59e0b" : "#ef4444"
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.color}`}>
-      {cfg.label}
-    </span>
-  )
-}
-
-function UserStatusBadge({ status, dark }: { status: "Anfänger" | "Fortgeschritten" | "Profi"; dark: boolean }) {
-  const cfg = USER_STATUS_CONFIG[status]
-  return (
-    <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${dark ? cfg.color : cfg.colorLight}`}>
-      {status}
-    </span>
-  )
-}
-
-function SkillBar({ score, status, dark }: { score: number; status: string; dark: boolean }) {
-  const cfg = (dark ? STATUS_CONFIG : STATUS_CONFIG_LIGHT)[status as keyof typeof STATUS_CONFIG]
-    ?? (dark ? STATUS_CONFIG.not_understood : STATUS_CONFIG_LIGHT.not_understood)
-  return (
-    <div className={`w-full h-2 rounded-full ${dark ? "bg-[#1e2f45]" : "bg-gray-200"} overflow-hidden`}>
-      <div
-        className={`h-full rounded-full transition-all duration-700 ${cfg.bar}`}
-        style={{ width: `${score}%` }}
-      />
-    </div>
-  )
-}
-
-function OverallRing({ score, dark }: { score: number; dark: boolean }) {
-  const radius = 36
-  const circ   = 2 * Math.PI * radius
-  const dash   = circ * (score / 100)
-  const color  = score >= 75 ? "#10b981" : score >= 40 ? "#f59e0b" : "#ef4444"
-
-  return (
-    <svg width="96" height="96" className="rotate-[-90deg]">
-      <circle cx="48" cy="48" r={radius} fill="none" strokeWidth="8"
-        stroke={dark ? "#1e2f45" : "#e5e7eb"} />
-      <circle cx="48" cy="48" r={radius} fill="none" strokeWidth="8"
-        stroke={color} strokeLinecap="round"
-        strokeDasharray={`${dash} ${circ}`}
-        style={{ transition: "stroke-dasharray 0.8s ease" }} />
-      <text x="48" y="52" textAnchor="middle" fontSize="18" fontWeight="bold"
-        fill={dark ? "#fff" : "#111"} className="rotate-90 origin-center"
-        style={{ transform: "rotate(90deg)", transformOrigin: "48px 48px" }}>
+    <svg width={size} height={size} className="rotate-[-90deg]">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="7" stroke={dark ? "#1e2f45" : "#e5e7eb"} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="7" stroke={color}
+        strokeLinecap="round" strokeDasharray={`${c * score / 100} ${c}`}
+        style={{ transition: "stroke-dasharray 0.9s ease" }} />
+      <text x={size / 2} y={size / 2 + 6} textAnchor="middle" fontSize={size / 5} fontWeight="bold"
+        fill={dark ? "#fff" : "#111"}
+        style={{ transform: `rotate(90deg)`, transformOrigin: `${size / 2}px ${size / 2}px` }}>
         {score}
       </text>
     </svg>
   )
 }
 
-const LEVEL_GROUPS: Array<{
-  key: "beginner" | "intermediate" | "advanced"
-  label: string
-  alwaysShow: boolean
-}> = [
-  { key: "beginner",     label: "Grundlagen (Anfänger)", alwaysShow: true  },
-  { key: "intermediate", label: "Fortgeschritten",        alwaysShow: false },
-  { key: "advanced",     label: "Profi",                  alwaysShow: false },
-]
+function Bar({ score, status, dark }: { score: number; status: string; dark: boolean }) {
+  const cfg = statusCfg(status, dark)
+  return (
+    <div className={`w-full h-1.5 rounded-full ${dark ? "bg-[#1e2f45]" : "bg-gray-200"} overflow-hidden`}>
+      <div className={`h-full rounded-full transition-all duration-700 ${cfg.bar}`} style={{ width: `${score}%` }} />
+    </div>
+  )
+}
 
-function SkillCard({
-  skill,
-  dark,
-  onClick,
-}: {
-  skill: SkillProgress
-  dark: boolean
-  onClick: () => void
-}) {
-  const isLocked = !skill.is_unlocked
-  const cardBase = dark
-    ? "rounded-xl border border-[#1e2f45] p-4 transition-colors"
-    : "rounded-xl border border-gray-200 p-4 transition-colors"
+// ─── Left panel: skill list ─────────────────────────────────────────────────
 
-  const interactiveClass = isLocked
-    ? `${cardBase} opacity-50 ${dark ? "bg-[#0a1525]" : "bg-gray-50"}`
-    : `${cardBase} cursor-pointer hover:border-blue-500/50 ${dark ? "bg-[#0a1525] hover:bg-[#0d1f35]" : "bg-white hover:bg-blue-50/50"}`
+function SkillListItem({
+  skill, selected, dark, onClick,
+}: { skill: SkillProgress; selected: boolean; dark: boolean; onClick: () => void }) {
+  const locked = !skill.is_unlocked
+  const cfg = statusCfg(skill.status, dark)
+
+  const base = `flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all text-sm`
+  const bg = locked
+    ? `opacity-40 cursor-default ${dark ? "text-gray-500" : "text-gray-400"}`
+    : selected
+      ? dark ? "bg-blue-600/25 border border-blue-500/40 text-white" : "bg-blue-50 border border-blue-200 text-blue-900"
+      : dark
+        ? "hover:bg-[#0d1f35] text-gray-300 border border-transparent hover:border-[#1e2f45]"
+        : "hover:bg-gray-100 text-gray-700 border border-transparent"
 
   return (
-    <div
-      className={interactiveClass}
-      onClick={isLocked ? undefined : onClick}
-      role={isLocked ? undefined : "button"}
-      tabIndex={isLocked ? undefined : 0}
-      onKeyDown={isLocked ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") onClick() }}
-    >
-      <div className="flex items-center justify-between mb-1.5">
-        <span className={`text-sm font-medium flex items-center gap-1.5 ${dark ? "text-gray-200" : "text-gray-700"}`}>
-          {isLocked && <span title="Gesperrt">🔒</span>}
-          {skill.skill_label}
-        </span>
-        {!isLocked && (
-          <div className="flex items-center gap-2">
-            <span className={`text-xs tabular-nums ${dark ? "text-gray-400" : "text-gray-500"}`}>
-              {skill.score}/100
-            </span>
-            <StatusBadge status={skill.status} dark={dark} />
-          </div>
-        )}
-        {isLocked && (
-          <span className={`text-xs ${dark ? "text-gray-600" : "text-gray-400"}`}>Gesperrt</span>
+    <div className={`${base} ${bg}`} onClick={locked ? undefined : onClick}>
+      <span className="text-base leading-none">
+        {locked ? "🔒" : skill.score === 100 ? "✅" : skill.score >= 80 ? "⭐" : "📖"}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-xs font-medium leading-tight">{skill.skill_label}</p>
+        {!locked && (
+          <Bar score={skill.score} status={skill.status} dark={dark} />
         )}
       </div>
-      {!isLocked && (
-        <SkillBar score={skill.score} status={skill.status} dark={dark} />
+      {!locked && (
+        <span className={`text-xs tabular-nums font-mono shrink-0 ${dark ? "text-gray-500" : "text-gray-400"}`}>
+          {skill.score}%
+        </span>
       )}
     </div>
   )
 }
+
+// ─── Right panel: skill detail ──────────────────────────────────────────────
+
+function EmptyState({ dark }: { dark: boolean }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 opacity-50 select-none">
+      <span className="text-6xl">👈</span>
+      <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}>
+        Wähle einen Skill aus der Liste
+      </p>
+    </div>
+  )
+}
+
+function SkillDetail({
+  skill, dark, onStartExercise,
+}: { skill: SkillProgress; dark: boolean; onStartExercise: () => void }) {
+  const cfg = statusCfg(skill.status, dark)
+  const meta = LEVEL_META[skill.level as keyof typeof LEVEL_META] ?? LEVEL_META.beginner
+
+  const exercisesDone = Math.floor(skill.score / 20)
+  const allExercisesDone = skill.score >= 100
+
+  const accentColors: Record<string, string> = {
+    blue:   dark ? "from-blue-600/20 to-transparent border-blue-500/20" : "from-blue-50 to-transparent border-blue-100",
+    purple: dark ? "from-purple-600/20 to-transparent border-purple-500/20" : "from-purple-50 to-transparent border-purple-100",
+    orange: dark ? "from-orange-600/20 to-transparent border-orange-500/20" : "from-orange-50 to-transparent border-orange-100",
+  }
+  const accentText: Record<string, string> = {
+    blue:   dark ? "text-blue-400" : "text-blue-700",
+    purple: dark ? "text-purple-400" : "text-purple-700",
+    orange: dark ? "text-orange-400" : "text-orange-700",
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+      {/* Hero card */}
+      <div className={`rounded-2xl border bg-gradient-to-br p-6 ${accentColors[meta.accent]}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xl">{meta.icon}</span>
+              <span className={`text-xs font-semibold uppercase tracking-widest ${accentText[meta.accent]}`}>
+                {meta.label}
+              </span>
+            </div>
+            <h2 className={`text-2xl font-bold mt-1 ${dark ? "text-white" : "text-gray-900"}`}>
+              {skill.skill_label}
+            </h2>
+            <span className={`inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.badge}`}>
+              {cfg.label}
+            </span>
+          </div>
+          <Ring score={skill.score} size={88} dark={dark} />
+        </div>
+      </div>
+
+      {/* Progress breakdown */}
+      <div className={`rounded-2xl border p-5 ${dark ? "bg-[#0d1929] border-[#1e2f45]" : "bg-white border-gray-200"}`}>
+        <h3 className={`text-xs font-semibold uppercase tracking-wider mb-4 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+          Fortschritt
+        </h3>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          {[1, 2, 3, 4, 5].slice(0, 3).concat([4, 5]).map((n) => {
+            const done = n <= exercisesDone
+            const current = n === exercisesDone + 1 && !allExercisesDone
+            return (
+              <div key={n} className={`rounded-xl p-3 text-center border transition-all ${
+                done
+                  ? dark ? "bg-emerald-500/15 border-emerald-500/30" : "bg-emerald-50 border-emerald-200"
+                  : current
+                    ? dark ? "bg-blue-500/15 border-blue-500/40 ring-1 ring-blue-500/30" : "bg-blue-50 border-blue-300 ring-1 ring-blue-200"
+                    : dark ? "bg-[#0a1525] border-[#1e2f45] opacity-40" : "bg-gray-50 border-gray-200 opacity-50"
+              }`}>
+                <div className="text-xl mb-1">{done ? "✅" : current ? "📝" : "🔒"}</div>
+                <div className={`text-xs font-medium ${dark ? "text-gray-400" : "text-gray-500"}`}>
+                  Übung {n}
+                </div>
+                <div className={`text-xs mt-0.5 ${done ? (dark ? "text-emerald-400" : "text-emerald-600") : current ? (dark ? "text-blue-400" : "text-blue-600") : (dark ? "text-gray-600" : "text-gray-400")}`}>
+                  {done ? "+20%" : current ? "Offen" : "Gesperrt"}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div className={`flex justify-between text-xs mb-1.5 ${dark ? "text-gray-500" : "text-gray-400"}`}>
+          <span>{exercisesDone} / 5 Übungen abgeschlossen</span>
+          <span>{skill.score}%</span>
+        </div>
+        <div className={`w-full h-2.5 rounded-full ${dark ? "bg-[#1e2f45]" : "bg-gray-200"} overflow-hidden`}>
+          <div
+            className={`h-full rounded-full transition-all duration-700 ${statusCfg(skill.status, dark).bar}`}
+            style={{ width: `${skill.score}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Info cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className={`rounded-xl border p-4 ${dark ? "bg-[#0d1929] border-[#1e2f45]" : "bg-white border-gray-200"}`}>
+          <p className={`text-xs uppercase tracking-wider mb-1 ${dark ? "text-gray-500" : "text-gray-400"}`}>Nächstes Ziel</p>
+          <p className={`text-sm font-medium ${dark ? "text-white" : "text-gray-800"}`}>
+            {allExercisesDone ? "Skill-Test bestehen" : `Übung ${exercisesDone + 1} lösen`}
+          </p>
+        </div>
+        <div className={`rounded-xl border p-4 ${dark ? "bg-[#0d1929] border-[#1e2f45]" : "bg-white border-gray-200"}`}>
+          <p className={`text-xs uppercase tracking-wider mb-1 ${dark ? "text-gray-500" : "text-gray-400"}`}>Zum nächsten Skill</p>
+          <p className={`text-sm font-medium ${dark ? "text-white" : "text-gray-800"}`}>
+            {skill.score >= 80 ? "✅ Erreicht" : `${80 - skill.score}% fehlen`}
+          </p>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <button
+        onClick={onStartExercise}
+        className="w-full py-3 rounded-2xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white transition-all shadow-lg shadow-blue-600/20"
+      >
+        {allExercisesDone ? "🎯 Skill-Test starten" : `📝 Übung ${exercisesDone + 1} starten`}
+      </button>
+
+    </div>
+  )
+}
+
+// ─── Main component ─────────────────────────────────────────────────────────
 
 export default function LearningProgressView() {
   const { user } = useAuth()
   const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
   const { dark } = useTheme()
 
-  const [progress, setProgress]         = useState<ProgressResponse | null>(null)
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState<string | null>(null)
+  const [progress, setProgress]           = useState<ProgressResponse | null>(null)
+  const [loading, setLoading]             = useState(true)
+  const [error, setError]                 = useState<string | null>(null)
   const [selectedSkill, setSelectedSkill] = useState<SkillProgress | null>(null)
   const [showSkillTest, setShowSkillTest] = useState(false)
-  const [refreshTick, setRefreshTick]   = useState(0)
+  const [showLevelTest, setShowLevelTest] = useState<LevelKey | null>(null)
+  const [refreshTick, setRefreshTick]     = useState(0)
+  const [activeLevel, setActiveLevel]     = useState<LevelKey>("beginner")
 
-  // Analyse-Panel
-  const [inputText, setInputText]       = useState("")
-  const [inputType, setInputType]       = useState<"code" | "frage">("frage")
-  const [analyzing, setAnalyzing]       = useState(false)
-  const [lastResult, setLastResult]     = useState<SkillAnalyzeResponse | null>(null)
-
-  // Delete events state
-  const [deleting, setDeleting]         = useState(false)
-  const [deleteSuccess, setDeleteSuccess] = useState(false)
-
-  // Collapsible section state
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    beginner: true,
-    intermediate: false,
-    advanced: false,
-  })
-
-  const bg       = dark ? "bg-[#060e1c] text-white"    : "bg-gray-50 text-gray-900"
-  const card     = dark ? "bg-[#0d1929] border-[#1e2f45]" : "bg-white border-gray-200"
-  const inputCls = dark
-    ? "w-full bg-[#0a1525] border border-[#1e2f45] text-white placeholder-gray-500 rounded-xl p-3 text-sm resize-none focus:outline-none focus:border-blue-500/60"
-    : "w-full bg-white border border-gray-300 text-gray-900 placeholder-gray-400 rounded-xl p-3 text-sm resize-none focus:outline-none focus:border-blue-500"
-
-  const refreshProgress = useCallback(() => {
-    setRefreshTick((t) => t + 1)
-  }, [])
+  const refreshProgress = useCallback(() => setRefreshTick((t) => t + 1), [])
 
   useEffect(() => {
     if (!user) return
@@ -194,343 +270,157 @@ export default function LearningProgressView() {
     return () => { cancelled = true }
   }, [user, refreshTick])
 
-  async function handleAnalyze() {
-    if (!inputText.trim() || analyzing) return
-    setAnalyzing(true)
-    setLastResult(null)
-    try {
-      const result = await analyzeSkill(
-        inputType === "code" ? { code: inputText } : { question: inputText },
-        token,
-      )
-      setLastResult(result)
-      setProgress(result.updated_progress)
-    } catch {
-      setError("Analyse fehlgeschlagen.")
-    } finally {
-      setAnalyzing(false)
-    }
-  }
-
-  async function handleDeleteEvents() {
-    const confirmed = window.confirm(
-      "Alle letzten Analysen löschen? Diese Aktion kann nicht rückgängig gemacht werden."
-    )
-    if (!confirmed) return
-    setDeleting(true)
-    try {
-      await deleteAnalysisEvents(token)
-      setDeleteSuccess(true)
-      refreshProgress()
-      setTimeout(() => setDeleteSuccess(false), 3000)
-    } catch {
-      setError("Löschen fehlgeschlagen.")
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  function toggleGroup(key: string) {
-    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
-
-  if (loading) {
-    return (
-      <div className={`${bg} flex-1 flex items-center justify-center`}>
-        <div className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}>Laden…</div>
-      </div>
-    )
-  }
-
   function handleSkillScoreUpdate(skillKey: string, newScore: number) {
     setProgress((prev) => {
       if (!prev) return prev
-      return {
-        ...prev,
-        skills: prev.skills.map((s) =>
-          s.skill_key === skillKey ? { ...s, score: newScore } : s,
-        ),
-      }
+      return { ...prev, skills: prev.skills.map((s) => s.skill_key === skillKey ? { ...s, score: newScore } : s) }
     })
-    setSelectedSkill((prev) =>
-      prev?.skill_key === skillKey ? { ...prev, score: newScore } : prev
-    )
+    setSelectedSkill((prev) => prev?.skill_key === skillKey ? { ...prev, score: newScore } : prev)
   }
 
   function handleTestPassed(skillKey: string) {
-    // Refresh progress to get newly unlocked skills
     void skillKey
     refreshProgress()
   }
 
-  return (
-    <div className={`${bg} flex-1 overflow-y-auto`}>
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+  const bg   = dark ? "bg-[#060e1c] text-white" : "bg-gray-50 text-gray-900"
+  const side = dark ? "bg-[#0d1929] border-[#1e2f45]" : "bg-white border-gray-200"
 
-        {/* Header */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div>
-            <h1 className={`text-xl font-bold ${dark ? "text-white" : "text-gray-900"}`}>
-              Lernfortschritt
-            </h1>
-            <p className={`text-sm mt-1 ${dark ? "text-gray-400" : "text-gray-500"}`}>
-              Dein aktueller Stand in den Python-Grundlagen
-            </p>
-          </div>
+  if (loading) {
+    return (
+      <div className={`${bg} flex-1 flex items-center justify-center`}>
+        <div className={`text-sm animate-pulse ${dark ? "text-gray-400" : "text-gray-500"}`}>Laden…</div>
+      </div>
+    )
+  }
+
+  const levelSkills = (level: string) =>
+    (progress?.skills ?? []).filter((s) => s.level === level).sort((a, b) => a.order - b.order)
+
+  const unlockedLevels = (["beginner", "intermediate", "advanced"] as const).filter(
+    (l) => l === "beginner" || levelSkills(l).some((s) => s.is_unlocked)
+  )
+
+  return (
+    <div className={`${bg} flex-1 flex flex-col overflow-hidden`}>
+
+      {/* Top bar */}
+      <div className={`border-b px-6 py-4 flex items-center justify-between gap-4 shrink-0 ${dark ? "border-[#1e2f45]" : "border-gray-200"}`}>
+        <div className="flex items-center gap-3">
+          <h1 className={`text-lg font-bold ${dark ? "text-white" : "text-gray-900"}`}>Lernfortschritt</h1>
           {progress && (
-            <UserStatusBadge status={progress.user_status} dark={dark} />
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${dark ? USER_STATUS_STYLES[progress.user_status] : USER_STATUS_STYLES_LIGHT[progress.user_status]}`}>
+              {progress.user_status}
+            </span>
           )}
         </div>
-
-        {error && (
-          <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Gesamtfortschritt */}
         {progress && (
-          <div className={`rounded-2xl border p-6 ${card} flex items-center gap-6`}>
-            <OverallRing score={progress.overall_score} dark={dark} />
+          <div className="flex items-center gap-2">
+            <Ring score={progress.overall_score} size={44} dark={dark} />
             <div>
-              <p className={`text-xs font-medium uppercase tracking-wider mb-1 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                Gesamtfortschritt
-              </p>
-              <p className={`text-3xl font-bold ${dark ? "text-white" : "text-gray-900"}`}>
-                {progress.overall_score}%
-              </p>
-              <p className={`text-sm mt-1 ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                Durchschnitt über alle Skills
-              </p>
+              <p className={`text-xs ${dark ? "text-gray-500" : "text-gray-400"}`}>Gesamt</p>
+              <p className={`text-sm font-bold ${dark ? "text-white" : "text-gray-900"}`}>{progress.overall_score}%</p>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Skill-Fortschrittsbalken — grouped by level */}
-        {progress && (
-          <div className={`rounded-2xl border p-6 ${card} space-y-4`}>
-            <h2 className={`text-sm font-semibold ${dark ? "text-white" : "text-gray-900"}`}>
-              Skills im Detail
-            </h2>
+      {error && (
+        <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
-            {LEVEL_GROUPS.map(({ key, label, alwaysShow }) => {
-              const groupSkills = progress.skills
-                .filter((s) => s.level === key)
-                .sort((a, b) => a.order - b.order)
+      {/* Split layout */}
+      <div className="flex-1 flex overflow-hidden">
 
-              const hasUnlocked = groupSkills.some((s) => s.is_unlocked)
-              if (!alwaysShow && !hasUnlocked) return null
+        {/* LEFT — skill list */}
+        <div className={`w-64 shrink-0 border-r flex flex-col overflow-hidden ${side}`}>
 
-              const isOpen = openGroups[key] ?? false
-
+          {/* Level tabs */}
+          <div className={`flex border-b ${dark ? "border-[#1e2f45]" : "border-gray-200"}`}>
+            {unlockedLevels.map((lvl) => {
+              const meta = LEVEL_META[lvl]
+              const active = activeLevel === lvl
               return (
-                <div key={key}>
-                  <button
-                    className={`w-full flex items-center justify-between py-2 text-left transition-colors ${
-                      dark
-                        ? "text-gray-300 hover:text-white"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                    onClick={() => toggleGroup(key)}
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
-                    <span className={`text-xs ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                      {isOpen ? "▲" : "▼"}
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="space-y-2 mt-2">
-                      {groupSkills.map((skill) => (
-                        <SkillCard
-                          key={skill.skill_key}
-                          skill={skill}
-                          dark={dark}
-                          onClick={() => setSelectedSkill(skill)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <button
+                  key={lvl}
+                  onClick={() => setActiveLevel(lvl)}
+                  className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
+                    active
+                      ? dark ? "border-b-2 border-blue-500 text-blue-400" : "border-b-2 border-blue-500 text-blue-600"
+                      : dark ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"
+                  }`}
+                  title={meta.label}
+                >
+                  {meta.icon}
+                </button>
               )
             })}
           </div>
-        )}
 
-        {/* Analyse-Panel */}
-        <div className={`rounded-2xl border p-6 ${card}`}>
-          <h2 className={`text-sm font-semibold mb-1 ${dark ? "text-white" : "text-gray-900"}`}>
-            Code oder Frage analysieren
-          </h2>
-          <p className={`text-xs mb-4 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-            Gib Python-Code oder eine Frage ein — das System erkennt den Skill und bewertet deinen Stand.
-          </p>
-          <div className="flex gap-2 mb-2">
-            <button
-              onClick={() => setInputType("code")}
-              className={inputType === "code" ? "px-3 py-1 rounded bg-blue-600 text-white text-sm" : "px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm"}
-            >
-              Code
-            </button>
-            <button
-              onClick={() => setInputType("frage")}
-              className={inputType === "frage" ? "px-3 py-1 rounded bg-blue-600 text-white text-sm" : "px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm"}
-            >
-              Frage
-            </button>
+          {/* Skill items */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+            {levelSkills(activeLevel).map((skill) => (
+              <SkillListItem
+                key={skill.skill_key}
+                skill={skill}
+                selected={selectedSkill?.skill_key === skill.skill_key}
+                dark={dark}
+                onClick={() => setSelectedSkill(skill)}
+              />
+            ))}
           </div>
-          <textarea
-            rows={5}
-            placeholder={inputType === "code" ? "# Beispiel:\nfor i in range(5)\n    print(i)" : "z.B. Was ist eine for-Schleife?"}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            className={inputCls}
-          />
-          <button
-            onClick={handleAnalyze}
-            disabled={!inputText.trim() || analyzing}
-            className="mt-3 px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {analyzing ? "Analysiere…" : "Analysieren"}
-          </button>
 
-          {/* Analyse-Ergebnis */}
-          {lastResult && (
-            <div className={`mt-5 rounded-xl border p-5 space-y-4 ${dark ? "border-[#1e2f45] bg-[#060e1c]" : "border-gray-200 bg-gray-50"}`}>
-              {/* Score + Status */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className={`text-2xl font-bold ${dark ? "text-white" : "text-gray-900"}`}>
-                  {lastResult.score}/100
-                </span>
-                <StatusBadge status={lastResult.status} dark={dark} />
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${dark ? "border-blue-500/30 bg-blue-500/10 text-blue-400" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
-                  Skill: {lastResult.main_skill}
-                </span>
-              </div>
-
-              {/* Feedback */}
-              <div>
-                <p className={`text-xs font-medium uppercase tracking-wider mb-1 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                  Feedback
+          {/* Level stats footer + Level-Test Button */}
+          {progress && (() => {
+            const skills = levelSkills(activeLevel)
+            const ready = skills.length > 0 && skills.every((s) => s.score >= 80)
+            return (
+              <div className={`p-3 border-t space-y-2 ${dark ? "border-[#1e2f45]" : "border-gray-200"}`}>
+                <p className={`text-xs text-center ${dark ? "text-gray-500" : "text-gray-400"}`}>
+                  {skills.filter((s) => s.score >= 80).length} / {skills.length} Skills ≥ 80%
                 </p>
-                <p className={`text-sm ${dark ? "text-gray-300" : "text-gray-700"}`}>
-                  {lastResult.feedback}
-                </p>
+                {ready && (
+                  <button
+                    onClick={() => { setSelectedSkill(null); setShowLevelTest(activeLevel) }}
+                    className="w-full py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                  >
+                    🎓 Level-Test starten
+                  </button>
+                )}
               </div>
+            )
+          })()}
+        </div>
 
-              {/* Typische Fehler */}
-              {lastResult.mistakes.length > 0 && (
-                <div>
-                  <p className={`text-xs font-medium uppercase tracking-wider mb-2 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                    Typische Fehler
-                  </p>
-                  <ul className="space-y-1">
-                    {lastResult.mistakes.map((m, i) => (
-                      <li key={i} className={`flex items-start gap-2 text-sm ${dark ? "text-amber-300" : "text-amber-700"}`}>
-                        <span className="mt-0.5">⚠</span>
-                        {m}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Empfohlene Übung */}
-              {lastResult.recommended_next_exercise && (
-                <div className={`rounded-xl p-4 ${dark ? "bg-blue-600/10 border border-blue-500/20" : "bg-blue-50 border border-blue-200"}`}>
-                  <p className={`text-xs font-medium uppercase tracking-wider mb-1 ${dark ? "text-blue-400" : "text-blue-700"}`}>
-                    Empfohlene nächste Übung
-                  </p>
-                  <p className={`text-sm ${dark ? "text-blue-200" : "text-blue-800"}`}>
-                    {lastResult.recommended_next_exercise}
-                  </p>
-                </div>
-              )}
-            </div>
+        {/* RIGHT — detail panel */}
+        <div className="flex-1 flex overflow-hidden">
+          {showLevelTest ? (
+            <LevelTestModal
+              level={showLevelTest}
+              onClose={() => setShowLevelTest(null)}
+              onTestResult={() => { setShowLevelTest(null); refreshProgress() }}
+            />
+          ) : !selectedSkill || !selectedSkill.is_unlocked ? (
+            <EmptyState dark={dark} />
+          ) : showSkillTest ? (
+            <SkillTestModal
+              skill={selectedSkill}
+              onClose={() => { setShowSkillTest(false); setSelectedSkill(null) }}
+              onTestPassed={handleTestPassed}
+              inline
+            />
+          ) : (
+            <ExercisePanel
+              skill={selectedSkill}
+              onSkillScoreUpdate={handleSkillScoreUpdate}
+              onStartSkillTest={() => setShowSkillTest(true)}
+            />
           )}
         </div>
 
-        {/* Letzte Analysen */}
-        {progress && progress.recent_events.length > 0 && (
-          <div className={`rounded-2xl border p-6 ${card}`}>
-            <h2 className={`text-sm font-semibold mb-4 ${dark ? "text-white" : "text-gray-900"}`}>
-              Letzte Analysen
-            </h2>
-            <div className="space-y-3">
-              {progress.recent_events.map((ev, i) => (
-                <div key={i} className={`rounded-xl border p-4 ${dark ? "border-[#1e2f45] bg-[#0a1525]" : "border-gray-100 bg-gray-50"}`}>
-                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm font-medium ${dark ? "text-gray-200" : "text-gray-700"}`}>
-                        {ev.skill_label}
-                      </span>
-                      <span className={`text-xs tabular-nums ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                        Score: {ev.score}
-                      </span>
-                    </div>
-                    {ev.created_at && (
-                      <span className={`text-xs ${dark ? "text-gray-600" : "text-gray-400"}`}>
-                        {new Date(ev.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
-                      </span>
-                    )}
-                  </div>
-                  {ev.feedback && (
-                    <p className={`text-xs ${dark ? "text-gray-400" : "text-gray-600"}`}>{ev.feedback}</p>
-                  )}
-                  {ev.mistakes.length > 0 && (
-                    <p className={`text-xs mt-1 ${dark ? "text-amber-400/70" : "text-amber-700"}`}>
-                      ⚠ {ev.mistakes.join(" · ")}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Letzte Analysen löschen */}
-            <div className="mt-4 flex items-center gap-3">
-              <button
-                onClick={handleDeleteEvents}
-                disabled={deleting}
-                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                  dark
-                    ? "border-red-500/30 text-red-400 hover:bg-red-500/10"
-                    : "border-red-200 text-red-600 hover:bg-red-50"
-                }`}
-              >
-                {deleting ? "Lösche…" : "Letzte Analysen löschen"}
-              </button>
-              {deleteSuccess && (
-                <span className={`text-xs ${dark ? "text-emerald-400" : "text-emerald-600"}`}>
-                  Analysen wurden gelöscht.
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
       </div>
-
-      {/* Exercise Modal */}
-      {selectedSkill && selectedSkill.is_unlocked && !showSkillTest && (
-        <ExerciseModal
-          skill={selectedSkill}
-          onClose={() => setSelectedSkill(null)}
-          onSkillScoreUpdate={handleSkillScoreUpdate}
-          onStartSkillTest={() => setShowSkillTest(true)}
-        />
-      )}
-
-      {/* Skill Test Modal */}
-      {selectedSkill && showSkillTest && (
-        <SkillTestModal
-          skill={selectedSkill}
-          onClose={() => {
-            setShowSkillTest(false)
-            setSelectedSkill(null)
-          }}
-          onTestPassed={handleTestPassed}
-        />
-      )}
     </div>
   )
 }

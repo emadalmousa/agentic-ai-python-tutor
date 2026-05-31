@@ -190,3 +190,52 @@ export interface SkillTestResult {
   }>
   attempt_number: number
 }
+
+// --- Level test types ---
+
+export type LevelKey = "beginner" | "intermediate" | "advanced"
+
+export interface LevelTestGenerateResponse {
+  test_session_id: number
+  level: LevelKey
+  test_data: {
+    multiple_choice: Array<{
+      question: string
+      options: { A: string; B: string; C: string; D: string }
+      correct: string
+      explanation: string
+    }>
+    code_reading: {
+      code: string
+      question: string
+      correct_answer: string
+    }
+    mini_task: {
+      description: string
+      expected_output: string
+    }
+  }
+}
+
+export interface LevelTestSubmitRequest {
+  test_session_id: number
+  level: LevelKey
+  mc_answers: Record<string, string>
+  code_reading_answer: string
+  mini_task_code: string
+}
+
+export interface LevelTestResult {
+  total_score: number
+  passed: boolean
+  mc_score: number
+  code_reading_score: number
+  mini_task_score: number
+  per_question_feedback: Array<{
+    question_type: string
+    index?: number
+    correct: boolean
+    explanation: string
+  }>
+  attempt_number: number
+}

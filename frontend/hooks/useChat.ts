@@ -45,7 +45,10 @@ async function saveSession(payload: {
 
 export function useChat(code: string, initialHistory: ChatMessage[] = []) {
   const { user } = useAuth()
-  const [history, setHistory] = useState<ChatMessage[]>(initialHistory)
+  // If initialHistory starts with a user message, treat it as a pending auto-send
+  const pendingMsg = initialHistory.length === 1 && initialHistory[0].role === "user"
+    ? initialHistory[0].content : null
+  const [history, setHistory] = useState<ChatMessage[]>(pendingMsg ? [] : initialHistory)
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
@@ -58,6 +61,18 @@ export function useChat(code: string, initialHistory: ChatMessage[] = []) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [history, loading, analyzing])
+
+  // Auto-send pending topic explanation on mount
+  useEffect(() => {
+    if (!pendingMsg) return
+    setLoading(true)
+    const userMsg: ChatMessage = { role: "user", content: pendingMsg }
+    setHistory([userMsg])
+    sendChatMessage({ code, message: pendingMsg, history: [] })
+      .then((data) => setHistory(data.history))
+      .catch(() => setError("Backend nicht erreichbar."))
+      .finally(() => setLoading(false))
+  }, [])
 
   async function send() {
     const msg = input.trim()

@@ -32,7 +32,8 @@ def evaluate_exercise(
             "- what_was_good: finde etwas Positives im Code (z.B. Struktur, Ansatz)\n"
             "- what_went_wrong: erkläre auf Deutsch einfach, warum keine Ausgabe entstand\n"
             "- hint: gib einen konkreten ersten Schritt zum Beheben des Problems\n"
-            "- Alle Texte auf Deutsch, anfängerfreundlich und ermutigend"
+            "- Alle Texte auf Deutsch, anfängerfreundlich und ermutigend\n"
+            "- Code-Beispiele in den Texten immer als Markdown-Code-Block formatieren: ```python ... ```"
         ))
         human = HumanMessage(content=(
             f"Aufgabenbeschreibung:\n{exercise_description}\n\n"
@@ -68,7 +69,8 @@ def evaluate_exercise(
             "- what_was_good: immer einen positiven Aspekt nennen (nie leer lassen)\n"
             "- what_went_wrong: leer lassen wenn result='richtig', sonst erklären was suboptimal ist\n"
             "- hint: bei 'richtig' einen Bonustipp geben; bei 'teilweise' zeigen wie man es richtig macht\n"
-            "- Alle Texte auf Deutsch, anfängerfreundlich und ermutigend"
+            "- Alle Texte auf Deutsch, anfängerfreundlich und ermutigend\n"
+            "- Code-Beispiele in den Texten immer als Markdown-Code-Block formatieren: ```python ... ```"
         ))
         human = HumanMessage(content=(
             f"Aufgabenbeschreibung:\n{exercise_description}\n\n"
@@ -112,7 +114,8 @@ def evaluate_exercise(
         "- what_was_good: immer einen positiven Aspekt nennen (nie leer lassen)\n"
         "- what_went_wrong: erkläre konkret was falsch ist\n"
         "- hint: gib einen hilfreichen Hinweis ohne die vollständige Lösung zu verraten\n"
-        "- Alle Texte auf Deutsch, anfängerfreundlich und ermutigend"
+        "- Alle Texte auf Deutsch, anfängerfreundlich und ermutigend\n"
+        "- Code-Beispiele in den Texten immer als Markdown-Code-Block formatieren: ```python ... ```"
     ))
     human = HumanMessage(content=(
         f"Aufgabenbeschreibung:\n{exercise_description}\n\n"

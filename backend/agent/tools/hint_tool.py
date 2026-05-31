@@ -44,7 +44,8 @@ def get_hint(code: str, exercise_description: str, hint_level: int) -> str:
         "- Antworte auf Deutsch\n"
         "- Sei ermutigend und positiv\n"
         "- Halte den Tipp kurz (2-4 Sätze)\n"
-        "- Verrate niemals die vollständige Lösung"
+        "- Verrate niemals die vollständige Lösung\n"
+        "- Wenn du Code-Beispiele zeigst, verwende immer Markdown-Code-Blöcke: ```python ... ```"
     ))
     human = HumanMessage(content=(
         f"Aufgabe:\n{exercise_description}\n\n"

@@ -2,6 +2,34 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# ./start.sh reset — DB komplett leeren
+if [ "$1" = "reset" ]; then
+  echo "DB wird geleert..."
+  cd "$SCRIPT_DIR/backend"
+  source venv/bin/activate
+  python3 -c "
+import sys; sys.path.insert(0, '.')
+from core.database import engine
+from sqlalchemy import text
+with engine.connect() as conn:
+    conn.execute(text('TRUNCATE users, learning_sessions, student_skill_progress, learning_events, exercise_completions, skill_test_results RESTART IDENTITY CASCADE'))
+    conn.commit()
+print('✓ DB geleert')
+"
+  echo "✓ Fertig. Testdaten laden: ./start.sh db"
+  exit 0
+fi
+
+# ./start.sh db — Testdaten laden
+if [ "$1" = "db" ]; then
+  echo "Testdaten werden geladen..."
+  cd "$SCRIPT_DIR/backend"
+  source venv/bin/activate
+  python3 seed_data.py
+  echo "✓ Fertig. Starten mit: ./start.sh"
+  exit 0
+fi
+
 # Ollama starten falls nicht läuft
 if ! pgrep -x ollama > /dev/null; then
   echo "Starte Ollama..."

@@ -8,6 +8,8 @@ from routers.progress import router as progress_router
 from routers.learning_progress import router as learning_progress_router
 from routers.exercises import router as exercises_router
 from routers.skill_tests import router as skill_tests_router
+from routers.admin import router as admin_router
+from routers.level_tests import router as level_tests_router
 from agent.tutor_agent import ServiceUnavailableError
 
 # Import all models so that create_all finds them
@@ -36,6 +38,8 @@ app.include_router(progress_router)
 app.include_router(learning_progress_router)
 app.include_router(exercises_router)
 app.include_router(skill_tests_router)
+app.include_router(admin_router)
+app.include_router(level_tests_router)
 
 
 @app.exception_handler(ServiceUnavailableError)

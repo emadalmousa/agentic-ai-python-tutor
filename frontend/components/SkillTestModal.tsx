@@ -10,12 +10,13 @@ interface SkillTestModalProps {
   skill: SkillProgress
   onClose: () => void
   onTestPassed: (skillKey: string) => void
+  inline?: boolean
 }
 
 type Step = 1 | 2 | 3
 const STEP_LABELS = ["Multiple Choice", "Code-Lesen", "Mini-Aufgabe"] as const
 
-export default function SkillTestModal({ skill, onClose, onTestPassed }: SkillTestModalProps) {
+export default function SkillTestModal({ skill, onClose, onTestPassed, inline = false }: SkillTestModalProps) {
   const { dark } = useTheme()
   useAuth() // ensure we are inside an authenticated context
   const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
@@ -120,11 +121,8 @@ export default function SkillTestModal({ skill, onClose, onTestPassed }: SkillTe
     ? "w-full bg-[#0a1525] border border-[#1e2f45] text-white placeholder-gray-500 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-500/60 transition-colors"
     : "w-full bg-white border border-gray-300 text-gray-900 placeholder-gray-400 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-500 transition-colors"
 
-  return (
-    <div className={`${overlayClass} ${backdropClass}`} onClick={handleBackdropClick}>
-      <div
-        className={`${modalClass} w-full max-w-[700px] max-h-[90vh] overflow-y-auto animate-[slideUp_250ms_ease-out]`}
-      >
+  const content = (
+    <>
         {/* Header */}
         <div className={`sticky top-0 z-10 px-6 py-4 border-b ${dark ? "border-[#1e2f45] bg-[#0d1929]" : "border-gray-100 bg-white"} rounded-t-2xl`}>
           <div className="flex items-center justify-between">
@@ -415,19 +413,24 @@ export default function SkillTestModal({ skill, onClose, onTestPassed }: SkillTe
             </>
           )}
         </div>
-      </div>
+      </>
+  )
 
-      {/* Keyframe animations */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+  if (inline) {
+    return (
+      <div className={`flex-1 overflow-y-auto p-5 ${dark ? "bg-[#060e1c]" : "bg-gray-50"}`}>
+        <div className={`rounded-2xl overflow-hidden ${modalClass}`}>
+          {content}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`${overlayClass} ${backdropClass}`} onClick={handleBackdropClick}>
+      <div className={`${modalClass} w-full max-w-[700px] max-h-[90vh] overflow-y-auto animate-[slideUp_250ms_ease-out]`}>
+        {content}
+      </div>
     </div>
   )
 }
