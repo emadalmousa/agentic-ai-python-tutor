@@ -1,13 +1,8 @@
 import json
-import re
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
 from agent.config import get_llm
-
-
-def _parse_json(text: str) -> dict:
-    text = re.sub(r"```json\s*|\s*```", "", text).strip()
-    return json.loads(text)
+from agent.tools._utils import _parse_json
 
 
 @tool
@@ -27,10 +22,10 @@ def evaluate_skill_test(
     Gibt ein JSON-Objekt mit total_score, passed und per_question_feedback zurück.
 
     Scoring:
-    - Jede MC-Frage: 20 Punkte (exakter String-Vergleich, kein LLM)
-    - Code-Lesen: 20 Punkte (LLM bewertet semantisch)
-    - Mini-Aufgabe: 20 Punkte (LLM bewertet ob Code die erwartete Ausgabe produziert)
-    - Gesamt: 0-100, bestanden wenn >= 60
+    - Jede MC-Frage: 10 Punkte × 3 = 30 Punkte gesamt (exakter String-Vergleich, kein LLM)
+    - Code-Lesen: 30 Punkte (LLM bewertet semantisch)
+    - Mini-Aufgabe: 40 Punkte (LLM bewertet ob Code die erwartete Ausgabe produziert)
+    - Gesamt: 0-100, bestanden wenn >= 60 (MC=30%, code_reading=30%, mini_task=40%)
     """
     llm = get_llm()
 
@@ -49,7 +44,7 @@ def evaluate_skill_test(
     for i in range(3):
         is_correct = answers[i] == corrects[i]
         if is_correct:
-            mc_score += 20
+            mc_score += 10
         mc_feedback.append({
             "question_type": f"mc_{i + 1}",
             "correct": is_correct,
@@ -87,13 +82,13 @@ def evaluate_skill_test(
         code_reading_correct_flag = bool(cr_result.get("correct", False))
         code_reading_explanation = cr_result.get("explanation", "")
         if code_reading_correct_flag:
-            code_reading_score = 20
+            code_reading_score = 30
     except (json.JSONDecodeError, ValueError):
         # Conservative fallback: exact string comparison
         code_reading_correct_flag = (
             code_reading_answer.strip().lower() == code_reading_correct.strip().lower()
         )
-        code_reading_score = 20 if code_reading_correct_flag else 0
+        code_reading_score = 30 if code_reading_correct_flag else 0
         code_reading_explanation = (
             "Richtig!" if code_reading_correct_flag
             else f"Die richtige Antwort wäre: {code_reading_correct}"
@@ -131,7 +126,7 @@ def evaluate_skill_test(
         mini_task_correct = bool(mt_result.get("correct", False))
         mini_task_explanation = mt_result.get("explanation", "")
         if mini_task_correct:
-            mini_task_score = 20
+            mini_task_score = 40
     except (json.JSONDecodeError, ValueError):
         mini_task_correct = False
         mini_task_explanation = "Die Bewertung konnte nicht durchgeführt werden."

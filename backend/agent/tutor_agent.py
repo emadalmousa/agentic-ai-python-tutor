@@ -8,6 +8,10 @@ from agent.tools.explain_tool import explain_code_tool
 from agent.tools.debug_tool import debug_code_tool
 from agent.tools.exercise_tool import exercise_tool
 
+# exercise_evaluator_tool, hint_tool, exercise_generator_tool,
+# skill_test_generator_tool, skill_test_evaluator_tool are invoked
+# directly by routers — not bound to this agent.
+
 
 class ServiceUnavailableError(Exception):
     pass

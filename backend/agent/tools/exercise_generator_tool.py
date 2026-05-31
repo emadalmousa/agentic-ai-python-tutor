@@ -1,13 +1,8 @@
 import json
-import re
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
 from agent.config import get_llm
-
-
-def _parse_json(text: str) -> dict:
-    text = re.sub(r"```json\s*|\s*```", "", text).strip()
-    return json.loads(text)
+from agent.tools._utils import _parse_json
 
 
 @tool
