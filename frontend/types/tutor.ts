@@ -102,7 +102,9 @@ export interface Exercise {
   title: string
   description: string
   hint: string
+  /** True when the exercise is visible to the user (prev exercise completed). */
   is_unlocked: boolean
+  /** True when the exercise is fully completed (score_granted=20) and blocks re-submission. */
   is_locked: boolean
   score_granted: number
 }

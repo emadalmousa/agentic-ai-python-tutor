@@ -158,6 +158,7 @@ export default function LearningProgressView() {
 
   // Analyse-Panel
   const [inputText, setInputText]       = useState("")
+  const [inputType, setInputType]       = useState<"code" | "frage">("frage")
   const [analyzing, setAnalyzing]       = useState(false)
   const [lastResult, setLastResult]     = useState<SkillAnalyzeResponse | null>(null)
 
@@ -200,9 +201,8 @@ export default function LearningProgressView() {
     setAnalyzing(true)
     setLastResult(null)
     try {
-      const isCode = inputText.includes("def ") || inputText.includes("for ") || inputText.includes("print(")
       const result = await analyzeSkill(
-        isCode ? { code: inputText } : { question: inputText },
+        inputType === "code" ? { code: inputText } : { question: inputText },
         getToken(),
       )
       setLastResult(result)
@@ -349,9 +349,23 @@ export default function LearningProgressView() {
           <p className={`text-xs mb-4 ${dark ? "text-gray-500" : "text-gray-400"}`}>
             Gib Python-Code oder eine Frage ein — das System erkennt den Skill und bewertet deinen Stand.
           </p>
+          <div className="flex gap-2 mb-2">
+            <button
+              onClick={() => setInputType("code")}
+              className={inputType === "code" ? "px-3 py-1 rounded bg-blue-600 text-white text-sm" : "px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm"}
+            >
+              Code
+            </button>
+            <button
+              onClick={() => setInputType("frage")}
+              className={inputType === "frage" ? "px-3 py-1 rounded bg-blue-600 text-white text-sm" : "px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-sm"}
+            >
+              Frage
+            </button>
+          </div>
           <textarea
             rows={5}
-            placeholder={"# Beispiel:\nfor i in range(5)\n    print(i)"}
+            placeholder={inputType === "code" ? "# Beispiel:\nfor i in range(5)\n    print(i)" : "z.B. Was ist eine for-Schleife?"}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             className={inputCls}

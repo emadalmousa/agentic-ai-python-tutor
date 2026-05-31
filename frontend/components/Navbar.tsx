@@ -10,8 +10,9 @@ export default function Navbar() {
   const { dark, toggleDark } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
-  const onTutor = pathname === "/tutor"
-  const onProfile = pathname === "/profile"
+  const onTutor    = pathname === "/tutor"
+  const onProfile  = pathname === "/profile"
+  const onProgress = pathname === "/progress"
 
   const handleLogout = () => {
     logout()
@@ -51,6 +52,18 @@ export default function Navbar() {
                 }`}
               >
                 Tutor
+              </Link>
+            )}
+            {!onProgress && (
+              <Link
+                href="/progress"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  dark
+                    ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                }`}
+              >
+                Fortschritt
               </Link>
             )}
             {!onProfile && (
