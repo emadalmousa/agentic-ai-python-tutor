@@ -5,6 +5,9 @@ from fastapi.responses import JSONResponse
 from routers.tutor import router as tutor_router
 from routers.auth import router as auth_router
 from routers.progress import router as progress_router
+from routers.learning_progress import router as learning_progress_router
+from routers.exercises import router as exercises_router
+from routers.skill_tests import router as skill_tests_router
 from agent.tutor_agent import ServiceUnavailableError
 
 # Import all models so that create_all finds them
@@ -30,6 +33,9 @@ app.add_middleware(
 app.include_router(tutor_router)
 app.include_router(auth_router)
 app.include_router(progress_router)
+app.include_router(learning_progress_router)
+app.include_router(exercises_router)
+app.include_router(skill_tests_router)
 
 
 @app.exception_handler(ServiceUnavailableError)
