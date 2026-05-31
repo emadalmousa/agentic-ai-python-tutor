@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import CodeEditor from "@/components/tutor/CodeEditor"
 import EditorFooter from "@/components/tutor/EditorFooter"
@@ -72,6 +72,42 @@ export default function TutorView() {
   } = useChat(code, initialHistory)
   const { output, loading: running, run } = useCodeRunner()
 
+  const [leftWidth, setLeftWidth] = useState(480)
+  const [outputHeight, setOutputHeight] = useState(160)
+  const draggingH = useRef(false)
+  const draggingV = useRef<"left" | "output" | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const leftPanelRef = useRef<HTMLDivElement>(null)
+
+  const onMouseDownH = useCallback(() => { draggingV.current = "left" }, [])
+  const onMouseDownOutput = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    draggingV.current = "output"
+  }, [])
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!draggingV.current) return
+      if (draggingV.current === "left" && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        const newWidth = Math.min(Math.max(e.clientX - rect.left, 240), rect.width - 280)
+        setLeftWidth(newWidth)
+      }
+      if (draggingV.current === "output" && leftPanelRef.current) {
+        const rect = leftPanelRef.current.getBoundingClientRect()
+        const fromBottom = rect.bottom - e.clientY
+        setOutputHeight(Math.min(Math.max(fromBottom, 80), rect.height - 120))
+      }
+    }
+    function onMouseUp() { draggingV.current = null }
+    window.addEventListener("mousemove", onMouseMove)
+    window.addEventListener("mouseup", onMouseUp)
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("mouseup", onMouseUp)
+    }
+  }, [])
+
   useEffect(() => {
     if (!isAuthenticated) router.replace("/login")
   }, [isAuthenticated, router])
@@ -87,10 +123,10 @@ export default function TutorView() {
 
   return (
     <div className={`${bg} flex-1 flex flex-col overflow-hidden`}>
-      <div className="flex flex-1 min-h-0">
+      <div ref={containerRef} className="flex flex-1 min-h-0">
 
-        <div className={`w-[480px] flex-shrink-0 flex flex-col border-r ${border}`}>
-          <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
+        <div ref={leftPanelRef} className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: leftWidth }}>
+          <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 min-h-0">
             <label className={labelCls}>Python-Code</label>
             <CodeEditor code={code} onChange={setCode} dark={dark} />
           </div>
@@ -102,10 +138,18 @@ export default function TutorView() {
             output={output}
             onRun={() => run(code)}
             onAnalyze={analyze}
+            outputHeight={outputHeight}
+            onOutputDragStart={onMouseDownOutput}
           />
         </div>
 
-        <div className="flex-1 min-w-0">
+        {/* Draggable divider */}
+        <div
+          onMouseDown={onMouseDownH}
+          className={`w-1 flex-shrink-0 cursor-col-resize hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors ${dark ? "bg-[#1e2f45]" : "bg-gray-200"}`}
+        />
+
+        <div className="flex-1 min-w-0 overflow-y-auto">
           <ChatPanel
             history={history}
             input={input}

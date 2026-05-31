@@ -10,9 +10,11 @@ interface Props {
   output: RunResponse | null
   onRun: () => void
   onAnalyze: () => void
+  outputHeight?: number
+  onOutputDragStart?: (e: React.MouseEvent) => void
 }
 
-export default function EditorFooter({ dark, code, running, analyzing, output, onRun, onAnalyze }: Props) {
+export default function EditorFooter({ dark, code, running, analyzing, output, onRun, onAnalyze, outputHeight = 160, onOutputDragStart }: Props) {
   const border = dark ? "border-[#1e2f45]" : "border-gray-200"
 
   return (
@@ -21,6 +23,11 @@ export default function EditorFooter({ dark, code, running, analyzing, output, o
       {/* Output-Panel */}
       {(output || running) && (
         <div className={`border-b ${border}`}>
+          {/* Draggable resize handle */}
+          <div
+            onMouseDown={onOutputDragStart}
+            className={`h-1 cursor-row-resize hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors ${dark ? "bg-[#1e2f45]" : "bg-gray-200"}`}
+          />
           <div className={`flex items-center justify-between px-4 py-1.5 ${dark ? "bg-[#080f1e]" : "bg-gray-50"}`}>
             <div className="flex items-center gap-2">
               {output && (
@@ -36,9 +43,9 @@ export default function EditorFooter({ dark, code, running, analyzing, output, o
               </span>
             )}
           </div>
-          <pre className={`px-4 py-3 text-xs font-mono leading-relaxed overflow-x-auto max-h-36 ${
+          <pre className={`px-4 py-3 text-xs font-mono leading-relaxed overflow-y-auto overflow-x-auto ${
             dark ? "bg-[#060e1c] text-gray-300" : "bg-gray-900 text-gray-100"
-          }`}>
+          }`} style={{ height: outputHeight }}>
             {running && <span className="text-gray-500">Ausführen…</span>}
             {output?.stdout && <span>{output.stdout}</span>}
             {output?.stderr && <span className="text-red-400">{output.stderr}</span>}

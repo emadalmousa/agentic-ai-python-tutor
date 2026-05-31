@@ -96,10 +96,10 @@ export default function ChatPanel({
   const subCol  = dark ? "text-gray-500"    : "text-gray-400"
 
   return (
-    <div className={`flex flex-col h-full ${bg} border-l ${border}`}>
+    <div className={`flex flex-col min-h-full ${bg} border-l ${border}`}>
 
-      {/* Header */}
-      <div className={`flex items-center justify-between px-4 py-3 border-b ${border}`}>
+      {/* Header — sticky oben */}
+      <div className={`sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b ${border} ${bg}`}>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-indigo-500" />
           <span className={`text-sm font-semibold ${textCol}`}>Python Tutor</span>
@@ -120,7 +120,7 @@ export default function ChatPanel({
       </div>
 
       {/* Nachrichtenverlauf */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+      <div className="flex-1 px-4 py-4 flex flex-col gap-3">
         {history.length === 0 && !busy && (
           <div className={`text-center mt-12 ${subCol} text-sm`}>
             <div className="text-3xl mb-3">🤖</div>
@@ -190,8 +190,8 @@ export default function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {/* Eingabe */}
-      <div className={`px-4 py-3 border-t ${border}`}>
+      {/* Eingabe — sticky am unteren Rand */}
+      <div className={`sticky bottom-0 px-4 py-3 border-t ${border} ${bg}`}>
         <div className={`flex gap-2 items-end rounded-2xl border ${inputBg} px-3 py-2`}>
 
           {/* Paperclip: PDF hochladen */}
