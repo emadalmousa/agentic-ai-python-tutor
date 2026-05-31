@@ -8,6 +8,7 @@ from core.database import get_db
 from models.skill_progress import StudentSkillProgress, LearningEvent, FIXED_SKILLS, SKILL_TREE
 from models.user import User
 from routers.auth import get_current_user
+from services.progress_service import get_or_create_skill_progress
 from services.skill_analyzer import analyze_skill
 
 router = APIRouter(prefix="/learning-progress", tags=["learning-progress"])
@@ -66,18 +67,6 @@ _SKILL_LABEL = dict(FIXED_SKILLS)
 # Build a lookup from skill_key -> full skill metadata (level, order, unlocks_after)
 _SKILL_META: dict[str, dict] = {s["key"]: s for s in SKILL_TREE}
 
-
-def _get_or_create_progress(user_id: int, skill_key: str, db: Session) -> StudentSkillProgress:
-    """Gibt den Fortschritt-Eintrag zurück oder legt ihn neu an."""
-    row = (
-        db.query(StudentSkillProgress)
-        .filter_by(user_id=user_id, skill_key=skill_key)
-        .first()
-    )
-    if not row:
-        row = StudentSkillProgress(user_id=user_id, skill_key=skill_key)
-        db.add(row)
-    return row
 
 
 def _build_progress_response(user_id: int, db: Session) -> ProgressResponse:
@@ -195,7 +184,7 @@ def analyze_and_save(
 
     # Skill-Fortschritt aktualisieren (gleitender Durchschnitt mit neuem Score)
     skill_key = result["main_skill"]
-    row = _get_or_create_progress(current_user.id, skill_key, db)
+    row = get_or_create_skill_progress(current_user.id, skill_key, db)
     # Neuer Score = 70 % alter Wert + 30 % neuer Wert (sanfte Aktualisierung)
     row.score  = round(row.score * 0.7 + result["score"] * 0.3) if row.score else result["score"]
     row.status = result["status"]

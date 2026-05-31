@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, JSON, String
 from sqlalchemy.sql import func
 
 from core.database import Base
@@ -14,4 +14,5 @@ class SkillTestResult(Base):
     score          = Column(Integer, nullable=False)  # 0–100 percentage
     passed         = Column(Boolean, nullable=False)  # score >= 60
     attempt_number = Column(Integer, default=1)       # incremented on each retry
+    generated_test = Column(JSON, nullable=True)      # server-side test data, avoids client tampering
     created_at     = Column(DateTime(timezone=True), server_default=func.now())

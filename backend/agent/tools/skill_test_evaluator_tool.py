@@ -15,6 +15,7 @@ def evaluate_skill_test(
     mini_task_code: str,
     code_reading_answer: str,
     code_reading_correct: str,
+    mini_task_actual_output: str = "",
 ) -> str:
     """Bewertet die Antworten eines Skill-Tests.
 
@@ -114,10 +115,16 @@ def evaluate_skill_test(
         "- Kleine Formatierungsunterschiede (z.B. zusätzlicher Zeilenumbruch) sind tolerierbar\n"
         "- explanation: kurze deutsche Erklärung"
     ))
+    actual_output_section = (
+        f"Tatsächliche Ausgabe (ausgeführt): {mini_task_actual_output}\n\n"
+        if mini_task_actual_output
+        else ""
+    )
     mt_human = HumanMessage(content=(
         f"Aufgabe: {mini_task_description}\n"
         f"Erwartete Ausgabe: {mini_task_expected}\n\n"
         f"Code des Schülers:\n```python\n{mini_task_code}\n```\n\n"
+        f"{actual_output_section}"
         "Würde dieser Code die erwartete Ausgabe produzieren?"
     ))
     try:

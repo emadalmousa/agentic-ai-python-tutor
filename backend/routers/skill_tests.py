@@ -1,13 +1,12 @@
 """Skill-Tests router — generates and evaluates skill tests."""
 import json
-import subprocess
-import sys
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from core.code_runner import run_user_code
 from models.skill_progress import SKILL_TREE
 from models.skill_test import SkillTestResult
 from models.user import User
@@ -29,12 +28,17 @@ class GenerateRequest(BaseModel):
     skill_key: str
 
 
+class GenerateResponse(BaseModel):
+    test_session_id: int
+    test_data: dict
+
+
 class SubmitTestRequest(BaseModel):
+    test_session_id: int              # server-side session; replaces client-supplied test_data
     skill_key: str
-    mc_answers: dict[str, str]          # {"0": "A", "1": "B", "2": "C"}
+    mc_answers: dict[str, str]        # {"0": "A", "1": "B", "2": "C"}
     code_reading_answer: str
     mini_task_code: str
-    test_data: dict                      # full test data returned from generate endpoint
 
 
 class SubmitTestResponse(BaseModel):
@@ -48,34 +52,16 @@ class SubmitTestResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _run_code(code: str) -> tuple[str, str]:
-    """Runs user code in a subprocess and returns (stdout, stderr)."""
-    try:
-        proc = subprocess.run(
-            [sys.executable, "-c", code],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        return proc.stdout.strip(), proc.stderr.strip()
-    except subprocess.TimeoutExpired:
-        return "", "TimeoutError: Code lief zu lange (>10s)."
-
-
-# ---------------------------------------------------------------------------
 # POST /skill-tests/generate
 # ---------------------------------------------------------------------------
 
-@router.post("/generate")
+@router.post("/generate", response_model=GenerateResponse)
 def generate_test(
     data: GenerateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Generates a skill test for the given skill_key."""
+    """Generates a skill test, stores it server-side, and returns a session id."""
     skill = _SKILL_META.get(data.skill_key)
     if not skill:
         raise HTTPException(status_code=404, detail=f"Skill '{data.skill_key}' nicht gefunden.")
@@ -85,8 +71,29 @@ def generate_test(
         "skill_label": skill["label"],
         "user_level": current_user.level,
     })
+    test_data = json.loads(raw_result)
 
-    return json.loads(raw_result)
+    # Count prior attempts to set attempt_number for this session row
+    prior_attempts = (
+        db.query(SkillTestResult)
+        .filter_by(user_id=current_user.id, skill_key=data.skill_key)
+        .count()
+    )
+    attempt_number = prior_attempts + 1
+
+    session_row = SkillTestResult(
+        user_id=current_user.id,
+        skill_key=data.skill_key,
+        score=0,
+        passed=False,
+        attempt_number=attempt_number,
+        generated_test=test_data,
+    )
+    db.add(session_row)
+    db.commit()
+    db.refresh(session_row)
+
+    return GenerateResponse(test_session_id=session_row.id, test_data=test_data)
 
 
 # ---------------------------------------------------------------------------
@@ -99,30 +106,40 @@ def submit_test(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Evaluates a submitted skill test and persists the result."""
+    """Evaluates a submitted skill test using the server-stored test data."""
     skill = _SKILL_META.get(data.skill_key)
     if not skill:
         raise HTTPException(status_code=404, detail=f"Skill '{data.skill_key}' nicht gefunden.")
 
-    # 1. Run mini_task_code via subprocess
-    _mini_stdout, _mini_stderr = _run_code(data.mini_task_code)
+    # Fetch the session row — validate ownership to prevent cross-user access
+    session_row = (
+        db.query(SkillTestResult)
+        .filter_by(id=data.test_session_id, user_id=current_user.id)
+        .first()
+    )
+    if not session_row:
+        raise HTTPException(status_code=404, detail="Test-Session nicht gefunden.")
 
-    # 2. Extract correct answers from test_data
-    mc_questions = data.test_data.get("multiple_choice", [])
+    test_data = session_row.generated_test
+
+    # 1. Run mini_task_code via subprocess
+    mini_stdout, _mini_stderr = run_user_code(data.mini_task_code)
+
+    # 2. Extract correct answers from authoritative server-side test_data
+    mc_questions = test_data.get("multiple_choice", [])
     mc_correct_list = [q.get("correct", "") for q in mc_questions]
     mc_correct_str = ",".join(mc_correct_list)
 
-    # Build mc_answers string in order (keys "0", "1", "2")
     mc_answers_list = [
         data.mc_answers.get(str(i), "")
         for i in range(len(mc_questions))
     ]
     mc_answers_str = ",".join(mc_answers_list)
 
-    code_reading = data.test_data.get("code_reading", {})
-    mini_task = data.test_data.get("mini_task", {})
+    code_reading = test_data.get("code_reading", {})
+    mini_task = test_data.get("mini_task", {})
 
-    # 3. Call evaluate_skill_test tool
+    # 3. Call evaluate_skill_test tool — pass actual stdout so evaluator can use it
     raw_result = evaluate_skill_test.invoke({
         "skill_key": data.skill_key,
         "mc_answers": mc_answers_str,
@@ -130,27 +147,15 @@ def submit_test(
         "mini_task_description": mini_task.get("description", ""),
         "mini_task_expected": mini_task.get("expected_output", ""),
         "mini_task_code": data.mini_task_code,
+        "mini_task_actual_output": mini_stdout,
         "code_reading_answer": data.code_reading_answer,
         "code_reading_correct": code_reading.get("correct_answer", ""),
     })
     eval_result = json.loads(raw_result)
 
-    # 4. Save SkillTestResult — increment attempt_number if this user has prior attempts
-    prior_attempts = (
-        db.query(SkillTestResult)
-        .filter_by(user_id=current_user.id, skill_key=data.skill_key)
-        .count()
-    )
-    attempt_number = prior_attempts + 1
-
-    test_record = SkillTestResult(
-        user_id=current_user.id,
-        skill_key=data.skill_key,
-        score=eval_result["total_score"],
-        passed=eval_result["passed"],
-        attempt_number=attempt_number,
-    )
-    db.add(test_record)
+    # 4. Update the existing session row with the real score and pass status
+    session_row.score = eval_result["total_score"]
+    session_row.passed = eval_result["passed"]
     db.commit()
 
     return SubmitTestResponse(
@@ -160,5 +165,5 @@ def submit_test(
         code_reading_score=eval_result["code_reading_score"],
         mini_task_score=eval_result["mini_task_score"],
         per_question_feedback=eval_result["per_question_feedback"],
-        attempt_number=attempt_number,
+        attempt_number=session_row.attempt_number,
     )

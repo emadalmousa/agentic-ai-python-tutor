@@ -1,18 +1,18 @@
 """Exercises router — serves exercise lists and handles code submission/hints."""
 import json
-import subprocess
-import sys
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from core.code_runner import run_user_code
 from data.exercises import EXERCISES
 from models.exercise import ExerciseCompletion
 from models.skill_progress import StudentSkillProgress, SKILL_TREE
 from models.user import User
 from routers.auth import get_current_user
+from services.progress_service import get_or_create_skill_progress
 from agent.tools.exercise_evaluator_tool import evaluate_exercise
 from agent.tools.hint_tool import get_hint
 
@@ -85,31 +85,6 @@ def _get_completions(user_id: int, skill_key: str, db: Session) -> dict[str, Exe
     )
     return {r.exercise_id: r for r in rows}
 
-
-def _run_code(code: str) -> tuple[str, str]:
-    """Runs user code in a subprocess and returns (stdout, stderr)."""
-    try:
-        proc = subprocess.run(
-            [sys.executable, "-c", code],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        return proc.stdout.strip(), proc.stderr.strip()
-    except subprocess.TimeoutExpired:
-        return "", "TimeoutError: Code lief zu lange (>10s)."
-
-
-def _get_or_create_skill_progress(user_id: int, skill_key: str, db: Session) -> StudentSkillProgress:
-    row = (
-        db.query(StudentSkillProgress)
-        .filter_by(user_id=user_id, skill_key=skill_key)
-        .first()
-    )
-    if not row:
-        row = StudentSkillProgress(user_id=user_id, skill_key=skill_key)
-        db.add(row)
-    return row
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +167,7 @@ def submit_exercise(
     current_score_granted = completion.score_granted if completion else 0
 
     # 3. Run user code
-    stdout, stderr = _run_code(data.code)
+    stdout, stderr = run_user_code(data.code)
 
     # 4. Call evaluate_exercise tool
     raw_result = evaluate_exercise.invoke({
@@ -247,7 +222,7 @@ def submit_exercise(
     # Cap at 100 (5 exercises * 20 = 100 max)
     new_skill_score = min(total_exercise_score, 100)
 
-    skill_progress = _get_or_create_skill_progress(current_user.id, data.skill_key, db)
+    skill_progress = get_or_create_skill_progress(current_user.id, data.skill_key, db)
     skill_progress.score = new_skill_score
     if new_skill_score >= 80:
         skill_progress.status = "understood"
