@@ -10,9 +10,31 @@ import { useCodeRunner } from "@/hooks/useCodeRunner"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 
+function readExerciseRedirect(): { code: string; history: import("@/types/tutor").ChatMessage[] } {
+  const DEFAULT_CODE = "for i in range(5)\n    print(i)"
+  try {
+    const raw = localStorage.getItem("ki_tutor_exercise_redirect")
+    if (!raw) return { code: DEFAULT_CODE, history: [] }
+    const { code, analysis, exercise_title } = JSON.parse(raw) as {
+      code: string
+      analysis: string
+      exercise_title: string
+    }
+    localStorage.removeItem("ki_tutor_exercise_redirect")
+    return {
+      code,
+      history: [{ role: "assistant", content: `**Aufgabe: ${exercise_title}**\n\n${analysis}` }],
+    }
+  } catch {
+    localStorage.removeItem("ki_tutor_exercise_redirect")
+    return { code: DEFAULT_CODE, history: [] }
+  }
+}
+
 export default function TutorView() {
   const { dark } = useTheme()
-  const [code, setCode] = useState("for i in range(5)\n    print(i)")
+  const [{ code: initialCode, history: initialHistory }] = useState(readExerciseRedirect)
+  const [code, setCode] = useState(initialCode)
   const { isAuthenticated } = useAuth()
   const router = useRouter()
   const {
@@ -22,7 +44,7 @@ export default function TutorView() {
     send, analyze, reset,
     openFilePicker, handleFileInput, fileInputRef,
     bottomRef,
-  } = useChat(code)
+  } = useChat(code, initialHistory)
   const { output, loading: running, run } = useCodeRunner()
 
   useEffect(() => {

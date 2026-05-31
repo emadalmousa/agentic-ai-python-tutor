@@ -43,9 +43,9 @@ async function saveSession(payload: {
   }
 }
 
-export function useChat(code: string) {
+export function useChat(code: string, initialHistory: ChatMessage[] = []) {
   const { user } = useAuth()
-  const [history, setHistory] = useState<ChatMessage[]>([])
+  const [history, setHistory] = useState<ChatMessage[]>(initialHistory)
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
