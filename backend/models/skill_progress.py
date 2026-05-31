@@ -8,7 +8,7 @@ from core.database import Base
 # to existing tables without a migration. The constraint is created fresh on startup
 # via Base.metadata.create_all.
 
-# Full 37-skill tree — ordered globally (beginner 1–13, intermediate 14–25, advanced 26–37).
+# Full 37-skill tree. order is level-local (1-based within each level).
 # Each entry: key, German label, level, level-local order, unlocks_after (previous skill key or None).
 SKILL_TREE = [
     # --- Beginner (13 skills) ---

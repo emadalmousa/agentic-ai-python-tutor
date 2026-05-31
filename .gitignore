@@ -31,5 +31,8 @@ Thumbs.db
 # Logs
 *.log
 
+# Database files
+*.db
+
 # RAG FAISS vectorstore (generated at runtime)
 backend/agent/rag/vectorstore/
