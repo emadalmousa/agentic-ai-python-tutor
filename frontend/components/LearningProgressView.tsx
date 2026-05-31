@@ -8,12 +8,6 @@ import type { ProgressResponse, SkillAnalyzeResponse, SkillProgress } from "@/ty
 import ExerciseModal from "@/components/ExerciseModal"
 import SkillTestModal from "@/components/SkillTestModal"
 
-const TOKEN_KEY = "ki_tutor_token"
-function getToken(): string {
-  if (typeof window === "undefined") return ""
-  return localStorage.getItem(TOKEN_KEY) ?? ""
-}
-
 // Status-Konfiguration
 const STATUS_CONFIG = {
   understood:     { label: "Verstanden",           color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",  bar: "bg-emerald-500" },
@@ -150,6 +144,7 @@ function SkillCard({
 
 export default function LearningProgressView() {
   const { user } = useAuth()
+  const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
   const { dark } = useTheme()
 
   const [progress, setProgress]         = useState<ProgressResponse | null>(null)
@@ -192,7 +187,7 @@ export default function LearningProgressView() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setError(null)
-    getLearningProgress(Number(user.id), getToken())
+    getLearningProgress(Number(user.id), token)
       .then((data) => { if (!cancelled) setProgress(data) })
       .catch(() => { if (!cancelled) setError("Fortschritt konnte nicht geladen werden.") })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -206,7 +201,7 @@ export default function LearningProgressView() {
     try {
       const result = await analyzeSkill(
         inputType === "code" ? { code: inputText } : { question: inputText },
-        getToken(),
+        token,
       )
       setLastResult(result)
       setProgress(result.updated_progress)
@@ -224,7 +219,7 @@ export default function LearningProgressView() {
     if (!confirmed) return
     setDeleting(true)
     try {
-      await deleteAnalysisEvents(getToken())
+      await deleteAnalysisEvents(token)
       setDeleteSuccess(true)
       refreshProgress()
       setTimeout(() => setDeleteSuccess(false), 3000)
@@ -257,6 +252,9 @@ export default function LearningProgressView() {
         ),
       }
     })
+    setSelectedSkill((prev) =>
+      prev?.skill_key === skillKey ? { ...prev, score: newScore } : prev
+    )
   }
 
   function handleTestPassed(skillKey: string) {

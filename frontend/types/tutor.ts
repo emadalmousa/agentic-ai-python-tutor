@@ -101,6 +101,7 @@ export interface Exercise {
   order: number
   title: string
   description: string
+  /** Static hint from exercise data. Dynamic hints available via getExerciseHint API. */
   hint: string
   /** True when the exercise is visible to the user (prev exercise completed). */
   is_unlocked: boolean

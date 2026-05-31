@@ -1,16 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/context/ThemeContext"
+import { useAuth } from "@/context/AuthContext"
 import { getExercises, submitExercise, getExerciseHint } from "@/lib/api"
 import type { SkillProgress, Exercise, SubmitExerciseResponse, HintResponse } from "@/types/tutor"
-
-const TOKEN_KEY = "ki_tutor_token"
-function getToken(): string {
-  if (typeof window === "undefined") return ""
-  return localStorage.getItem(TOKEN_KEY) ?? ""
-}
 
 interface ExerciseModalProps {
   skill: SkillProgress
@@ -21,7 +16,10 @@ interface ExerciseModalProps {
 
 export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onStartSkillTest }: ExerciseModalProps) {
   const { dark } = useTheme()
+  useAuth() // ensure we are inside an authenticated context
+  const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
   const router = useRouter()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,10 +38,14 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
   const [loadTick, setLoadTick] = useState(0)
 
   useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
-    getExercises(skill.skill_key, getToken())
+    getExercises(skill.skill_key, token)
       .then((data) => { if (!cancelled) setExercises(data.exercises) })
       .catch(() => { if (!cancelled) setError("Übungen konnten nicht geladen werden.") })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -52,6 +54,7 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
 
   // Find the current exercise: first one that is unlocked and not locked
   const currentExercise = exercises.find((ex) => ex.is_unlocked && !ex.is_locked) ?? null
+  // is_locked means score_granted=20 (fully completed), not "blocked by admin"
   const allDone = exercises.length > 0 && exercises.every((ex) => ex.is_locked)
   const totalExercises = exercises.length
   const currentIndex = currentExercise
@@ -65,14 +68,14 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
     try {
       const res = await submitExercise(
         { skill_key: skill.skill_key, exercise_id: currentExercise.id, code },
-        getToken(),
+        token,
       )
       setResult(res)
       onSkillScoreUpdate(skill.skill_key, res.new_skill_score)
 
       if (res.result === "richtig") {
         // After correct answer, reload exercises to advance
-        setTimeout(() => {
+        timerRef.current = setTimeout(() => {
           setResult(null)
           setCode("")
           setCurrentHint(null)
@@ -89,7 +92,7 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
             exercise_title: currentExercise.title,
           }),
         )
-        setTimeout(() => {
+        timerRef.current = setTimeout(() => {
           router.push("/tutor")
         }, 1200)
       }
@@ -106,7 +109,7 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
     try {
       const res: HintResponse = await getExerciseHint(
         { skill_key: skill.skill_key, exercise_id: currentExercise.id, code, hint_level: hintLevel },
-        getToken(),
+        token,
       )
       setCurrentHint(res.hint)
       setHintLevel((prev) => prev + 1)
@@ -301,9 +304,15 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
                       {result.what_went_wrong && (
                         <p className={`text-sm ${dark ? "text-red-200/80" : "text-red-700"}`}>{result.what_went_wrong}</p>
                       )}
-                      <p className={`text-xs mt-2 ${dark ? "text-red-400/60" : "text-red-500"}`}>
-                        Du wirst zum Tutor weitergeleitet...
-                      </p>
+                      {result.redirect_to_tutor ? (
+                        <p className={`text-xs mt-2 ${dark ? "text-red-400/60" : "text-red-500"}`}>
+                          Du wirst zum Tutor weitergeleitet...
+                        </p>
+                      ) : (
+                        <p className={`text-xs mt-2 ${dark ? "text-red-400/60" : "text-red-500"}`}>
+                          Versuche es nochmal!
+                        </p>
+                      )}
                     </div>
                   )}
 

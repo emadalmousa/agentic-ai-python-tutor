@@ -2,14 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useTheme } from "@/context/ThemeContext"
+import { useAuth } from "@/context/AuthContext"
 import { generateSkillTest, submitSkillTest } from "@/lib/api"
 import type { SkillProgress, SkillTestGenerateResponse, SkillTestResult } from "@/types/tutor"
-
-const TOKEN_KEY = "ki_tutor_token"
-function getToken(): string {
-  if (typeof window === "undefined") return ""
-  return localStorage.getItem(TOKEN_KEY) ?? ""
-}
 
 interface SkillTestModalProps {
   skill: SkillProgress
@@ -22,6 +17,8 @@ const STEP_LABELS = ["Multiple Choice", "Code-Lesen", "Mini-Aufgabe"] as const
 
 export default function SkillTestModal({ skill, onClose, onTestPassed }: SkillTestModalProps) {
   const { dark } = useTheme()
+  useAuth() // ensure we are inside an authenticated context
+  const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
 
   const [testData, setTestData] = useState<SkillTestGenerateResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -46,7 +43,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed }: SkillTe
   useEffect(() => {
     async function load() {
       try {
-        const data = await generateSkillTest(skill.skill_key, getToken())
+        const data = await generateSkillTest(skill.skill_key, token)
         setTestData(data)
       } catch {
         setError("Skill-Test konnte nicht generiert werden.")
@@ -82,7 +79,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed }: SkillTe
           code_reading_answer: codeReadingAnswer,
           mini_task_code: miniTaskCode,
         },
-        getToken(),
+        token,
       )
       setResult(res)
       if (res.passed) {
@@ -103,7 +100,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed }: SkillTe
     setMiniTaskCode("")
     setLoading(true)
     setError(null)
-    generateSkillTest(skill.skill_key, getToken())
+    generateSkillTest(skill.skill_key, token)
       .then((data) => setTestData(data))
       .catch(() => setError("Skill-Test konnte nicht generiert werden."))
       .finally(() => setLoading(false))
