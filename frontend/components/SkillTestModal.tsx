@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTheme } from "@/context/ThemeContext"
 import { useAuth } from "@/context/AuthContext"
+import { useLang } from "@/context/LangContext"
 import { generateSkillTest, submitSkillTest } from "@/lib/api"
 import type { SkillProgress, SkillTestGenerateResponse, SkillTestResult } from "@/types/tutor"
 
@@ -14,12 +15,14 @@ interface SkillTestModalProps {
 }
 
 type Step = 1 | 2 | 3
-const STEP_LABELS = ["Multiple Choice", "Code-Lesen", "Mini-Aufgabe"] as const
 
 export default function SkillTestModal({ skill, onClose, onTestPassed, inline = false }: SkillTestModalProps) {
   const { dark } = useTheme()
+  const { t } = useLang()
   useAuth() // ensure we are inside an authenticated context
   const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
+
+  const STEP_LABELS = [t("skillTest.stepMC"), t("skillTest.stepCodeReading"), t("skillTest.stepMiniTask")] as const
 
   const [testData, setTestData] = useState<SkillTestGenerateResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -47,7 +50,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
         const data = await generateSkillTest(skill.skill_key, token)
         setTestData(data)
       } catch {
-        setError("Skill-Test konnte nicht generiert werden.")
+        setError(t("skillTest.generateError"))
       } finally {
         setLoading(false)
       }
@@ -87,7 +90,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
         onTestPassed(skill.skill_key)
       }
     } catch {
-      setError("Abgabe fehlgeschlagen.")
+      setError(t("skillTest.submitError"))
     } finally {
       setSubmitting(false)
     }
@@ -103,7 +106,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
     setError(null)
     generateSkillTest(skill.skill_key, token)
       .then((data) => setTestData(data))
-      .catch(() => setError("Skill-Test konnte nicht generiert werden."))
+      .catch(() => setError(t("skillTest.generateError")))
       .finally(() => setLoading(false))
   }
 
@@ -128,18 +131,18 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
           <div className="flex items-center justify-between">
             <div>
               <h2 className={`text-base font-semibold ${dark ? "text-white" : "text-gray-900"}`}>
-                Skill-Test: {skill.skill_label}
+                {t("skillTest.title", { label: skill.skill_label })}
               </h2>
               {!result && !loading && (
                 <p className={`text-xs mt-0.5 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                  Schritt {step} von 3 &mdash; {STEP_LABELS[step - 1]}
+                  {t("skillTest.step", { step })} &mdash; {STEP_LABELS[step - 1]}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
               className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${dark ? "hover:bg-[#1e2f45] text-gray-400 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-700"}`}
-              aria-label="Schließen"
+              aria-label={t("skillTest.close")}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 4l8 8M12 4l-8 8" />
@@ -171,7 +174,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <div className={`w-6 h-6 border-2 border-t-transparent rounded-full animate-spin ${dark ? "border-blue-400" : "border-blue-600"}`} />
-              <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}>Test wird generiert...</p>
+              <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}>{t("skillTest.generating")}</p>
             </div>
           )}
 
@@ -190,11 +193,11 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                   {result.total_score}%
                 </div>
                 <p className={`text-lg font-semibold ${result.passed ? (dark ? "text-emerald-400" : "text-emerald-600") : (dark ? "text-red-400" : "text-red-600")}`}>
-                  {result.passed ? "Bestanden! ✓" : "Nicht bestanden"}
+                  {result.passed ? t("skillTest.passed") : t("skillTest.failed")}
                 </p>
                 {result.passed && (
                   <p className={`text-sm mt-2 ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                    Nächster Skill wurde freigeschaltet!
+                    {t("skillTest.nextUnlocked")}
                   </p>
                 )}
               </div>
@@ -202,12 +205,12 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
               {/* Score breakdown */}
               <div className={`rounded-xl border p-4 space-y-3 ${dark ? "border-[#1e2f45] bg-[#0a1525]" : "border-gray-200 bg-gray-50"}`}>
                 <h4 className={`text-xs font-medium uppercase tracking-wider ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                  Ergebnisse im Detail
+                  {t("skillTest.detailResults")}
                 </h4>
                 <div className="grid grid-cols-3 gap-3">
                   <ScoreBox label="MC" score={result.mc_score} max={30} dark={dark} />
-                  <ScoreBox label="Code-Lesen" score={result.code_reading_score} max={30} dark={dark} />
-                  <ScoreBox label="Mini-Aufgabe" score={result.mini_task_score} max={40} dark={dark} />
+                  <ScoreBox label={t("skillTest.stepCodeReading")} score={result.code_reading_score} max={30} dark={dark} />
+                  <ScoreBox label={t("skillTest.stepMiniTask")} score={result.mini_task_score} max={40} dark={dark} />
                 </div>
               </div>
 
@@ -215,15 +218,15 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
               {!result.passed && result.per_question_feedback.length > 0 && (
                 <div className="space-y-2">
                   <h4 className={`text-xs font-medium uppercase tracking-wider ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                    Feedback
+                    {t("skillTest.feedback")}
                   </h4>
                   {result.per_question_feedback.map((fb, i) => (
                     <div
                       key={i}
-                      className={`rounded-lg p-3 text-sm border-l-4 ${
+                      className={`rounded-lg p-3 text-sm border-s-4 ${
                         fb.correct
-                          ? dark ? "bg-emerald-500/5 border-l-emerald-500/50 text-emerald-300" : "bg-emerald-50 border-l-emerald-500 text-emerald-800"
-                          : dark ? "bg-red-500/5 border-l-red-500/50 text-red-300" : "bg-red-50 border-l-red-500 text-red-800"
+                          ? dark ? "bg-emerald-500/5 border-s-emerald-500/50 text-emerald-300" : "bg-emerald-50 border-s-emerald-500 text-emerald-800"
+                          : dark ? "bg-red-500/5 border-s-red-500/50 text-red-300" : "bg-red-50 border-s-red-500 text-red-800"
                       }`}
                     >
                       <span className="font-medium">
@@ -242,7 +245,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                     onClick={handleRetry}
                     className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                   >
-                    Nochmal versuchen
+                    {t("skillTest.retry")}
                   </button>
                 )}
                 <button
@@ -252,7 +255,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                     : "border-gray-200 text-gray-600 hover:bg-gray-50"
                   }`}
                 >
-                  Schließen
+                  {t("skillTest.close")}
                 </button>
               </div>
             </div>
@@ -323,7 +326,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                 <div className="space-y-4">
                   <div>
                     <h3 className={`text-sm font-semibold mb-2 ${dark ? "text-gray-200" : "text-gray-700"}`}>
-                      Lies den folgenden Code und beantworte die Frage:
+                      {t("skillTest.codeReadingInstruction")}
                     </h3>
                     <pre className={`rounded-xl p-4 font-mono text-sm overflow-x-auto ${dark ? "bg-[#1e1e1e] text-gray-200 border border-[#2d3f55]" : "bg-gray-900 text-gray-200 border border-gray-300"}`}>
                       {testData.test_data.code_reading.code}
@@ -338,7 +341,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                       onChange={(e) => setCodeReadingAnswer(e.target.value)}
                       className={inputClass}
                       rows={4}
-                      placeholder="Deine Antwort..."
+                      placeholder={t("skillTest.yourAnswer")}
                     />
                   </div>
                 </div>
@@ -349,7 +352,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                 <div className="space-y-4">
                   <div>
                     <h3 className={`text-sm font-semibold mb-2 ${dark ? "text-gray-200" : "text-gray-700"}`}>
-                      Mini-Aufgabe
+                      {t("skillTest.miniTaskTitle")}
                     </h3>
                     <p className={`text-sm leading-relaxed ${dark ? "text-gray-400" : "text-gray-600"}`}>
                       {testData.test_data.mini_task.description}
@@ -358,7 +361,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                   {testData.test_data.mini_task.expected_output && (
                     <div className={`rounded-xl p-3 ${dark ? "bg-[#0a1525] border border-[#1e2f45]" : "bg-gray-50 border border-gray-200"}`}>
                       <p className={`text-xs font-medium uppercase tracking-wider mb-1 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                        Erwartete Ausgabe
+                        {t("skillTest.expectedOutput")}
                       </p>
                       <pre className={`font-mono text-sm ${dark ? "text-emerald-400" : "text-emerald-700"}`}>
                         {testData.test_data.mini_task.expected_output}
@@ -367,14 +370,14 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                   )}
                   <div>
                     <label className={`block text-xs font-medium uppercase tracking-wider mb-2 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                      Dein Code
+                      {t("skillTest.yourCode")}
                     </label>
                     <textarea
                       value={miniTaskCode}
                       onChange={(e) => setMiniTaskCode(e.target.value)}
                       className={codeAreaClass}
                       rows={8}
-                      placeholder="# Schreibe deinen Python-Code hier..."
+                      placeholder={t("skillTest.codePlaceholder")}
                       spellCheck={false}
                     />
                   </div>
@@ -391,14 +394,14 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                     : "border-gray-200 text-gray-600 hover:bg-gray-50"
                   }`}
                 >
-                  Zurück
+                  {t("skillTest.back")}
                 </button>
                 {step < 3 ? (
                   <button
                     onClick={() => setStep((s) => (s < 3 ? (s + 1) as Step : s))}
                     className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                   >
-                    Weiter
+                    {t("skillTest.next")}
                   </button>
                 ) : (
                   <button
@@ -406,7 +409,7 @@ export default function SkillTestModal({ skill, onClose, onTestPassed, inline = 
                     disabled={submitting}
                     className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
-                    {submitting ? "Prüfe..." : "Absenden"}
+                    {submitting ? t("skillTest.submitting") : t("skillTest.submitBtn")}
                   </button>
                 )}
               </div>

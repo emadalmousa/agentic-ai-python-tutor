@@ -4,14 +4,21 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth, Level } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
+import { useLang } from "@/context/LangContext"
+import type { TranslationKey } from "@/i18n"
 
-const LEVELS: Level[] = ["Anfänger", "Mittel", "Fortgeschritten"]
-const GOALS = [
-  "Python Grundlagen",
-  "Debugging",
-  "Prüfungsvorbereitung",
-  "Objektorientierung",
-  "Datenstrukturen",
+const LEVELS: { value: Level; labelKey: TranslationKey }[] = [
+  { value: "Anfänger", labelKey: "auth.register.levelBeginner" },
+  { value: "Mittel", labelKey: "auth.register.levelIntermediate" },
+  { value: "Fortgeschritten", labelKey: "auth.register.levelAdvanced" },
+]
+
+const GOALS: { value: string; labelKey: TranslationKey }[] = [
+  { value: "Python Grundlagen", labelKey: "auth.register.goalBasics" },
+  { value: "Debugging", labelKey: "auth.register.goalDebugging" },
+  { value: "Prüfungsvorbereitung", labelKey: "auth.register.goalExam" },
+  { value: "Objektorientierung", labelKey: "auth.register.goalOOP" },
+  { value: "Datenstrukturen", labelKey: "auth.register.goalDataStructures" },
 ]
 
 const LEARNED_TOPICS = ["Variablen", "Schleifen", "Bedingungen"]
@@ -22,6 +29,7 @@ const PROGRESS_PERCENT = 45
 export default function ProfileView() {
   const { user, updateUser } = useAuth()
   const { dark } = useTheme()
+  const { t } = useLang()
   const router = useRouter()
 
   const [isEditing, setIsEditing] = useState(false)
@@ -70,7 +78,7 @@ export default function ProfileView() {
                   onClick={handleEditOpen}
                   className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[#1e2f45] text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200 transition-all"
                 >
-                  Bearbeiten
+                  {t("profile.edit")}
                 </button>
               )}
             </div>
@@ -79,17 +87,17 @@ export default function ProfileView() {
               <span className={`text-xs px-2.5 py-0.5 rounded-full border ${levelColor}`}>
                 {user.level}
               </span>
-              <span className="text-xs text-gray-500">Ziel: {user.goal}</span>
+              <span className="text-xs text-gray-500">{t("profile.goalPrefix", { goal: user.goal })}</span>
             </div>
           </div>
         </div>
 
         {isEditing && (
           <div className="bg-[#0d1b2e] border border-[#1e2f45] rounded-xl p-6 mb-6 space-y-4">
-            <h2 className="text-sm font-medium text-gray-300">Profil bearbeiten</h2>
+            <h2 className="text-sm font-medium text-gray-300">{t("profile.editTitle")}</h2>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Name</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("profile.name")}</label>
               <input
                 type="text"
                 value={editName}
@@ -99,24 +107,24 @@ export default function ProfileView() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Erfahrungslevel</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("profile.level")}</label>
               <select
                 value={editLevel}
                 onChange={(e) => setEditLevel(e.target.value as Level)}
                 className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none"
               >
-                {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+                {LEVELS.map((l) => <option key={l.value} value={l.value}>{t(l.labelKey)}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Lernziel</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("profile.goal")}</label>
               <select
                 value={editGoal}
                 onChange={(e) => setEditGoal(e.target.value)}
                 className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none"
               >
-                {GOALS.map((g) => <option key={g} value={g}>{g}</option>)}
+                {GOALS.map((g) => <option key={g.value} value={g.value}>{t(g.labelKey)}</option>)}
               </select>
             </div>
 
@@ -125,13 +133,13 @@ export default function ProfileView() {
                 onClick={handleEditSave}
                 className="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition-all"
               >
-                Speichern
+                {t("profile.save")}
               </button>
               <button
                 onClick={() => setIsEditing(false)}
                 className="px-4 py-2 rounded-lg text-xs font-medium border border-[#1e2f45] text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200 transition-all"
               >
-                Abbrechen
+                {t("profile.cancel")}
               </button>
             </div>
           </div>
@@ -139,11 +147,11 @@ export default function ProfileView() {
 
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-[#0d1b2e] border border-[#1e2f45] rounded-xl p-5">
-            <div className="text-xs text-gray-500 mb-1">Analysierte Codes</div>
+            <div className="text-xs text-gray-500 mb-1">{t("profile.analyzedCodes")}</div>
             <div className="text-3xl font-bold text-white">{user.analyzedCount}</div>
           </div>
           <div className="bg-[#0d1b2e] border border-[#1e2f45] rounded-xl p-5">
-            <div className="text-xs text-gray-500 mb-2">Lernfortschritt</div>
+            <div className="text-xs text-gray-500 mb-2">{t("profile.progressLabel")}</div>
             <div className="flex items-end gap-2">
               <span className="text-3xl font-bold text-white">{PROGRESS_PERCENT}%</span>
             </div>
@@ -163,7 +171,7 @@ export default function ProfileView() {
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
-              <h3 className="text-sm font-medium text-gray-300">Gelernte Themen</h3>
+              <h3 className="text-sm font-medium text-gray-300">{t("profile.learnedTopics")}</h3>
             </div>
             <div className="flex flex-wrap gap-2">
               {LEARNED_TOPICS.map((topic) => (
@@ -181,7 +189,7 @@ export default function ProfileView() {
                 <line x1="12" y1="9" x2="12" y2="13" />
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
-              <h3 className="text-sm font-medium text-gray-300">Aktuelle Schwächen</h3>
+              <h3 className="text-sm font-medium text-gray-300">{t("profile.weaknesses")}</h3>
             </div>
             <div className="flex flex-wrap gap-2">
               {WEAKNESSES.map((w) => (
@@ -198,13 +206,13 @@ export default function ProfileView() {
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <h3 className="text-sm font-medium text-gray-300">Nächstes Lernziel</h3>
+              <h3 className="text-sm font-medium text-gray-300">{t("profile.nextGoal")}</h3>
             </div>
             <div className="flex items-center gap-3">
               <span className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600/15 text-blue-300 border border-blue-500/30">
                 {NEXT_GOAL}
               </span>
-              <span className="text-xs text-gray-500">Empfohlen basierend auf deinem Fortschritt</span>
+              <span className="text-xs text-gray-500">{t("profile.recommended")}</span>
             </div>
           </div>
         </div>

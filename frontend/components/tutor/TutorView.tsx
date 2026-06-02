@@ -9,6 +9,7 @@ import { useChat } from "@/hooks/useChat"
 import { useCodeRunner } from "@/hooks/useCodeRunner"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
+import { useLang } from "@/context/LangContext"
 
 const LEVEL_COMPLEXITY: Record<string, string> = {
   beginner:     "Erkläre alles sehr einfach für absolute Anfänger. Verwende kurze, klare Sätze. Zeige einfache Beispiele mit print() und einfachen Werten.",
@@ -58,6 +59,7 @@ function readExerciseRedirect(): { code: string; history: import("@/types/tutor"
 
 export default function TutorView() {
   const { dark } = useTheme()
+  const { t } = useLang()
   const [{ code: initialCode, history: initialHistory }] = useState(readExerciseRedirect)
   const [code, setCode] = useState(initialCode)
   const { isAuthenticated } = useAuth()
@@ -69,8 +71,8 @@ export default function TutorView() {
     send, analyze, reset,
     openFilePicker, handleFileInput, fileInputRef,
     bottomRef,
-  } = useChat(code, initialHistory)
-  const { output, loading: running, run } = useCodeRunner()
+  } = useChat(code, t, initialHistory)
+  const { output, loading: running, run } = useCodeRunner(t)
 
   const [leftWidth, setLeftWidth] = useState(480)
   const [outputHeight, setOutputHeight] = useState(160)
@@ -127,7 +129,7 @@ export default function TutorView() {
 
         <div ref={leftPanelRef} className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: leftWidth }}>
           <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 min-h-0">
-            <label className={labelCls}>Python-Code</label>
+            <label className={labelCls}>{t("tutor.pythonCode")}</label>
             <CodeEditor code={code} onChange={setCode} dark={dark} />
           </div>
           <EditorFooter

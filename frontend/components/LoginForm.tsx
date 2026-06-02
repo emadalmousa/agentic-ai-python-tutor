@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
+import { useLang } from "@/context/LangContext"
 
 export default function LoginForm() {
   const [email, setEmail] = useState("")
@@ -11,6 +12,7 @@ export default function LoginForm() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const { login, user, continueAsGuest } = useAuth()
+  const { t } = useLang()
   const router = useRouter()
 
   const handleGuest = useCallback(() => {
@@ -28,7 +30,7 @@ export default function LoginForm() {
     setLoading(true)
 
     if (!email || !password) {
-      setError("Bitte alle Felder ausfüllen.")
+      setError(t("auth.login.errorEmpty"))
       setLoading(false)
       return
     }
@@ -37,7 +39,7 @@ export default function LoginForm() {
     if (success) {
       router.push("/tutor")
     } else {
-      setError("Ungültige E-Mail oder Passwort.")
+      setError(t("auth.login.errorInvalid"))
     }
     setLoading(false)
   }
@@ -56,7 +58,7 @@ export default function LoginForm() {
             <span className="text-2xl">🤖</span>
             <span className="text-white font-bold text-lg">Python Tutor</span>
           </div>
-          <p className="text-gray-500 text-sm">Melde dich an, um weiterzulernen</p>
+          <p className="text-gray-500 text-sm">{t("auth.login.subtitle")}</p>
         </div>
 
         <form
@@ -70,7 +72,7 @@ export default function LoginForm() {
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">E-Mail</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("auth.login.email")}</label>
             <input
               type="email"
               value={email}
@@ -81,12 +83,12 @@ export default function LoginForm() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">Passwort</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("auth.login.password")}</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Passwort eingeben"
+              placeholder={t("auth.login.passwordPlaceholder")}
               className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
             />
           </div>
@@ -96,13 +98,13 @@ export default function LoginForm() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg px-4 py-3 transition-all"
           >
-            {loading ? "Wird angemeldet..." : "Einloggen"}
+            {loading ? t("auth.login.submitting") : t("auth.login.submit")}
           </button>
 
           <p className="text-center text-sm text-gray-500">
-            Noch kein Konto?{" "}
+            {t("auth.login.noAccount")}{" "}
             <Link href="/register" className="text-blue-400 hover:text-blue-300 transition-colors">
-              Registrieren
+              {t("auth.login.register")}
             </Link>
           </p>
 
@@ -111,7 +113,7 @@ export default function LoginForm() {
               <div className="w-full border-t border-[#1e2f45]" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-[#0d1b2e] px-3 text-gray-600">oder</span>
+              <span className="bg-[#0d1b2e] px-3 text-gray-600">{t("auth.login.or")}</span>
             </div>
           </div>
 
@@ -120,12 +122,12 @@ export default function LoginForm() {
             onClick={handleGuest}
             className="w-full border border-[#1e2f45] hover:border-[#2d4a6b] hover:bg-[#0a1628] text-gray-400 hover:text-gray-200 font-medium text-sm rounded-lg px-4 py-3 transition-all"
           >
-            Als Gast fortfahren
+            {t("auth.login.guest")}
           </button>
         </form>
 
         <div className="mt-4 text-center">
-          <p className="text-xs text-gray-600">Demo: student@example.com / password123</p>
+          <p className="text-xs text-gray-600">{t("auth.login.demo")}</p>
         </div>
       </div>
     </div>

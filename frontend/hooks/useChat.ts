@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { sendChatMessage, analyzeCode, uploadMaterial } from "@/lib/api"
 import type { ChatMessage, TutorResponse } from "@/types/tutor"
 import { useAuth } from "@/context/AuthContext"
+import type { TranslationKey } from "@/i18n"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -43,7 +44,9 @@ async function saveSession(payload: {
   }
 }
 
-export function useChat(code: string, initialHistory: ChatMessage[] = []) {
+type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string
+
+export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []) {
   const { user } = useAuth()
   // If initialHistory starts with a user message, treat it as a pending auto-send
   const pendingMsg = initialHistory.length === 1 && initialHistory[0].role === "user"
@@ -70,7 +73,7 @@ export function useChat(code: string, initialHistory: ChatMessage[] = []) {
     setHistory([userMsg])
     sendChatMessage({ code, message: pendingMsg, history: [] })
       .then((data) => setHistory(data.history))
-      .catch(() => setError("Backend nicht erreichbar."))
+      .catch(() => setError(t("tutor.backendError")))
       .finally(() => setLoading(false))
   }, [])
 
@@ -96,7 +99,7 @@ export function useChat(code: string, initialHistory: ChatMessage[] = []) {
         })
       }
     } catch {
-      setError("Backend nicht erreichbar.")
+      setError(t("tutor.backendError"))
       setHistory(history)
     } finally {
       setLoading(false)
@@ -106,7 +109,7 @@ export function useChat(code: string, initialHistory: ChatMessage[] = []) {
   async function analyze() {
     if (loading || analyzing) return
     setError(null)
-    const trigger: ChatMessage = { role: "user", content: "🔍 Code analysieren" }
+    const trigger: ChatMessage = { role: "user", content: `🔍 ${t("tutor.analyzeAction")}` }
     setHistory(prev => [...prev, trigger])
     setAnalyzing(true)
     try {
@@ -121,13 +124,13 @@ export function useChat(code: string, initialHistory: ChatMessage[] = []) {
           topics: [],
           errors,
           chat_messages: [
-            { role: "user", content: "🔍 Code analysieren" },
+            { role: "user", content: `🔍 ${t("tutor.analyzeAction")}` },
             { role: "assistant", content: formatted },
           ],
         })
       }
     } catch {
-      setError("Analyse fehlgeschlagen. Ist das Backend erreichbar?")
+      setError(t("tutor.analyzeError"))
       setHistory(prev => prev.slice(0, -1))
     } finally {
       setAnalyzing(false)
@@ -143,11 +146,11 @@ export function useChat(code: string, initialHistory: ChatMessage[] = []) {
       const data = await uploadMaterial(file)
       const msg: ChatMessage = {
         role: "assistant",
-        content: `📚 **Lernmaterial geladen:** ${file.name}\n\n${data.chunks} Abschnitte verarbeitet. Ab jetzt nutze ich dieses Material als Kontext bei der Code-Analyse.`,
+        content: `📚 **${t("tutor.materialLoaded", { name: file.name })}**\n\n${t("tutor.materialChunks", { chunks: data.chunks })}`,
       }
       setHistory(prev => [...prev, msg])
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "PDF-Upload fehlgeschlagen.")
+      setError(e instanceof Error ? e.message : t("tutor.uploadError"))
       setMaterialName(null)
     } finally {
       setUploading(false)

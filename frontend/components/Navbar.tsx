@@ -4,10 +4,13 @@ import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
+import { useLang } from "@/context/LangContext"
+import LanguageSwitcher from "@/components/LanguageSwitcher"
 
 export default function Navbar() {
   const { user, isGuest, logout } = useAuth()
   const { dark, toggleDark } = useTheme()
+  const { t } = useLang()
   const router = useRouter()
   const pathname = usePathname()
   const onTutor    = pathname === "/tutor"
@@ -51,7 +54,7 @@ export default function Navbar() {
                     : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 }`}
               >
-                Tutor
+                {t("nav.tutor")}
               </Link>
             )}
             {!onProgress && (
@@ -63,7 +66,7 @@ export default function Navbar() {
                     : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 }`}
               >
-                Fortschritt
+                {t("nav.progress")}
               </Link>
             )}
             {!onProfile && (
@@ -75,7 +78,7 @@ export default function Navbar() {
                     : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 }`}
               >
-                Profil
+                {t("nav.profile")}
               </Link>
             )}
             <button
@@ -86,7 +89,7 @@ export default function Navbar() {
                   : "text-gray-500 hover:bg-red-50 hover:text-red-600"
               }`}
             >
-              Logout
+              {t("nav.logout")}
             </button>
             <div
               className={`ml-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -107,7 +110,7 @@ export default function Navbar() {
                     : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 }`}
               >
-                Tutor
+                {t("nav.tutor")}
               </Link>
             )}
             <Link
@@ -118,7 +121,7 @@ export default function Navbar() {
                   : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
               }`}
             >
-              Login
+              {t("nav.login")}
             </Link>
           </>
         ) : (
@@ -131,7 +134,7 @@ export default function Navbar() {
                   : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
               }`}
             >
-              Login
+              {t("nav.login")}
             </Link>
             <Link
               href="/register"
@@ -141,12 +144,14 @@ export default function Navbar() {
                   : "border-blue-300 text-blue-600 hover:bg-blue-50"
               }`}
             >
-              Registrieren
+              {t("nav.register")}
             </Link>
           </>
         )}
 
         <div className={`ml-2 w-px h-5 ${dark ? "bg-[#1e2f45]" : "bg-gray-200"}`} />
+
+        <LanguageSwitcher />
 
         <button
           onClick={toggleDark}
@@ -169,14 +174,14 @@ export default function Navbar() {
                 <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
               </svg>
-              Hell
+              {t("nav.themeLight")}
             </>
           ) : (
             <>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
               </svg>
-              Dunkel
+              {t("nav.themeDark")}
             </>
           )}
         </button>

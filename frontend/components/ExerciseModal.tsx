@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/context/ThemeContext"
 import { useAuth } from "@/context/AuthContext"
+import { useLang } from "@/context/LangContext"
 import { getExercises, submitExercise, getExerciseHint } from "@/lib/api"
 import type { SkillProgress, Exercise, SubmitExerciseResponse, HintResponse } from "@/types/tutor"
 
@@ -16,6 +17,7 @@ interface ExerciseModalProps {
 
 export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onStartSkillTest }: ExerciseModalProps) {
   const { dark } = useTheme()
+  const { t } = useLang()
   useAuth() // ensure we are inside an authenticated context
   const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
   const router = useRouter()
@@ -47,7 +49,7 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
     setLoading(true)
     getExercises(skill.skill_key, token)
       .then((data) => { if (!cancelled) setExercises(data.exercises) })
-      .catch(() => { if (!cancelled) setError("Übungen konnten nicht geladen werden.") })
+      .catch(() => { if (!cancelled) setError(t("exercise.loadError")) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [skill.skill_key, loadTick])
@@ -97,7 +99,7 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
         }, 1200)
       }
     } catch {
-      setError("Abgabe fehlgeschlagen.")
+      setError(t("exercise.submitError"))
     } finally {
       setSubmitting(false)
     }
@@ -114,15 +116,15 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
       setCurrentHint(res.hint)
       setHintLevel((prev) => prev + 1)
     } catch {
-      setError("Tipp konnte nicht geladen werden.")
+      setError(t("exercise.hintError"))
     } finally {
       setHintLoading(false)
     }
   }
 
   function getHintButtonLabel(): string {
-    if (hintLevel > 3) return "Kein weiterer Tipp"
-    return `Tipp ${hintLevel}`
+    if (hintLevel > 3) return t("exercise.hintNone")
+    return t("exercise.hintLabel", { level: hintLevel })
   }
 
   // Backdrop click handler
@@ -165,14 +167,14 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
             </h2>
             {!allDone && currentExercise && (
               <p className={`text-xs mt-0.5 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                Übung {currentIndex} von {totalExercises}
+                {t("exercise.exerciseOf", { current: currentIndex, total: totalExercises })}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${dark ? "hover:bg-[#1e2f45] text-gray-400 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-700"}`}
-            aria-label="Schließen"
+            aria-label={t("exercise.close")}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 4l8 8M12 4l-8 8" />
@@ -199,10 +201,10 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
             <div className="text-center py-8 space-y-4">
               <div className="text-4xl">&#127881;</div>
               <h3 className={`text-lg font-semibold ${dark ? "text-white" : "text-gray-900"}`}>
-                Alle Übungen abgeschlossen!
+                {t("exercise.allDone")}
               </h3>
               <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                Dein aktueller Skill-Score: <span className="font-bold text-emerald-500">{skill.score}/100</span>
+                {t("exercise.currentScore", { score: skill.score })}
               </p>
               <button
                 onClick={() => {
@@ -210,7 +212,7 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
                 }}
                 className="mt-4 px-6 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
               >
-                Skill-Test starten
+                {t("exercise.startSkillTest")}
               </button>
             </div>
           )}
@@ -231,23 +233,23 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
               {/* Code editor */}
               <div>
                 <label className={`block text-xs font-medium uppercase tracking-wider mb-2 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                  Dein Code
+                  {t("exercise.yourCode")}
                 </label>
                 <textarea
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   className={codeAreaClass}
                   rows={8}
-                  placeholder="# Schreibe deinen Python-Code hier..."
+                  placeholder={t("exercise.codePlaceholder")}
                   spellCheck={false}
                 />
               </div>
 
               {/* Hint display */}
               {currentHint && (
-                <div className={`rounded-xl p-4 border-l-4 ${dark ? "bg-blue-500/5 border-l-blue-500/50 text-blue-200" : "bg-blue-50 border-l-blue-500 text-blue-800"}`}>
+                <div className={`rounded-xl p-4 border-s-4 ${dark ? "bg-blue-500/5 border-s-blue-500/50 text-blue-200" : "bg-blue-50 border-s-blue-500 text-blue-800"}`}>
                   <p className={`text-xs font-medium uppercase tracking-wider mb-1 ${dark ? "text-blue-400" : "text-blue-600"}`}>
-                    Tipp {hintLevel - 1}
+                    {t("exercise.hintLabel", { level: hintLevel - 1 })}
                   </p>
                   <p className="text-sm leading-relaxed">{currentHint}</p>
                 </div>
@@ -263,14 +265,14 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
                     : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   }`}
                 >
-                  {hintLoading ? "Lade..." : getHintButtonLabel()}
+                  {hintLoading ? t("exercise.hintLoading") : getHintButtonLabel()}
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={!code.trim() || submitting}
                   className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  {submitting ? "Prüfe..." : "Ausführen"}
+                  {submitting ? t("exercise.submitting") : t("exercise.submit")}
                 </button>
               </div>
 
@@ -278,8 +280,8 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
               {result && (
                 <div className="space-y-3 animate-[fadeIn_300ms_ease-out]">
                   {result.result === "richtig" && (
-                    <div className={`rounded-xl p-4 border-l-4 ${dark ? "bg-emerald-500/10 border-l-emerald-500 text-emerald-300" : "bg-emerald-50 border-l-emerald-500 text-emerald-800"}`}>
-                      <p className="font-semibold text-sm mb-1">&#10003; Richtig! +{result.score_change / 10} Punkte</p>
+                    <div className={`rounded-xl p-4 border-s-4 ${dark ? "bg-emerald-500/10 border-s-emerald-500 text-emerald-300" : "bg-emerald-50 border-s-emerald-500 text-emerald-800"}`}>
+                      <p className="font-semibold text-sm mb-1">&#10003; {t("exercise.correct", { points: result.score_change / 10 })}</p>
                       {result.what_was_good && (
                         <p className={`text-sm ${dark ? "text-emerald-200/80" : "text-emerald-700"}`}>{result.what_was_good}</p>
                       )}
@@ -287,8 +289,8 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
                   )}
 
                   {result.result === "teilweise" && (
-                    <div className={`rounded-xl p-4 border-l-4 ${dark ? "bg-amber-500/10 border-l-amber-500 text-amber-300" : "bg-amber-50 border-l-amber-500 text-amber-800"}`}>
-                      <p className="font-semibold text-sm mb-1">&#9684; Teilweise richtig! +{result.score_change / 10} Punkte</p>
+                    <div className={`rounded-xl p-4 border-s-4 ${dark ? "bg-amber-500/10 border-s-amber-500 text-amber-300" : "bg-amber-50 border-s-amber-500 text-amber-800"}`}>
+                      <p className="font-semibold text-sm mb-1">&#9684; {t("exercise.partial", { points: result.score_change / 10 })}</p>
                       {result.what_was_good && (
                         <p className={`text-sm mb-2 ${dark ? "text-amber-200/80" : "text-amber-700"}`}>{result.what_was_good}</p>
                       )}
@@ -299,18 +301,18 @@ export default function ExerciseModal({ skill, onClose, onSkillScoreUpdate, onSt
                   )}
 
                   {result.result === "falsch" && (
-                    <div className={`rounded-xl p-4 border-l-4 ${dark ? "bg-red-500/10 border-l-red-500 text-red-300" : "bg-red-50 border-l-red-500 text-red-800"}`}>
-                      <p className="font-semibold text-sm mb-1">&#10007; Falsch</p>
+                    <div className={`rounded-xl p-4 border-s-4 ${dark ? "bg-red-500/10 border-s-red-500 text-red-300" : "bg-red-50 border-s-red-500 text-red-800"}`}>
+                      <p className="font-semibold text-sm mb-1">&#10007; {t("exercise.wrong")}</p>
                       {result.what_went_wrong && (
                         <p className={`text-sm ${dark ? "text-red-200/80" : "text-red-700"}`}>{result.what_went_wrong}</p>
                       )}
                       {result.redirect_to_tutor ? (
                         <p className={`text-xs mt-2 ${dark ? "text-red-400/60" : "text-red-500"}`}>
-                          Du wirst zum Tutor weitergeleitet...
+                          {t("exercise.redirecting")}
                         </p>
                       ) : (
                         <p className={`text-xs mt-2 ${dark ? "text-red-400/60" : "text-red-500"}`}>
-                          Versuche es nochmal!
+                          {t("exercise.tryAgain")}
                         </p>
                       )}
                     </div>

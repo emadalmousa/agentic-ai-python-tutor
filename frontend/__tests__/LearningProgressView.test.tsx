@@ -12,6 +12,10 @@ vi.mock("@/context/ThemeContext", () => ({
   useTheme: vi.fn(),
 }))
 
+vi.mock("@/context/LangContext", () => ({
+  useLang: vi.fn(),
+}))
+
 vi.mock("@/lib/api", () => ({
   getLearningProgress: vi.fn(),
   analyzeSkill: vi.fn(),
@@ -20,8 +24,10 @@ vi.mock("@/lib/api", () => ({
 
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
+import { useLang } from "@/context/LangContext"
 import { getLearningProgress, deleteAnalysisEvents } from "@/lib/api"
 import LearningProgressView from "@/components/LearningProgressView"
+import de from "@/i18n/de"
 
 // --- Test data factory ---
 
@@ -71,6 +77,17 @@ function setupMocks(progressData: ProgressResponse = makeProgress()) {
     updateUser: vi.fn(),
   })
   vi.mocked(useTheme).mockReturnValue({ dark: true, toggleDark: vi.fn() })
+  vi.mocked(useLang).mockReturnValue({
+    locale: "de" as const,
+    setLocale: vi.fn(),
+    t: ((key: string, vars?: Record<string, string | number>) => {
+      let str = (de as Record<string, string>)[key] ?? key
+      if (vars) {
+        str = str.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? String(vars[k]) : `{${k}}`)
+      }
+      return str
+    }) as ReturnType<typeof useLang>["t"],
+  })
   vi.mocked(getLearningProgress).mockResolvedValue(progressData)
 }
 
@@ -264,6 +281,17 @@ describe("LearningProgressView", () => {
       updateUser: vi.fn(),
     })
     vi.mocked(useTheme).mockReturnValue({ dark: true, toggleDark: vi.fn() })
+    vi.mocked(useLang).mockReturnValue({
+      locale: "de" as const,
+      setLocale: vi.fn(),
+      t: ((key: string, vars?: Record<string, string | number>) => {
+        let str = (de as Record<string, string>)[key] ?? key
+        if (vars) {
+          str = str.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? String(vars[k]) : `{${k}}`)
+        }
+        return str
+      }) as ReturnType<typeof useLang>["t"],
+    })
 
     render(<LearningProgressView />)
     expect(screen.getByText("Laden…")).toBeInTheDocument()
@@ -282,6 +310,17 @@ describe("LearningProgressView", () => {
       updateUser: vi.fn(),
     })
     vi.mocked(useTheme).mockReturnValue({ dark: true, toggleDark: vi.fn() })
+    vi.mocked(useLang).mockReturnValue({
+      locale: "de" as const,
+      setLocale: vi.fn(),
+      t: ((key: string, vars?: Record<string, string | number>) => {
+        let str = (de as Record<string, string>)[key] ?? key
+        if (vars) {
+          str = str.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? String(vars[k]) : `{${k}}`)
+        }
+        return str
+      }) as ReturnType<typeof useLang>["t"],
+    })
     vi.mocked(getLearningProgress).mockRejectedValue(new Error("Network error"))
 
     render(<LearningProgressView />)
@@ -303,6 +342,17 @@ describe("LearningProgressView", () => {
       updateUser: vi.fn(),
     })
     vi.mocked(useTheme).mockReturnValue({ dark: true, toggleDark: vi.fn() })
+    vi.mocked(useLang).mockReturnValue({
+      locale: "de" as const,
+      setLocale: vi.fn(),
+      t: ((key: string, vars?: Record<string, string | number>) => {
+        let str = (de as Record<string, string>)[key] ?? key
+        if (vars) {
+          str = str.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? String(vars[k]) : `{${k}}`)
+        }
+        return str
+      }) as ReturnType<typeof useLang>["t"],
+    })
 
     render(<LearningProgressView />)
     // Component shows loading because setLoading is true but fetch is never called

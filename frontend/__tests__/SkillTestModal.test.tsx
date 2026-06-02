@@ -12,6 +12,10 @@ vi.mock("@/context/ThemeContext", () => ({
   useTheme: vi.fn(),
 }))
 
+vi.mock("@/context/LangContext", () => ({
+  useLang: vi.fn(),
+}))
+
 vi.mock("@/lib/api", () => ({
   generateSkillTest: vi.fn(),
   submitSkillTest: vi.fn(),
@@ -19,9 +23,11 @@ vi.mock("@/lib/api", () => ({
 
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
+import { useLang } from "@/context/LangContext"
 import { generateSkillTest, submitSkillTest } from "@/lib/api"
 import SkillTestModal from "@/components/SkillTestModal"
 import type { SkillProgress } from "@/types/tutor"
+import de from "@/i18n/de"
 
 // --- Mock data ---
 
@@ -107,6 +113,17 @@ function setupMocks() {
     updateUser: vi.fn(),
   })
   vi.mocked(useTheme).mockReturnValue({ dark: false, toggleDark: vi.fn() })
+  vi.mocked(useLang).mockReturnValue({
+    locale: "de" as const,
+    setLocale: vi.fn(),
+    t: ((key: string, vars?: Record<string, string | number>) => {
+      let str = (de as Record<string, string>)[key] ?? key
+      if (vars) {
+        str = str.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? String(vars[k]) : `{${k}}`)
+      }
+      return str
+    }) as ReturnType<typeof useLang>["t"],
+  })
 }
 
 const defaultProps = {

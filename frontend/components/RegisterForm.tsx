@@ -4,14 +4,21 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth, Level } from "@/context/AuthContext"
+import { useLang } from "@/context/LangContext"
+import type { TranslationKey } from "@/i18n"
 
-const LEVELS: Level[] = ["Anfänger", "Mittel", "Fortgeschritten"]
-const GOALS = [
-  "Python Grundlagen",
-  "Debugging",
-  "Prüfungsvorbereitung",
-  "Objektorientierung",
-  "Datenstrukturen",
+const LEVELS: { value: Level; labelKey: TranslationKey }[] = [
+  { value: "Anfänger", labelKey: "auth.register.levelBeginner" },
+  { value: "Mittel", labelKey: "auth.register.levelIntermediate" },
+  { value: "Fortgeschritten", labelKey: "auth.register.levelAdvanced" },
+]
+
+const GOALS: { value: string; labelKey: TranslationKey }[] = [
+  { value: "Python Grundlagen", labelKey: "auth.register.goalBasics" },
+  { value: "Debugging", labelKey: "auth.register.goalDebugging" },
+  { value: "Prüfungsvorbereitung", labelKey: "auth.register.goalExam" },
+  { value: "Objektorientierung", labelKey: "auth.register.goalOOP" },
+  { value: "Datenstrukturen", labelKey: "auth.register.goalDataStructures" },
 ]
 
 export default function RegisterForm() {
@@ -20,10 +27,11 @@ export default function RegisterForm() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [level, setLevel] = useState<Level>("Anfänger")
-  const [goal, setGoal] = useState(GOALS[0])
+  const [goal, setGoal] = useState(GOALS[0].value)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const { register, user } = useAuth()
+  const { t } = useLang()
   const router = useRouter()
 
   useEffect(() => {
@@ -35,15 +43,15 @@ export default function RegisterForm() {
     setError("")
 
     if (!name || !email || !password || !confirmPassword) {
-      setError("Bitte alle Felder ausfüllen.")
+      setError(t("auth.register.errorEmpty"))
       return
     }
     if (password !== confirmPassword) {
-      setError("Passwörter stimmen nicht überein.")
+      setError(t("auth.register.errorMismatch"))
       return
     }
     if (password.length < 6) {
-      setError("Passwort muss mindestens 6 Zeichen lang sein.")
+      setError(t("auth.register.errorShort"))
       return
     }
 
@@ -52,7 +60,7 @@ export default function RegisterForm() {
     if (success) {
       router.push("/login")
     } else {
-      setError("Ein Konto mit dieser E-Mail existiert bereits.")
+      setError(t("auth.register.errorExists"))
     }
     setLoading(false)
   }
@@ -71,7 +79,7 @@ export default function RegisterForm() {
             <span className="text-2xl">🤖</span>
             <span className="text-white font-bold text-lg">Python Tutor</span>
           </div>
-          <p className="text-gray-500 text-sm">Erstelle dein Lernkonto</p>
+          <p className="text-gray-500 text-sm">{t("auth.register.subtitle")}</p>
         </div>
 
         <form
@@ -85,18 +93,18 @@ export default function RegisterForm() {
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">Name</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("auth.register.name")}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Dein Name"
+              placeholder={t("auth.register.namePlaceholder")}
               className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">E-Mail</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("auth.register.email")}</label>
             <input
               type="email"
               value={email}
@@ -108,46 +116,46 @@ export default function RegisterForm() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Passwort</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("auth.register.password")}</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 6 Zeichen"
+                placeholder={t("auth.register.passwordPlaceholder")}
                 className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Bestätigen</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("auth.register.confirm")}</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Wiederholen"
+                placeholder={t("auth.register.confirmPlaceholder")}
                 className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">Erfahrungslevel</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("auth.register.level")}</label>
             <select
               value={level}
               onChange={(e) => setLevel(e.target.value as Level)}
               className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none"
             >
-              {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+              {LEVELS.map((l) => <option key={l.value} value={l.value}>{t(l.labelKey)}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">Lernziel</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("auth.register.goal")}</label>
             <select
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               className="w-full bg-[#0a1628] border border-[#1e2f45] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none"
             >
-              {GOALS.map((g) => <option key={g} value={g}>{g}</option>)}
+              {GOALS.map((g) => <option key={g.value} value={g.value}>{t(g.labelKey)}</option>)}
             </select>
           </div>
 
@@ -156,13 +164,13 @@ export default function RegisterForm() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg px-4 py-3 transition-all"
           >
-            {loading ? "Wird registriert..." : "Konto erstellen"}
+            {loading ? t("auth.register.submitting") : t("auth.register.submit")}
           </button>
 
           <p className="text-center text-sm text-gray-500">
-            Bereits registriert?{" "}
+            {t("auth.register.hasAccount")}{" "}
             <Link href="/login" className="text-blue-400 hover:text-blue-300 transition-colors">
-              Einloggen
+              {t("auth.register.login")}
             </Link>
           </p>
         </form>

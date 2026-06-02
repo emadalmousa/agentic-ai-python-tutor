@@ -2,19 +2,22 @@
 
 import { useRef, useEffect, useState, KeyboardEvent } from "react"
 import type { ChatMessage } from "@/types/tutor"
+import type { TranslationKey } from "@/i18n"
+import { useLang } from "@/context/LangContext"
 import MarkdownMessage from "./MarkdownMessage"
 
-const THINKING_MESSAGES = [
-  { after: 0,  text: "Ich lese deine Frage..." },
-  { after: 2,  text: "Ich bereite die Antwort vor..." },
-  { after: 5,  text: "Fast fertig, ich formuliere die Erklärung..." },
-  { after: 9,  text: "Noch einen Moment, ich überprüfe die Beispiele..." },
-  { after: 14, text: "Gleich fertig..." },
-  { after: 20, text: "Das ist eine ausführliche Antwort — fast da..." },
-  { after: 28, text: "Ich bin dran, danke für deine Geduld ✨" },
+const THINKING_KEYS: { after: number; key: TranslationKey }[] = [
+  { after: 0,  key: "tutor.thinking0" },
+  { after: 2,  key: "tutor.thinking1" },
+  { after: 5,  key: "tutor.thinking2" },
+  { after: 9,  key: "tutor.thinking3" },
+  { after: 14, key: "tutor.thinking4" },
+  { after: 20, key: "tutor.thinking5" },
+  { after: 28, key: "tutor.thinking6" },
 ]
 
 function ThinkingIndicator({ dark, subCol }: { dark: boolean; subCol: string }) {
+  const { t } = useLang()
   const [msgIndex, setMsgIndex] = useState(0)
   const [elapsed, setElapsed] = useState(0)
 
@@ -24,7 +27,7 @@ function ThinkingIndicator({ dark, subCol }: { dark: boolean; subCol: string }) 
     const interval = setInterval(() => {
       setElapsed((prev) => {
         const next = prev + 1
-        const nextIdx = THINKING_MESSAGES.findLastIndex((m) => m.after <= next)
+        const nextIdx = THINKING_KEYS.findLastIndex((m) => m.after <= next)
         setMsgIndex(nextIdx >= 0 ? nextIdx : 0)
         return next
       })
@@ -32,7 +35,7 @@ function ThinkingIndicator({ dark, subCol }: { dark: boolean; subCol: string }) 
     return () => clearInterval(interval)
   }, [])
 
-  const msg = THINKING_MESSAGES[msgIndex]
+  const msg = THINKING_KEYS[msgIndex]
 
   return (
     <div className={`px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 ${dark ? "bg-[#111e30]" : "bg-gray-50"}`}>
@@ -41,7 +44,7 @@ function ThinkingIndicator({ dark, subCol }: { dark: boolean; subCol: string }) 
         <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
         <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
       </div>
-      <span className={`text-xs transition-all duration-500 ${subCol}`}>{msg.text}</span>
+      <span className={`text-xs transition-all duration-500 ${subCol}`}>{t(msg.key)}</span>
     </div>
   )
 }
@@ -70,6 +73,7 @@ export default function ChatPanel({
   error, bottomRef, fileInputRef,
   onInput, onSend, onReset, onOpenFilePicker, onFileInput, onInsertCode, dark,
 }: Props) {
+  const { t } = useLang()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -98,7 +102,7 @@ export default function ChatPanel({
   return (
     <div className={`flex flex-col min-h-full ${bg} border-l ${border}`}>
 
-      {/* Header — sticky oben */}
+      {/* Header */}
       <div className={`sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b ${border} ${bg}`}>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-indigo-500" />
@@ -114,18 +118,18 @@ export default function ChatPanel({
             onClick={onReset}
             className={`text-xs ${subCol} hover:text-red-400 transition-colors`}
           >
-            Neues Gespräch
+            {t("tutor.newConversation")}
           </button>
         )}
       </div>
 
-      {/* Nachrichtenverlauf */}
+      {/* Message history */}
       <div className="flex-1 px-4 py-4 flex flex-col gap-3">
         {history.length === 0 && !busy && (
           <div className={`text-center mt-12 ${subCol} text-sm`}>
             <div className="text-3xl mb-3">🤖</div>
-            <p className="font-medium mb-1">Hallo! Ich bin dein Python-Tutor.</p>
-            <p className="text-xs">Stell eine Frage, analysiere deinen Code oder lade ein PDF hoch.</p>
+            <p className="font-medium mb-1">{t("tutor.greeting")}</p>
+            <p className="text-xs">{t("tutor.greetingSub")}</p>
           </div>
         )}
 
@@ -153,7 +157,7 @@ export default function ChatPanel({
           </div>
         ))}
 
-        {/* Typing-Indikator */}
+        {/* Typing indicator */}
         {busy && (
           <div className="flex justify-start">
             <div className="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center text-xs mr-2 mt-0.5 shrink-0">
@@ -166,7 +170,7 @@ export default function ChatPanel({
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className={`text-xs ${subCol}`}>Analysiere Code…</span>
+                <span className={`text-xs ${subCol}`}>{t("tutor.analyzing")}</span>
               </div>
             ) : uploading ? (
               <div className={`${msgBg} px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2`}>
@@ -175,7 +179,7 @@ export default function ChatPanel({
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className={`text-xs ${subCol}`}>PDF wird hochgeladen…</span>
+                <span className={`text-xs ${subCol}`}>{t("tutor.uploading")}</span>
               </div>
             ) : (
               <ThinkingIndicator dark={dark} subCol={subCol} />
@@ -190,15 +194,15 @@ export default function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {/* Eingabe — sticky am unteren Rand */}
+      {/* Input */}
       <div className={`sticky bottom-0 px-4 py-3 border-t ${border} ${bg}`}>
         <div className={`flex gap-2 items-end rounded-2xl border ${inputBg} px-3 py-2`}>
 
-          {/* Paperclip: PDF hochladen */}
+          {/* Paperclip: PDF upload */}
           <button
             onClick={onOpenFilePicker}
             disabled={busy}
-            title="PDF-Lernmaterial hochladen"
+            title={t("tutor.uploadTitle")}
             className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all flex-shrink-0 mb-0.5 disabled:opacity-30 disabled:cursor-not-allowed ${
               dark
                 ? "text-gray-500 hover:text-amber-400 hover:bg-amber-500/10"
@@ -215,14 +219,14 @@ export default function ChatPanel({
             value={input}
             onChange={(e) => onInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Frage stellen… (Enter = senden)"
+            placeholder={t("tutor.inputPlaceholder")}
             rows={1}
             className={`flex-1 bg-transparent text-sm resize-none focus:outline-none ${dark ? "text-gray-200 placeholder-gray-500" : "text-gray-800 placeholder-gray-400"}`}
             style={{ maxHeight: 120 }}
             disabled={busy}
           />
 
-          {/* Senden */}
+          {/* Send */}
           <button
             onClick={onSend}
             disabled={!input.trim() || busy}
@@ -236,7 +240,7 @@ export default function ChatPanel({
         </div>
 
         <p className={`text-center text-xs mt-1.5 ${subCol}`}>
-          PDF anhängen für kontextbasierte Analyse
+          {t("tutor.uploadHint")}
         </p>
       </div>
 

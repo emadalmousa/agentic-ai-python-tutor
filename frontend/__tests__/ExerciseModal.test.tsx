@@ -12,6 +12,10 @@ vi.mock("@/context/ThemeContext", () => ({
   useTheme: vi.fn(),
 }))
 
+vi.mock("@/context/LangContext", () => ({
+  useLang: vi.fn(),
+}))
+
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
 }))
@@ -24,10 +28,12 @@ vi.mock("@/lib/api", () => ({
 
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
+import { useLang } from "@/context/LangContext"
 import { useRouter } from "next/navigation"
 import { getExercises, submitExercise, getExerciseHint } from "@/lib/api"
 import ExerciseModal from "@/components/ExerciseModal"
 import type { SkillProgress } from "@/types/tutor"
+import de from "@/i18n/de"
 
 // --- Mock data ---
 
@@ -112,6 +118,17 @@ function setupMocks(pushMock = makePushMock()) {
     updateUser: vi.fn(),
   })
   vi.mocked(useTheme).mockReturnValue({ dark: false, toggleDark: vi.fn() })
+  vi.mocked(useLang).mockReturnValue({
+    locale: "de" as const,
+    setLocale: vi.fn(),
+    t: ((key: string, vars?: Record<string, string | number>) => {
+      let str = (de as Record<string, string>)[key] ?? key
+      if (vars) {
+        str = str.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? String(vars[k]) : `{${k}}`)
+      }
+      return str
+    }) as ReturnType<typeof useLang>["t"],
+  })
   vi.mocked(useRouter).mockReturnValue({
     push: pushMock,
     replace: vi.fn(),
