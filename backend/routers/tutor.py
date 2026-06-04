@@ -27,11 +27,16 @@ def analyze_code(request: CodeRequest) -> TutorResponse:
 @router.post("/upload-material", response_model=UploadResponse)
 async def upload_material(file: UploadFile = File(...)) -> UploadResponse:
     """Lädt ein PDF als Lernmaterial hoch und speichert es als FAISS-Index."""
+
+    # --- Validierung (kein LLM) ---
+    # Prüft ob die Datei wirklich ein PDF ist (Content-Type oder Dateiendung)
     content_type = file.content_type or ""
     filename = file.filename or ""
     if content_type != "application/pdf" and not filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Nur PDF-Dateien sind erlaubt.")
 
+    # --- Bytes lesen (kein LLM) ---
+    # Die rohen Binärdaten der PDF werden komplett in den RAM geladen
     pdf_bytes = await file.read()
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="Die hochgeladene Datei ist leer.")
@@ -41,9 +46,22 @@ async def upload_material(file: UploadFile = File(...)) -> UploadResponse:
         from agent.rag.splitter import split_pages
         from agent.rag.vectorstore import build_and_save
 
+        # --- Text extrahieren (kein LLM) ---
+        # PyMuPDF liest jede Seite und gibt [(text, seitennummer), ...] zurück
         pages = extract_pages(pdf_bytes)
+
+        # --- Chunks erstellen (kein LLM) ---
+        # Langer Text wird in kleine Abschnitte (~500 Zeichen) aufgeteilt
+        # damit die spätere Suche präziser ist
         chunks = split_pages(pages)
+
+        # --- FAISS-Index bauen (LLM/LangChain!) ---
+        # Hier wird get_embeddings() aufgerufen: OpenAI oder Ollama wandelt
+        # jeden Text-Chunk in einen Zahlen-Vektor um (Embedding).
+        # FAISS speichert diese Vektoren auf Disk (index.faiss + chunks.pkl).
+        # Ab jetzt kann der Chat semantisch in diesem Material suchen.
         build_and_save(chunks)
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

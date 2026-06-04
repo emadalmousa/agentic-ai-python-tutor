@@ -48,7 +48,7 @@ body {
 /* ── Karten: Transition (nur für Tastatur-Fokus) ─────────── */
 .problem-card, .feature-card, .sprint-card, .tech-item,
 .arch-flow, .agent-action, .dod-box,
-.journey-step, .code-card, .agenda-item {
+.journey-step, .code-card, .agenda-item, .tool-card-p3, .ep-list-block, .ep-info-card {
   transition: transform 0.3s, background 0.3s, box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
 }
 
@@ -70,6 +70,9 @@ body {
 .has-focus .journey-step:not(.card-focus),
 .has-focus .agenda-item:not(.card-focus),
 .has-focus .tool-card-p2:not(.card-focus),
+.has-focus .tool-card-p3:not(.card-focus),
+.has-focus .ep-list-block:not(.card-focus),
+.has-focus .ep-info-card:not(.card-focus),
 .has-focus .loop-step-item:not(.card-focus),
 .has-focus .rag-step:not(.card-focus),
 .has-focus .rag-fact-card:not(.card-focus),
