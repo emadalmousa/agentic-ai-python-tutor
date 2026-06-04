@@ -15,7 +15,7 @@ const STORAGE_KEY = "ki_tutor_lang"
 function getInitialLocale(): Locale {
   if (typeof window === "undefined") return "de"
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === "de" || stored === "en" || stored === "ar") return stored
+  if (stored === "de" || stored === "en") return stored
   return "de"
 }
 

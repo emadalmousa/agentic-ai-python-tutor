@@ -7,7 +7,6 @@ import type { Locale } from "@/i18n"
 const OPTIONS: { locale: Locale; label: string }[] = [
   { locale: "de", label: "DE" },
   { locale: "en", label: "EN" },
-  { locale: "ar", label: "ع" },
 ]
 
 export default function LanguageSwitcher() {

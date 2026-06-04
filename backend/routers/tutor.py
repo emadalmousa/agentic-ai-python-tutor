@@ -2,11 +2,16 @@ import subprocess
 import sys
 import tempfile
 import os
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from sqlalchemy.orm import Session
 from models.schemas import CodeRequest, TutorResponse, ChatRequest, ChatResponse, ChatMessage, RunRequest, RunResponse, UploadResponse
-from agent.tutor_agent import run_analysis
+from agent.tutor_agent import run_analysis, run_chat
 from agent.config import get_llm, get_classifier_llm
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from core.database import get_db
+from routers.auth import get_current_user
+from models.user import User
+from models.skill_progress import StudentSkillProgress, SKILL_TREE
 
 router = APIRouter(prefix="/tutor", tags=["Tutor"])
 
@@ -173,7 +178,11 @@ def _get_rag_context(message: str) -> str:
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
+def chat(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ChatResponse:
     if not _is_python_related(request.message, request.code):
         new_history = list(request.history) + [
             ChatMessage(role="user", content=request.message),
@@ -181,33 +190,27 @@ def chat(request: ChatRequest) -> ChatResponse:
         ]
         return ChatResponse(reply=OFF_TOPIC_REPLY, history=new_history)
 
-    llm = get_llm()
+    progress_rows = db.query(StudentSkillProgress).filter_by(user_id=current_user.id).all()
+    skill_map = {s["key"]: s for s in SKILL_TREE}
+    skill_progress = [
+        {
+            "skill_key": row.skill_key,
+            "skill_label": skill_map[row.skill_key]["label"] if row.skill_key in skill_map else row.skill_key,
+            "status": row.status,
+            "score": row.score,
+            "completed_titles": "",
+        }
+        for row in progress_rows
+        if row.skill_key in skill_map
+    ]
 
-    rag_context = _get_rag_context(request.message)
-
-    system_text = (
-        "Du bist ein freundlicher Python-Tutor für Anfänger. "
-        "Antworte klar, geduldig und auf Deutsch. Gib bei Bedarf Codebeispiele.\n"
-        f"Aktueller Code des Schülers:\n```python\n{request.code}\n```"
+    reply = run_chat(
+        message=request.message,
+        code=request.code,
+        history=request.history,
+        user_level=current_user.level,
+        skill_progress=skill_progress,
     )
-    if rag_context:
-        system_text += (
-            "\n\nInhalt aus dem hochgeladenen Lernmaterial "
-            "(erkläre diesen Inhalt wenn der Schüler danach fragt, "
-            "extrahiere Code-Beispiele als ausführbare Python-Blöcke):\n\n"
-            + rag_context
-        )
-
-    messages = [SystemMessage(content=system_text)]
-    for msg in request.history:
-        if msg.role == "user":
-            messages.append(HumanMessage(content=msg.content))
-        else:
-            messages.append(AIMessage(content=msg.content))
-    messages.append(HumanMessage(content=request.message))
-
-    response = llm.invoke(messages)
-    reply = response.content
 
     new_history = list(request.history) + [
         ChatMessage(role="user", content=request.message),

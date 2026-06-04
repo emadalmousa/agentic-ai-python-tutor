@@ -1,19 +1,16 @@
-export type Locale = "de" | "en" | "ar"
+export type Locale = "de" | "en"
 
 export { default as de } from "./de"
 export type { TranslationKey } from "./de"
 export { default as en } from "./en"
-export { default as ar } from "./ar"
 
 import deStrings from "./de"
 import enStrings from "./en"
-import arStrings from "./ar"
 import type { TranslationKey } from "./de"
 
 export const translations: Record<Locale, Record<TranslationKey, string>> = {
   de: deStrings,
   en: enStrings,
-  ar: arStrings,
 }
 
 /**

@@ -8,7 +8,7 @@ export default function HtmlDirSync() {
 
   useEffect(() => {
     document.documentElement.lang = locale
-    document.documentElement.dir = locale === "ar" ? "rtl" : "ltr"
+    document.documentElement.dir = "ltr"
   }, [locale])
 
   return null
