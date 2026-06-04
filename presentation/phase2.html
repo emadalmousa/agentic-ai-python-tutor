@@ -253,7 +253,7 @@
     /* ══════════════════════════════════════════════════════
        NEXT SPRINT SLIDE
     ══════════════════════════════════════════════════════ */
-    #slide-7 {
+    #slide-6 {
       justify-content: center; align-items: center;
       padding: clamp(32px,5vh,72px) clamp(48px,8vw,120px);
       background:
@@ -291,7 +291,7 @@
     /* ══════════════════════════════════════════════════════
        DEMO SLIDE
     ══════════════════════════════════════════════════════ */
-    #slide-8 {
+    #slide-7 {
       justify-content: center; align-items: center; text-align: center; padding: 4vh 8vw;
       background:
         radial-gradient(ellipse 55% 60% at 28% 40%, rgba(52,211,153,0.10) 0%, transparent 70%),
@@ -306,7 +306,7 @@
   <!-- Navigation -->
   <nav class="nav">
     <div class="nav-inner">
-      <span class="slide-counter" id="counter">Slide 1 / 8</span>
+      <span class="slide-counter" id="counter">Slide 1 / 7</span>
       <div class="dot-nav" id="dots">
         <button class="dot active" data-target="1"></button>
         <button class="dot" data-target="2"></button>
@@ -315,7 +315,6 @@
         <button class="dot" data-target="5"></button>
         <button class="dot" data-target="6"></button>
         <button class="dot" data-target="7"></button>
-        <button class="dot" data-target="8"></button>
       </div>
       <button class="nav-btn" id="btn-prev" disabled>◀ Zurück</button>
       <button class="nav-btn" id="btn-next">Weiter ▶</button>
@@ -355,7 +354,7 @@
     </section>
 
     <!-- ══ SLIDE 2 — Agenda ══════════════════════════════════════════ -->
-    <section class="slide" id="slide-2" data-num="02 / 08">
+    <section class="slide" id="slide-2" data-num="02 / 07">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">Agenda</span>
@@ -409,8 +408,7 @@
           </div>
           <span class="feat-label">05 — Ausblick</span>
           <div class="feat-title">Nächster Sprint</div>
-          <p class="feat-desc">Placeholder — wird später ergänzt.</p>
-          <span class="coming-soon">🔮 Coming Soon</span>
+          <p class="feat-desc">React Frontend · Agent-Gedächtnis · Analytics Dashboard</p>
         </div>
 
         <!-- 6 Live Demo -->
@@ -426,180 +424,245 @@
       </div>
     </section>
 
-    <!-- ══ SLIDE 3 — Neue FastAPI Endpoints ═════════════════════════ -->
-    <section class="slide" id="slide-3" data-num="03 / 08">
+    <!-- ══ SLIDE 3 — Endpoint Übersicht ══════════════════════════════ -->
+    <section class="slide" id="slide-3" data-num="03 / 07">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
-        <span class="slide-label">Backend — Neue Routers</span>
-        <h2 class="slide-title">Neue <em>FastAPI Endpoints</em></h2>
+        <span class="slide-label">Backend — Architektur</span>
+        <h2 class="slide-title">Endpoints &amp; <em>was sie aufrufen</em></h2>
       </div>
-      <div class="ep-wrapper">
 
-        <!-- Linke Seite: Endpoint-Liste -->
-        <div class="ep-list ep-list-block">
+      <style>
+        .ep3-grid {
+          flex: 1; min-height: 0;
+          display: grid; grid-template-columns: 1fr 1fr;
+          grid-template-rows: 1fr 1fr;
+          gap: clamp(12px,1.6vw,24px);
+        }
+        .ep3-card {
+          background: var(--card); border-radius: var(--radius);
+          padding: clamp(14px,1.8vh,26px) clamp(16px,1.8vw,26px);
+          display: flex; flex-direction: column; gap: clamp(8px,1vh,14px);
+          position: relative; overflow: hidden;
+        }
+        .ep3-card::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+        .ep3-card.c-lc    { border: 1px solid rgba(99,102,241,0.25); }
+        .ep3-card.c-tool  { border: 1px solid rgba(52,211,153,0.25); }
+        .ep3-card.c-llm   { border: 1px solid rgba(251,146,60,0.25); }
+        .ep3-card.c-gray  { border: 1px solid rgba(148,163,184,0.2); }
+        .ep3-card.c-lc::before   { background: var(--accent); }
+        .ep3-card.c-tool::before { background: var(--success); }
+        .ep3-card.c-llm::before  { background: var(--warn); }
+        .ep3-card.c-gray::before { background: var(--muted); }
 
-          <div class="ep-group-label">📄 PDF &amp; RAG</div>
-          <div class="ep-item">
-            <span class="http-method post">POST</span>
-            <span class="ep-path">/tutor/upload-material</span>
-            <span class="ep-desc">PDF → Chunks → FAISS · LLM Embeddings</span>
-          </div>
+        .ep3-card-head {
+          display: flex; align-items: center; gap: 10px;
+        }
+        .ep3-card-icon {
+          width: clamp(34px,4vw,46px); height: clamp(34px,4vw,46px);
+          border-radius: 10px; display: flex; align-items: center; justify-content: center;
+          font-size: clamp(1rem,1.4vw,1.5rem); flex-shrink: 0;
+        }
+        .c-lc   .ep3-card-icon { background: rgba(99,102,241,0.12); }
+        .c-tool .ep3-card-icon { background: rgba(52,211,153,0.12); }
+        .c-llm  .ep3-card-icon { background: rgba(251,146,60,0.12); }
+        .c-gray .ep3-card-icon { background: rgba(148,163,184,0.1); }
 
-          <div class="ep-group-label">🏋️ Übungen</div>
-          <div class="ep-item">
-            <span class="http-method post">POST</span>
-            <span class="ep-path">/exercises/submit</span>
-            <span class="ep-desc">Code einreichen → LLM bewertet</span>
-          </div>
+        .ep3-card-title {
+          font-family: var(--font-heading); font-size: clamp(0.9rem,1.08vw,1.16rem); font-weight: 800;
+        }
+        .c-lc   .ep3-card-title { color: var(--accent); }
+        .c-tool .ep3-card-title { color: var(--success); }
+        .c-llm  .ep3-card-title { color: var(--warn); }
+        .c-gray .ep3-card-title { color: var(--muted); }
 
-          <div class="ep-group-label">🧪 Skill-Tests</div>
-          <div class="ep-item">
-            <span class="http-method post">POST</span>
-            <span class="ep-path">/skill-tests/generate</span>
-            <span class="ep-desc">LLM generiert Test (MC + Mini-Aufgabe)</span>
-          </div>
-          <div class="ep-item">
-            <span class="http-method post">POST</span>
-            <span class="ep-path">/skill-tests/submit</span>
-            <span class="ep-desc">LLM wertet Test aus · Score 0–100</span>
-          </div>
+        .ep3-card-sub {
+          font-size: clamp(0.6rem,0.72vw,0.78rem); color: var(--muted);
+          font-family: var(--font-heading); font-weight: 600; letter-spacing: 0.05em;
+        }
 
-          <div class="ep-group-label">📊 Lernfortschritt</div>
-          <div class="ep-item">
-            <span class="http-method get">GET</span>
-            <span class="ep-path">/learning-progress/{id}</span>
-            <span class="ep-desc">37 Skills + Fortschritt laden</span>
-          </div>
-          <div class="ep-item">
-            <span class="http-method post">POST</span>
-            <span class="ep-path">/learning-progress/analyze</span>
-            <span class="ep-desc">LLM erkennt Skill im Code · Score berechnen</span>
-          </div>
-          <div class="ep-item">
-            <span class="http-method post">POST</span>
-            <span class="ep-path">/learning-progress/analyze</span>
-            <span class="ep-desc">LLM erkennt Skill + Score</span>
-          </div>
+        .ep3-entries { display: flex; flex-direction: column; gap: clamp(5px,0.6vh,8px); flex: 1; }
+        .ep3-entry {
+          display: grid; grid-template-columns: auto 1fr; gap: 8px 10px; align-items: start;
+          padding: clamp(5px,0.6vh,8px) clamp(8px,1vw,12px);
+          border-radius: 8px;
+        }
+        .c-lc   .ep3-entry { background: rgba(99,102,241,0.07); }
+        .c-tool .ep3-entry { background: rgba(52,211,153,0.07); }
+        .c-llm  .ep3-entry { background: rgba(251,146,60,0.07); }
+        .c-gray .ep3-entry { background: rgba(148,163,184,0.06); }
 
+        .ep3-method {
+          font-family: var(--font-heading); font-size: clamp(0.52rem,0.62vw,0.68rem);
+          font-weight: 800; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+        }
+        .m-post { background: rgba(52,211,153,0.12); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+        .m-get  { background: rgba(56,189,248,0.12); color: var(--accent3);  border: 1px solid rgba(56,189,248,0.3); }
+
+        .ep3-entry-body {}
+        .ep3-entry-path {
+          font-family: 'Courier New', monospace; font-weight: 700;
+          font-size: clamp(0.72rem,0.86vw,0.94rem); line-height: 1.3;
+        }
+        .c-lc   .ep3-entry-path { color: var(--accent); }
+        .c-tool .ep3-entry-path { color: var(--success); }
+        .c-llm  .ep3-entry-path { color: var(--warn); }
+        .c-gray .ep3-entry-path { color: var(--muted); }
+
+        .ep3-entry-desc {
+          font-size: clamp(0.62rem,0.74vw,0.8rem); color: var(--muted); line-height: 1.35; margin-top: 1px;
+        }
+        .ep3-entry-desc code {
+          font-size: .88em; color: var(--accent3);
+          background: rgba(56,189,248,0.08); padding: 1px 4px; border-radius: 3px;
+        }
+      </style>
+
+      <div class="ep3-grid">
+
+        <!-- 1: LangChain Agent -->
+        <div class="ep3-card c-lc feature-card" style="border-top:3px solid var(--accent);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">🤖</div>
+            <div>
+              <div class="ep3-card-title">LangChain Agent</div>
+              <div class="ep3-card-sub">ReAct-Loop · LLM wählt Tools</div>
+            </div>
+          </div>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/analyze</div>
+                <div class="ep3-entry-desc"><code>explain → debug → exercise → rag</code> — feste Reihenfolge</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/chat</div>
+                <div class="ep3-entry-desc">Dynamisch aus 6 Tools · Lernfortschritt als Kontext</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/upload-material</div>
+                <div class="ep3-entry-desc"><code>get_embeddings()</code> → FAISS Index</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Rechte Seite: Info -->
-        <div class="ep-right">
-
-          <div class="ep-info-card" style="border-left:4px solid var(--warn);">
-            <h4><span style="color:var(--warn);">⚡</span> Wo ist LLM beteiligt?</h4>
-            <ul>
-              <li><code style="color:var(--accent3);">/exercises/submit</code> → evaluate_exercise (1 LLM-Aufruf)</li>
-              <li><code style="color:var(--accent3);">/exercises/hint</code> → get_hint (1 LLM-Aufruf)</li>
-              <li><code style="color:var(--accent3);">/skill-tests/generate</code> → generate_skill_test (1 LLM-Aufruf)</li>
-              <li><code style="color:var(--accent3);">/skill-tests/submit</code> → evaluate_skill_test (2 LLM-Aufrufe)</li>
-              <li><code style="color:var(--accent3);">/learning-progress/analyze</code> → analyze_skill (1 LLM-Aufruf)</li>
-            </ul>
+        <!-- 2: Tool direkt -->
+        <div class="ep3-card c-tool feature-card" style="border-top:3px solid var(--success);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">🛠️</div>
+            <div>
+              <div class="ep3-card-title">Tool direkt</div>
+              <div class="ep3-card-sub">tool.invoke() · deterministisch</div>
+            </div>
           </div>
-
-          <div class="ep-info-card" style="border-left:4px solid var(--success);">
-            <h4><span style="color:var(--success);">🛡️</span> Sicherheit — kein Client-Trust</h4>
-            <ul>
-              <li>Skill-Tests serverseitig gespeichert — Client schickt nur session_id</li>
-              <li>User kann Fragen nicht manipulieren</li>
-              <li>JWT Bearer Token bei jedem Request validiert</li>
-              <li>ExerciseCompletion is_locked = true → Wiederholung geblockt</li>
-            </ul>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/exercises/submit</div>
+                <div class="ep3-entry-desc">⚖️ <code>evaluate_exercise</code> — stdout leer / korrekt / falsch · 1 LLM-Aufruf</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/exercises/hint</div>
+                <div class="ep3-entry-desc">💡 <code>get_hint</code> — gestufter Hinweis Level 1–3 · Lösung nie direkt</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/exercises/generate</div>
+                <div class="ep3-entry-desc">🏭 <code>generate_exercise</code> — neue Aufgabe · keine Wiederholung · auch im Chat-Agent</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/skill-tests/generate</div>
+                <div class="ep3-entry-desc">📋 <code>generate_skill_test</code> — 3 MC + Code-Lesen + Mini-Aufgabe · auch im Chat-Agent</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/skill-tests/submit</div>
+                <div class="ep3-entry-desc">🎓 <code>evaluate_skill_test</code> — MC + LLM semantisch + Code ausführen · 2 LLM-Aufrufe · Score 0–100</div>
+              </div>
+            </div>
           </div>
-
         </div>
+
+        <!-- 3: LLM direkt -->
+        <div class="ep3-card c-llm feature-card" style="border-top:3px solid var(--warn);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">⚡</div>
+            <div>
+              <div class="ep3-card-title">LLM direkt</div>
+              <div class="ep3-card-sub">llm.invoke() · kein Tool, kein Agent</div>
+            </div>
+          </div>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/learning-progress/analyze</div>
+                <div class="ep3-entry-desc"><code>analyze_skill()</code> · Skill erkennen + Score · Fallback: Keywords</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4: Kein LLM -->
+        <div class="ep3-card c-gray feature-card" style="border-top:3px solid var(--muted);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">🗄️</div>
+            <div>
+              <div class="ep3-card-title">Kein LLM</div>
+              <div class="ep3-card-sub">DB · subprocess · Auth</div>
+            </div>
+          </div>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/run</div>
+                <div class="ep3-entry-desc"><code>subprocess.run()</code> · Timeout 10s</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-get">GET</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/learning-progress/{id}</div>
+                <div class="ep3-entry-desc">DB · 37 Skills + Scores laden</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/auth/login · /auth/register</div>
+                <div class="ep3-entry-desc">bcrypt + JWT Token · kein LLM</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
-    <!-- ══ SLIDE 4 — Neue Agent Tools ════════════════════════════════ -->
-    <section class="slide" id="slide-4" data-num="04 / 08">
-      <div class="slide-accent-bar"></div>
-      <div class="slide-header">
-        <span class="slide-label">Agent Tools — Sprint 2</span>
-        <h2 class="slide-title">5 neue <em>LangChain Tools</em></h2>
-      </div>
-      <div class="tools-p2-grid">
-
-        <!-- 1 exercise_evaluator -->
-        <div class="tool-card-p3 t1">
-          <div class="tool-icon-p3">⚖️</div>
-          <div class="tool-name-p3">evaluate_exercise</div>
-          <div class="tool-file-p3">agent/tools/exercise_evaluator_tool.py</div>
-          <p class="tool-desc-p3">Bewertet Schüler-Lösung in <strong style="color:var(--text);">3 Fällen:</strong>
-            (1) stdout leer → falsch,
-            (2) stdout == expected → LLM prüft ob Konzept stimmt oder hardcodiert,
-            (3) stdout ≠ expected → LLM: teilweise oder falsch.</p>
-          <span class="tool-badge">1 LLM-Aufruf</span>
-        </div>
-
-        <!-- 2 exercise_generator -->
-        <div class="tool-card-p3 t2">
-          <div class="tool-icon-p3">🏭</div>
-          <div class="tool-name-p3">generate_exercise</div>
-          <div class="tool-file-p3">agent/tools/exercise_generator_tool.py</div>
-          <p class="tool-desc-p3">Generiert dynamisch neue Übungsaufgaben für Intermediate & Advanced Skills.
-            LLM erhält bereits abgeschlossene Titel — <strong style="color:var(--text);">keine Wiederholung.</strong>
-            Gibt JSON zurück: title, description, expected_output, hint.</p>
-          <span class="tool-badge">1 LLM-Aufruf</span>
-        </div>
-
-        <!-- 3 hint_tool -->
-        <div class="tool-card-p3 t3">
-          <div class="tool-icon-p3">💡</div>
-          <div class="tool-name-p3">get_hint</div>
-          <div class="tool-file-p3">agent/tools/hint_tool.py</div>
-          <p class="tool-desc-p3">Gibt gestuften Hinweis basierend auf hint_level (1–3).
-            Level 1 = vage, Level 2 = konkreter, Level 3 = fast die Lösung.
-            <strong style="color:var(--text);">Lösung wird nie direkt verraten.</strong></p>
-          <span class="tool-badge">1 LLM-Aufruf</span>
-        </div>
-
-        <!-- 4 skill_test_generator -->
-        <div class="tool-card-p3 t4">
-          <div class="tool-icon-p3">📋</div>
-          <div class="tool-name-p3">generate_skill_test</div>
-          <div class="tool-file-p3">agent/tools/skill_test_generator_tool.py</div>
-          <p class="tool-desc-p3">Generiert vollständigen Test: <strong style="color:var(--text);">3 Multiple-Choice + 1 Code-Lesen + 1 Mini-Aufgabe.</strong>
-            Test wird serverseitig gespeichert — Client bekommt nur session_id, kann Fragen nicht manipulieren.</p>
-          <span class="tool-badge">1 LLM-Aufruf</span>
-        </div>
-
-        <!-- 5 skill_test_evaluator -->
-        <div class="tool-card-p3 t5">
-          <div class="tool-icon-p3">🎓</div>
-          <div class="tool-name-p3">evaluate_skill_test</div>
-          <div class="tool-file-p3">agent/tools/skill_test_evaluator_tool.py</div>
-          <p class="tool-desc-p3">Bewertet Test in 3 Teilen:
-            MC = reiner String-Vergleich (kein LLM, 30 Punkte),
-            Code-Lesen = LLM semantisch (30 Punkte),
-            Mini-Aufgabe = Code ausführen + LLM bewertet (40 Punkte).
-            <strong style="color:var(--text);">Bestanden ≥ 60/100.</strong></p>
-          <span class="tool-badge">2 LLM-Aufrufe</span>
-        </div>
-
-        <!-- Note box -->
-        <div class="tool-card-p3 note-card">
-          <div class="tool-icon-p3" style="background:rgba(148,163,184,0.08);">💬</div>
-          <div class="tool-name-p3" style="color:var(--muted);">Warum direkte invoke() Aufrufe?</div>
-          <p class="tool-desc-p3">Diese 5 Tools werden <strong style="color:var(--text);">nicht</strong> über den ReAct-Agent-Loop aufgerufen — sondern direkt via <code style="color:var(--accent3);">tool.invoke()</code> aus dem Router.
-            Grund: deterministisches Verhalten, kein LLM-Entscheidungsschritt nötig.</p>
-          <span class="tool-badge" style="background:rgba(148,163,184,0.1); color:var(--muted); border-color:rgba(148,163,184,0.2);">Kein Agent-Loop</span>
-        </div>
-
-      </div>
-
-      <div style="margin-top:clamp(8px,1vh,14px); background:var(--card); border:1px solid var(--border); border-radius:10px; padding:clamp(8px,1vh,14px) clamp(14px,1.6vw,22px); display:flex; align-items:center; gap:12px;">
-        <span style="font-size:1.1rem;">💡</span>
-        <p style="font-size:clamp(0.76rem,0.9vw,0.98rem); color:var(--muted); line-height:1.4;">
-          <strong style="color:var(--text);">Tool-Docstring = LLM-Beschreibung:</strong>
-          Jedes <code style="color:var(--accent3);">@tool</code>-Docstring ist die Beschreibung die das LLM sieht wenn es entscheiden muss welches Tool zu rufen.
-          <strong style="color:var(--accent2);">Guter Docstring = korrektes Tool.</strong>
-        </p>
-      </div>
-    </section>
-
-    <!-- ══ SLIDE 5 — PDF Feature Diagramm ═══════════════════════════ -->
-    <section class="slide" id="slide-5" data-num="05 / 08">
+    <!-- ══ SLIDE 4 — PDF Feature Diagramm ═══════════════════════════ -->
+    <section class="slide" id="slide-4" data-num="04 / 07">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">RAG — Retrieval Augmented Generation</span>
@@ -811,8 +874,8 @@
       </div>
     </section>
 
-    <!-- ══ SLIDE 6 — Lernfortschritt Diagramm ════════════════════════ -->
-    <section class="slide" id="slide-6" data-num="06 / 08">
+    <!-- ══ SLIDE 7 — Lernfortschritt Diagramm ════════════════════════ -->
+    <section class="slide" id="slide-5" data-num="05 / 07">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">Skill-System</span>
@@ -933,8 +996,8 @@
       </div>
     </section>
 
-    <!-- ══ SLIDE 7 — Nächster Sprint (Placeholder) ═══════════════════ -->
-    <section class="slide" id="slide-7" data-num="07 / 08">
+    <!-- ══ SLIDE 8 — Nächster Sprint ════════════════════════════════ -->
+    <section class="slide" id="slide-6" data-num="06 / 07">
       <div class="slide-accent-bar"></div>
       <div class="next-inner">
 
@@ -945,30 +1008,48 @@
 
         <div class="next-cards">
           <div class="next-card">
-            <div class="next-card-icon">🚀</div>
-            <div class="next-card-title">Placeholder</div>
-            <p class="next-card-desc">Dieser Platz wird später ergänzt.</p>
-            <span class="next-card-badge">Coming Soon</span>
+            <div class="next-card-icon">🧠</div>
+            <div class="next-card-title">Agent-Gedächtnis</div>
+            <p class="next-card-desc">Chat-History über Sessions hinweg persistieren. Agent erinnert sich an frühere Fehler und passt Erklärungen automatisch an.</p>
+            <div style="margin-top:auto; display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:clamp(0.62rem,0.74vw,0.78rem); color:var(--accent); font-family:var(--font-heading); font-weight:700;">
+                LangChain <code style="color:var(--accent3); font-size:.9em;">ConversationSummaryMemory</code>
+              </div>
+              <div style="font-size:clamp(0.6rem,0.72vw,0.78rem); color:var(--muted);">Summary per LLM-Aufruf · DB-persistent · echter Tutor-Charakter</div>
+              <span class="next-card-badge">Sprint 3</span>
+            </div>
           </div>
           <div class="next-card">
-            <div class="next-card-icon">🔮</div>
-            <div class="next-card-title">Placeholder</div>
-            <p class="next-card-desc">Dieser Platz wird später ergänzt.</p>
-            <span class="next-card-badge">Coming Soon</span>
+            <div class="next-card-icon">🔗</div>
+            <div class="next-card-title">Code-Review Chain</div>
+            <p class="next-card-desc">Mehrstufige LangChain-Chain: Schritt 1 Syntax → Schritt 2 Stil → Schritt 3 Best Practices. Jeder Schritt ein eigener LLM-Aufruf.</p>
+            <div style="margin-top:auto; display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:clamp(0.62rem,0.74vw,0.78rem); color:var(--success); font-family:var(--font-heading); font-weight:700;">
+                LangChain <code style="color:var(--accent3); font-size:.9em;">RunnableSequence</code>
+              </div>
+              <div style="font-size:clamp(0.6rem,0.72vw,0.78rem); color:var(--muted);">Echte Chain — nicht nur einzelne Tool-Aufrufe · 3 LLM-Aufrufe</div>
+              <span class="next-card-badge">Sprint 3</span>
+            </div>
           </div>
           <div class="next-card">
-            <div class="next-card-icon">⚡</div>
-            <div class="next-card-title">Placeholder</div>
-            <p class="next-card-desc">Dieser Platz wird später ergänzt.</p>
-            <span class="next-card-badge">Coming Soon</span>
+            <div class="next-card-icon">📊</div>
+            <div class="next-card-title">Lernstatistik</div>
+            <p class="next-card-desc">LLM analysiert alle Skill-Scores und generiert einen kurzen Fortschrittsbericht: Stärken, Schwächen, nächster empfohlener Schritt.</p>
+            <div style="margin-top:auto; display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:clamp(0.62rem,0.74vw,0.78rem); color:var(--warn); font-family:var(--font-heading); font-weight:700;">
+                Neues Tool <code style="color:var(--accent3); font-size:.9em;">generate_progress_report</code>
+              </div>
+              <div style="font-size:clamp(0.6rem,0.72vw,0.78rem); color:var(--muted);">1 LLM-Aufruf · JSON mit Stärken + Schwächen + Empfehlung</div>
+              <span class="next-card-badge">Sprint 3</span>
+            </div>
           </div>
         </div>
 
       </div>
     </section>
 
-    <!-- ══ SLIDE 8 — Live Demo ════════════════════════════════════════ -->
-    <section class="slide" id="slide-8" data-num="08 / 08">
+    <!-- ══ SLIDE 9 — Live Demo ════════════════════════════════════════ -->
+    <section class="slide" id="slide-7" data-num="07 / 07">
       <div class="slide-accent-bar"></div>
       <a href="#"
          style="font-family:var(--font-heading); font-size:clamp(2.4rem,5vw,5rem); font-weight:900; color:var(--accent2); text-decoration:underline; text-underline-offset:10px; text-decoration-color:rgba(99,102,241,0.5); letter-spacing:-0.01em; transition:color 0.2s;"
