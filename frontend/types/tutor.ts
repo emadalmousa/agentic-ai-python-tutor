@@ -219,6 +219,11 @@ export interface LevelTestSubmitRequest {
   mini_task_code: string
 }
 
+export interface UploadResponse {
+  status: string
+  chunks: number
+}
+
 export interface LevelTestResult {
   total_score: number
   passed: boolean
