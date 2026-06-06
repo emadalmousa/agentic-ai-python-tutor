@@ -11,6 +11,7 @@ class TutorResponse(BaseModel):
     error_type: str = "Kein Fehler"
     suggestion: str
     next_exercise: str | None = None
+    sources: list[str] = []
 
 
 class ChatMessage(BaseModel):
@@ -38,4 +39,8 @@ class RunResponse(BaseModel):
     stderr: str
     exit_code: int
 
+
+class UploadResponse(BaseModel):
+    status: str
+    chunks: int
 
