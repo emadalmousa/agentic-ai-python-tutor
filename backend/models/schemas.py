@@ -39,3 +39,8 @@ class RunResponse(BaseModel):
     exit_code: int
 
 
+class UploadResponse(BaseModel):
+    status: str
+    chunks: int
+
+
