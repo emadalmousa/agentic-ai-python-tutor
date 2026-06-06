@@ -4,6 +4,9 @@
 
 - [ ] Chat-Filter anpassen: Nachrichten filtern/sortieren
 - [ ] PDF: Seitenbereich-Auswahl beim Upload (z.B. "Seite 1-50") für große PDFs
+:await file.read() lädt die Bytes in den Arbeitsspeicher des laufenden uvicorn/Python-Prozesses. Das ist Serverspeicher, nicht der RAM deines Computers, auf dem der Browser läuft. Der
+  Browser schickt die Datei nur über HTTP — er hält danach keine Kopie mehr.
+
 
 ---
 

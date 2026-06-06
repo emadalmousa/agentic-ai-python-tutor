@@ -139,6 +139,10 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
 
   async function uploadPdf(file: File) {
     if (uploading) return
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setError(t("tutor.uploadError"))
+      return
+    }
     setError(null)
     setUploading(true)
     setMaterialName(file.name)
