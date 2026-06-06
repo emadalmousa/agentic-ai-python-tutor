@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase 2 — Sprint 2 Features</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    /* ── Light Mode ───────────────────────────────────────── */
+    body.light-mode {
+      --bg:      #f1f5f9;
+      --surface: #ffffff;
+      --card:    #f8fafc;
+      --border:  rgba(99,102,241,0.2);
+      --text:    #0f172a;
+      --muted:   #64748b;
+    }
+    body.light-mode .nav { background: rgba(241,245,249,0.95); }
+    body.light-mode .flow-node { color: #0f172a; }
+    body.light-mode .code-block, body.light-mode .code-card { background: #1e293b; }
+
+    /* ── Transition für Karten ──────────────────────────── */
+    .tool-card-p3, .ep-item, .ep-info-card, .prog-fact-card, .next-card {
+      transition: transform 0.3s, background 0.3s, box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
+    }
+
+    /* ── Diagram fullscreen overlay ─────────────────────── */
+    #diag-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.88); z-index: 99; cursor: zoom-out;
+    }
+    #diag-overlay.active { display: block; }
+    #diag-fullscreen {
+      display: none; position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%,-50%); width: 54vw; height: 94vh; z-index: 100;
+      border-radius: 16px; overflow-y: auto; background: var(--bg);
+      border: 1px solid var(--border); box-shadow: 0 32px 80px rgba(0,0,0,.8);
+      padding: clamp(24px,3vw,44px) clamp(28px,3.5vw,52px);
+      flex-direction: column; align-items: stretch; gap: 0;
+    }
+    #diag-fullscreen.active { display: flex; }
+    .fc-left { cursor: zoom-in; }
+    .fc-left:hover { outline: 2px solid rgba(99,102,241,0.4); border-radius: 14px; }
+    #diag-close-hint {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.7); color: rgba(255,255,255,0.65);
+      font-size: 0.75rem; padding: 5px 14px; border-radius: 20px; z-index: 101; pointer-events: none;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       FLOWCHART STYLES (fc-*) — identisch mit Phase 1
+    ══════════════════════════════════════════════════════ */
+    .fc-grid {
+      flex: 1; min-height: 0; display: grid;
+      grid-template-columns: 1fr 1.05fr; gap: clamp(14px,2vw,26px);
+    }
+    .fc-node {
+      border-radius: 12px;
+      padding: clamp(7px,0.9vh,12px) clamp(10px,1.2vw,16px);
+      text-align: center;
+    }
+    .fc-node .ni { font-size: clamp(1.1rem,1.4vw,1.55rem); margin-bottom: 3px; }
+    .fc-node h4  { font-family:var(--font-heading); font-size:clamp(0.76rem,0.9vw,0.98rem); font-weight:800; margin-bottom:2px; }
+    .fc-node p   { font-size:clamp(0.62rem,0.72vw,0.78rem); color:var(--muted); line-height:1.35; }
+    .fc-node code{ font-size:.85em; background:rgba(255,255,255,0.07); padding:1px 5px; border-radius:4px; color:var(--accent3); }
+
+    .fc-node.n-student { background:rgba(99,102,241,0.1);  border:2px solid rgba(99,102,241,0.45); }
+    .fc-node.n-student h4 { color:var(--accent); }
+    .fc-node.n-llm     { background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(167,139,250,0.12)); border:2px solid rgba(99,102,241,0.5); }
+    .fc-node.n-llm h4  { color:var(--accent); }
+    .fc-node.n-warn    { background:linear-gradient(135deg,rgba(251,146,60,0.15),rgba(245,158,11,0.12)); border:2px solid rgba(251,146,60,0.6); }
+    .fc-node.n-warn h4 { color:var(--warn); }
+    .fc-node.n-tool    { background:rgba(52,211,153,0.1);  border:2px solid rgba(52,211,153,0.45); }
+    .fc-node.n-tool h4 { color:var(--success); }
+    .fc-node.n-end     { background:rgba(248,113,113,0.1); border:2px solid rgba(248,113,113,0.45); }
+    .fc-node.n-end h4  { color:#f87171; }
+    .fc-node.n-cfg     { background:rgba(56,189,248,0.07); border:1.5px solid rgba(56,189,248,0.3); }
+    .fc-node.n-cfg h4  { color:var(--accent3); }
+    .fc-node.n-muted   { background:rgba(148,163,184,0.07); border:1.5px solid rgba(148,163,184,0.25); }
+    .fc-node.n-muted h4{ color:var(--muted); }
+
+    /* arrows */
+    .fc-arr { display:flex; flex-direction:column; align-items:center; }
+    .fc-arr .al { width:2px; height:clamp(10px,1.3vh,16px); }
+    .fc-arr .ah { width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; }
+    .fc-arr.blue   .al { background:rgba(99,102,241,0.55); }
+    .fc-arr.blue   .ah { border-top:8px solid rgba(99,102,241,0.55); }
+    .fc-arr.amber  .al { background:rgba(251,146,60,0.55); }
+    .fc-arr.amber  .ah { border-top:8px solid rgba(251,146,60,0.55); }
+    .fc-arr.green  .al { background:rgba(52,211,153,0.55); }
+    .fc-arr.green  .ah { border-top:8px solid rgba(52,211,153,0.55); }
+    .fc-arr.red    .al { background:rgba(248,113,113,0.55); }
+    .fc-arr.red    .ah { border-top:8px solid rgba(248,113,113,0.55); }
+    .fc-arr.purple .al { background:rgba(167,139,250,0.55); }
+    .fc-arr.purple .ah { border-top:8px solid rgba(167,139,250,0.55); }
+    .fc-arr.teal   .al { background:rgba(56,189,248,0.55); }
+    .fc-arr.teal   .ah { border-top:8px solid rgba(56,189,248,0.55); }
+
+    /* left column */
+    .fc-left { display:flex; flex-direction:column; align-items:stretch; gap:0; }
+
+    /* zone highlight */
+    .fc-zone {
+      background: rgba(251,146,60,0.07); border: 2px dashed rgba(251,146,60,0.45);
+      border-radius: 16px; padding: clamp(8px,1vh,12px) clamp(10px,1.2vw,14px);
+      display: flex; flex-direction: column; align-items: stretch; gap: 0; position: relative;
+    }
+    .fc-zone.purple-zone {
+      background: rgba(167,139,250,0.07); border-color: rgba(167,139,250,0.45);
+    }
+    .fc-zone-label {
+      position: absolute; top: -11px; left: 14px; background: var(--bg);
+      padding: 0 8px; font-family: var(--font-heading);
+      font-size: clamp(0.6rem,0.68vw,0.74rem); font-weight: 700;
+      color: var(--warn); letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .fc-zone.purple-zone .fc-zone-label { color: var(--accent2); }
+
+    .fc-divider {
+      height: 1px; background: var(--border);
+      margin: clamp(6px,0.7vh,10px) 0;
+    }
+
+    /* right column */
+    .fc-right { display:flex; flex-direction:column; gap: clamp(7px,0.9vh,11px); }
+    .fc-chat-zone {
+      background: rgba(99,102,241,0.05); border: 1.5px solid rgba(99,102,241,0.2);
+      border-radius: 14px; padding: clamp(8px,1vh,12px) clamp(10px,1.2vw,14px);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .fc-chat-title {
+      font-family: var(--font-heading); font-size: clamp(0.66rem,0.76vw,0.82rem);
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+      text-align: center; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, var(--warn), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .fc-msg { display:grid; grid-template-columns:22px 1fr; gap:6px; align-items:start; }
+    .fc-msg-icon { font-size:1rem; margin-top:1px; }
+    .fc-msg-bubble {
+      border-radius: 10px; padding: 5px 9px;
+      font-size: clamp(0.62rem,0.72vw,0.78rem); line-height: 1.4;
+    }
+    .fc-msg-bubble.llm  { background:rgba(99,102,241,0.1);  border:1px solid rgba(99,102,241,0.3);  color:var(--text); }
+    .fc-msg-bubble.lc   { background:rgba(52,211,153,0.1);  border:1px solid rgba(52,211,153,0.3);  color:var(--text); }
+    .fc-msg-bubble.warn { background:rgba(251,146,60,0.1);  border:1px solid rgba(251,146,60,0.35); color:var(--text); }
+    .fc-msg-bubble.done { background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.3); color:var(--text); }
+    .fc-msg-bubble .who { display:block; font-weight:700; font-size:.85em; margin-bottom:2px; }
+    .fc-msg-bubble.llm  .who { color:var(--accent2); }
+    .fc-msg-bubble.lc   .who { color:var(--success); }
+    .fc-msg-bubble.warn .who { color:var(--warn); }
+    .fc-msg-bubble.done .who { color:#f87171; }
+    .fc-msg-bubble strong { color:var(--text); }
+    .fc-msg-bubble code  { font-size:.85em; background:rgba(255,255,255,0.07); padding:1px 4px; border-radius:3px; color:var(--accent3); }
+    .fc-sep { height:1px; background:var(--border); margin:2px 0; }
+
+    /* ══════════════════════════════════════════════════════
+       NEUE ENDPOINTS SLIDE
+    ══════════════════════════════════════════════════════ */
+    .ep-wrapper {
+      flex: 1; min-height: 0; display: grid;
+      grid-template-columns: 1.2fr 1fr; gap: clamp(14px,2vw,28px);
+    }
+    .ep-list {
+      display: flex; flex-direction: column;
+      gap: clamp(6px,0.8vh,10px); justify-content: center;
+    }
+    .ep-group-label {
+      font-family: var(--font-heading); font-size: clamp(0.65rem,0.78vw,0.8rem);
+      font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--muted); margin-top: clamp(8px,1vh,12px);
+    }
+    .ep-group-label:first-child { margin-top: 0; }
+    .ep-item {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: clamp(7px,0.9vh,12px) clamp(12px,1.4vw,18px);
+      display: grid; grid-template-columns: auto auto 1fr; align-items: center;
+      gap: clamp(8px,1vw,14px);
+    }
+    .http-method {
+      font-family: var(--font-heading); font-size: clamp(0.6rem,0.72vw,0.76rem);
+      font-weight: 800; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 6px;
+    }
+    .http-method.post { background: rgba(52,211,153,0.12); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+    .http-method.get  { background: rgba(56,189,248,0.12); color: var(--accent3);  border: 1px solid rgba(56,189,248,0.3); }
+    .http-method.del  { background: rgba(248,113,113,0.12); color: #f87171;         border: 1px solid rgba(248,113,113,0.3); }
+    .ep-path { font-family: 'Courier New', monospace; font-size: clamp(0.75rem,0.9vw,0.96rem); color: var(--accent2); }
+    .ep-desc { font-size: clamp(0.72rem,0.88vw,0.94rem); color: var(--muted); text-align: right; }
+
+    .ep-right {
+      display: flex; flex-direction: column; gap: clamp(8px,1vh,14px); justify-content: center;
+    }
+    .ep-info-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: clamp(10px,1.3vh,18px) clamp(14px,1.6vw,22px);
+    }
+    .ep-info-card h4 {
+      font-family: var(--font-heading); font-size: clamp(0.88rem,1.05vw,1.1rem);
+      font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+    }
+    .ep-info-card ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+    .ep-info-card ul li {
+      font-size: clamp(0.78rem,0.92vw,0.98rem); color: var(--muted);
+      padding-left: 14px; position: relative; line-height: 1.4;
+    }
+    .ep-info-card ul li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-size: 0.7rem; top: 2px; }
+
+    /* ══════════════════════════════════════════════════════
+       AGENT TOOLS SLIDE
+    ══════════════════════════════════════════════════════ */
+    .tools-p2-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: clamp(10px,1.2vw,18px); flex: 1; min-height: 0;
+    }
+    .tool-card-p3 {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: clamp(12px,1.6vh,22px) clamp(12px,1.4vw,20px);
+      display: flex; flex-direction: column; gap: clamp(7px,0.9vh,12px);
+    }
+    .tool-card-p3.t1 { border-top: 3px solid var(--accent); }
+    .tool-card-p3.t2 { border-top: 3px solid #f87171; }
+    .tool-card-p3.t3 { border-top: 3px solid var(--success); }
+    .tool-card-p3.t4 { border-top: 3px solid var(--accent2); }
+    .tool-card-p3.t5 { border-top: 3px solid var(--warn); }
+    .tool-card-p3.note-card { border-top: 3px solid rgba(148,163,184,0.4); background: rgba(148,163,184,0.04); }
+
+    .tool-icon-p3 {
+      width: clamp(36px,4vw,50px); height: clamp(36px,4vw,50px);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: clamp(1.1rem,1.5vw,1.6rem);
+    }
+    .tool-card-p3.t1 .tool-icon-p3 { background: rgba(99,102,241,0.12); }
+    .tool-card-p3.t2 .tool-icon-p3 { background: rgba(248,113,113,0.12); }
+    .tool-card-p3.t3 .tool-icon-p3 { background: rgba(52,211,153,0.12); }
+    .tool-card-p3.t4 .tool-icon-p3 { background: rgba(167,139,250,0.12); }
+    .tool-card-p3.t5 .tool-icon-p3 { background: rgba(251,146,60,0.12); }
+
+    .tool-name-p3 { font-family: var(--font-heading); font-size: clamp(0.88rem,1.05vw,1.1rem); font-weight: 700; }
+    .tool-file-p3 { font-size: clamp(0.62rem,0.74vw,0.78rem); color: var(--muted); font-family: 'Courier New', monospace; }
+    .tool-desc-p3 { font-size: clamp(0.78rem,0.92vw,0.98rem); color: var(--muted); line-height: 1.5; flex: 1; }
+    .tool-badge {
+      font-size: clamp(0.62rem,0.74vw,0.78rem); font-family: var(--font-heading); font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; width: fit-content;
+    }
+    .tool-card-p3.t1 .tool-badge { background: rgba(99,102,241,0.1);  color: var(--accent); }
+    .tool-card-p3.t2 .tool-badge { background: rgba(248,113,113,0.1); color: #f87171; }
+    .tool-card-p3.t3 .tool-badge { background: rgba(52,211,153,0.1);  color: var(--success); }
+    .tool-card-p3.t4 .tool-badge { background: rgba(167,139,250,0.1); color: var(--accent2); }
+    .tool-card-p3.t5 .tool-badge { background: rgba(251,146,60,0.1);  color: var(--warn); }
+
+    /* ══════════════════════════════════════════════════════
+       NEXT SPRINT SLIDE
+    ══════════════════════════════════════════════════════ */
+    #slide-6 {
+      justify-content: center; align-items: center;
+      padding: clamp(32px,5vh,72px) clamp(48px,8vw,120px);
+      background:
+        radial-gradient(ellipse 40% 50% at 20% 30%, rgba(99,102,241,0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 35% 40% at 80% 70%, rgba(167,139,250,0.06) 0%, transparent 70%),
+        var(--surface);
+    }
+    .next-inner {
+      width: 100%; display: flex; flex-direction: column;
+      align-items: center; gap: clamp(24px,3.5vh,48px);
+    }
+    .next-cards {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: clamp(14px,2vw,28px); width: 100%;
+    }
+    .next-card {
+      background: var(--card); border: 2px dashed rgba(99,102,241,0.2);
+      border-radius: var(--radius); padding: clamp(20px,3vh,36px) clamp(16px,2vw,28px);
+      display: flex; flex-direction: column; align-items: center; gap: clamp(10px,1.2vh,16px);
+      text-align: center;
+    }
+    .next-card-icon { font-size: clamp(2rem,3vw,3rem); }
+    .next-card-title {
+      font-family: var(--font-heading); font-size: clamp(1rem,1.2vw,1.3rem);
+      font-weight: 700; color: var(--text);
+    }
+    .next-card-desc { font-size: clamp(0.82rem,0.98vw,1.04rem); color: var(--muted); line-height: 1.5; }
+    .next-card-badge {
+      margin-top: auto; font-family: var(--font-heading); font-size: clamp(0.62rem,0.74vw,0.78rem);
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 14px; border-radius: 100px;
+      background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.25); color: var(--accent2);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       DEMO SLIDE
+    ══════════════════════════════════════════════════════ */
+    #slide-7 {
+      justify-content: center; align-items: center; text-align: center; padding: 4vh 8vw;
+      background:
+        radial-gradient(ellipse 55% 60% at 28% 40%, rgba(52,211,153,0.10) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 45% at 76% 65%, rgba(99,102,241,0.10) 0%, transparent 70%),
+        var(--surface);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <span class="slide-counter" id="counter">Slide 1 / 7</span>
+      <div class="dot-nav" id="dots">
+        <button class="dot active" data-target="1"></button>
+        <button class="dot" data-target="2"></button>
+        <button class="dot" data-target="3"></button>
+        <button class="dot" data-target="4"></button>
+        <button class="dot" data-target="5"></button>
+        <button class="dot" data-target="6"></button>
+        <button class="dot" data-target="7"></button>
+      </div>
+      <button class="nav-btn" id="btn-prev" disabled>◀ Zurück</button>
+      <button class="nav-btn" id="btn-next">Weiter ▶</button>
+      <button class="nav-btn fs-btn" id="btn-fs" title="Vollbild">⛶</button>
+      <button class="nav-btn fs-btn" id="btn-theme" title="Dark/Light Modus">☀️</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ══ SLIDE 1 — Titelfolie ══════════════════════════════════════ -->
+    <section class="slide active" id="slide-1">
+      <div class="slide-accent-bar"></div>
+      <h1 class="title-main">Sprint 2</h1>
+      <p class="title-sub">Agentic AI Python Tutor — Neue Features</p>
+
+      <div class="title-dots">
+        <div class="title-dot-item">
+          <div class="icon" style="background:rgba(52,211,153,0.12); border-color:rgba(52,211,153,0.3);">
+            <i class="fa-solid fa-chart-line" style="color:var(--success);"></i>
+          </div>
+          <span>Fortschritt</span>
+        </div>
+        <div class="title-dot-item">
+          <div class="icon" style="background:rgba(99,102,241,0.12); border-color:rgba(99,102,241,0.3);">
+            <i class="fa-solid fa-screwdriver-wrench" style="color:var(--accent2);"></i>
+          </div>
+          <span>Agent Tools</span>
+        </div>
+        <div class="title-dot-item">
+          <div class="icon" style="background:rgba(251,146,60,0.12); border-color:rgba(251,146,60,0.3);">
+            <i class="fa-solid fa-book-open" style="color:var(--warn);"></i>
+          </div>
+          <span>PDF & RAG</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 2 — Agenda ══════════════════════════════════════════ -->
+    <section class="slide" id="slide-2" data-num="02 / 07">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Agenda</span>
+      </div>
+      <div class="features-grid">
+
+        <!-- 1 Endpoints -->
+        <div class="feature-card" style="border-top:3px solid var(--accent3);">
+          <div class="feat-icon blue">
+            <i class="fa-solid fa-bolt" style="color:var(--accent3);"></i>
+          </div>
+          <span class="feat-label">01 — Backend</span>
+          <div class="feat-title">Neue FastAPI Endpoints</div>
+          <p class="feat-desc">/exercises · /skill-tests · /level-tests · /learning-progress · /auth — jeder Endpoint mit JWT-Schutz.</p>
+        </div>
+
+        <!-- 2 PDF / RAG -->
+        <div class="feature-card" style="border-top:3px solid var(--warn);">
+          <div class="feat-icon amber">
+            <i class="fa-solid fa-file-pdf" style="color:var(--warn);"></i>
+          </div>
+          <span class="feat-label">03 — RAG</span>
+          <div class="feat-title">PDF Feature &amp; RAG Pipeline</div>
+          <p class="feat-desc">Upload → Chunks → LLM Embeddings → FAISS Vector Store. Chat nutzt automatisch relevante Abschnitte als Kontext.</p>
+        </div>
+
+        <!-- 3 Lernfortschritt -->
+        <div class="feature-card feature-special" style="border-top:3px solid var(--success);">
+          <div class="feat-icon teal">
+            <i class="fa-solid fa-chart-line" style="color:var(--success);"></i>
+          </div>
+          <span class="feat-label">04 — Kern</span>
+          <div class="feat-title">Lernfortschritt &amp; Skills</div>
+          <p class="feat-desc">37 Skills in 3 Level. LLM erkennt Skill im Code, berechnet Score 0–100. Unlock-Logik: Vorgänger ≥ 80% nötig.</p>
+        </div>
+
+        <!-- 4 Agent Tools -->
+        <div class="feature-card" style="border-top:3px solid var(--accent2);">
+          <div class="feat-icon indigo">
+            <i class="fa-solid fa-screwdriver-wrench" style="color:var(--accent2);"></i>
+          </div>
+          <span class="feat-label">02 — Tools</span>
+          <div class="feat-title">5 neue Agent Tools</div>
+          <p class="feat-desc"><em style="color:var(--accent2);">evaluate_exercise</em> · <em style="color:#f87171;">generate_exercise</em> · <em style="color:var(--success);">get_hint</em> · <em style="color:var(--accent2);">generate_skill_test</em> · <em style="color:var(--warn);">evaluate_skill_test</em></p>
+        </div>
+
+        <!-- 5 Nächster Sprint -->
+        <div class="feature-card" style="border-top:3px solid var(--accent3);">
+          <div class="feat-icon blue">
+            <i class="fa-solid fa-rocket" style="color:var(--accent3);"></i>
+          </div>
+          <span class="feat-label">05 — Ausblick</span>
+          <div class="feat-title">Nächster Sprint</div>
+          <p class="feat-desc">React Frontend · Agent-Gedächtnis · Analytics Dashboard</p>
+        </div>
+
+        <!-- 6 Live Demo -->
+        <div class="feature-card" style="border-top:3px solid #f87171;">
+          <div class="feat-icon" style="background:rgba(248,113,113,0.12);">
+            <i class="fa-solid fa-play" style="color:#f87171;"></i>
+          </div>
+          <span class="feat-label">06 — Demo</span>
+          <div class="feat-title">Live Demo</div>
+          <p class="feat-desc">System in Aktion — alle neuen Features live zeigen.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 3 — Endpoint Übersicht ══════════════════════════════ -->
+    <section class="slide" id="slide-3" data-num="03 / 07">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Backend — Architektur</span>
+        <h2 class="slide-title">Endpoints &amp; <em>was sie aufrufen</em></h2>
+      </div>
+
+      <style>
+        .ep3-grid {
+          flex: 1; min-height: 0;
+          display: grid; grid-template-columns: 1fr 1fr;
+          grid-template-rows: 1fr 1fr;
+          gap: clamp(12px,1.6vw,24px);
+        }
+        .ep3-card {
+          background: var(--card); border-radius: var(--radius);
+          padding: clamp(14px,1.8vh,26px) clamp(16px,1.8vw,26px);
+          display: flex; flex-direction: column; gap: clamp(8px,1vh,14px);
+          position: relative; overflow: hidden;
+        }
+        .ep3-card::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+        .ep3-card.c-lc    { border: 1px solid rgba(99,102,241,0.25); }
+        .ep3-card.c-tool  { border: 1px solid rgba(52,211,153,0.25); }
+        .ep3-card.c-llm   { border: 1px solid rgba(251,146,60,0.25); }
+        .ep3-card.c-gray  { border: 1px solid rgba(148,163,184,0.2); }
+        .ep3-card.c-lc::before   { background: var(--accent); }
+        .ep3-card.c-tool::before { background: var(--success); }
+        .ep3-card.c-llm::before  { background: var(--warn); }
+        .ep3-card.c-gray::before { background: var(--muted); }
+
+        .ep3-card-head {
+          display: flex; align-items: center; gap: 10px;
+        }
+        .ep3-card-icon {
+          width: clamp(34px,4vw,46px); height: clamp(34px,4vw,46px);
+          border-radius: 10px; display: flex; align-items: center; justify-content: center;
+          font-size: clamp(1rem,1.4vw,1.5rem); flex-shrink: 0;
+        }
+        .c-lc   .ep3-card-icon { background: rgba(99,102,241,0.12); }
+        .c-tool .ep3-card-icon { background: rgba(52,211,153,0.12); }
+        .c-llm  .ep3-card-icon { background: rgba(251,146,60,0.12); }
+        .c-gray .ep3-card-icon { background: rgba(148,163,184,0.1); }
+
+        .ep3-card-title {
+          font-family: var(--font-heading); font-size: clamp(0.9rem,1.08vw,1.16rem); font-weight: 800;
+        }
+        .c-lc   .ep3-card-title { color: var(--accent); }
+        .c-tool .ep3-card-title { color: var(--success); }
+        .c-llm  .ep3-card-title { color: var(--warn); }
+        .c-gray .ep3-card-title { color: var(--muted); }
+
+        .ep3-card-sub {
+          font-size: clamp(0.6rem,0.72vw,0.78rem); color: var(--muted);
+          font-family: var(--font-heading); font-weight: 600; letter-spacing: 0.05em;
+        }
+
+        .ep3-entries { display: flex; flex-direction: column; gap: clamp(5px,0.6vh,8px); flex: 1; }
+        .ep3-entry {
+          display: grid; grid-template-columns: auto 1fr; gap: 8px 10px; align-items: start;
+          padding: clamp(5px,0.6vh,8px) clamp(8px,1vw,12px);
+          border-radius: 8px;
+        }
+        .c-lc   .ep3-entry { background: rgba(99,102,241,0.07); }
+        .c-tool .ep3-entry { background: rgba(52,211,153,0.07); }
+        .c-llm  .ep3-entry { background: rgba(251,146,60,0.07); }
+        .c-gray .ep3-entry { background: rgba(148,163,184,0.06); }
+
+        .ep3-method {
+          font-family: var(--font-heading); font-size: clamp(0.52rem,0.62vw,0.68rem);
+          font-weight: 800; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+        }
+        .m-post { background: rgba(52,211,153,0.12); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+        .m-get  { background: rgba(56,189,248,0.12); color: var(--accent3);  border: 1px solid rgba(56,189,248,0.3); }
+
+        .ep3-entry-body {}
+        .ep3-entry-path {
+          font-family: 'Courier New', monospace; font-weight: 700;
+          font-size: clamp(0.72rem,0.86vw,0.94rem); line-height: 1.3;
+        }
+        .c-lc   .ep3-entry-path { color: var(--accent); }
+        .c-tool .ep3-entry-path { color: var(--success); }
+        .c-llm  .ep3-entry-path { color: var(--warn); }
+        .c-gray .ep3-entry-path { color: var(--muted); }
+
+        .ep3-entry-desc {
+          font-size: clamp(0.62rem,0.74vw,0.8rem); color: var(--muted); line-height: 1.35; margin-top: 1px;
+        }
+        .ep3-entry-desc code {
+          font-size: .88em; color: var(--accent3);
+          background: rgba(56,189,248,0.08); padding: 1px 4px; border-radius: 3px;
+        }
+      </style>
+
+      <div class="ep3-grid">
+
+        <!-- 1: LangChain Agent -->
+        <div class="ep3-card c-lc feature-card" style="border-top:3px solid var(--accent);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">🤖</div>
+            <div>
+              <div class="ep3-card-title">LangChain Agent</div>
+              <div class="ep3-card-sub">ReAct-Loop · LLM wählt Tools</div>
+            </div>
+          </div>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/analyze</div>
+                <div class="ep3-entry-desc"><code>explain → debug → exercise → rag</code> — feste Reihenfolge</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/chat</div>
+                <div class="ep3-entry-desc">Dynamisch aus 6 Tools · Lernfortschritt als Kontext</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/upload-material</div>
+                <div class="ep3-entry-desc"><code>get_embeddings()</code> → FAISS Index</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2: Tool direkt -->
+        <div class="ep3-card c-tool feature-card" style="border-top:3px solid var(--success);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">🛠️</div>
+            <div>
+              <div class="ep3-card-title">Tool direkt</div>
+              <div class="ep3-card-sub">tool.invoke() · deterministisch</div>
+            </div>
+          </div>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/exercises/submit</div>
+                <div class="ep3-entry-desc">⚖️ <code>evaluate_exercise</code> — stdout leer / korrekt / falsch · 1 LLM-Aufruf</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/exercises/hint</div>
+                <div class="ep3-entry-desc">💡 <code>get_hint</code> — gestufter Hinweis Level 1–3 · Lösung nie direkt</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/exercises/generate</div>
+                <div class="ep3-entry-desc">🏭 <code>generate_exercise</code> — neue Aufgabe · keine Wiederholung · auch im Chat-Agent</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/skill-tests/generate</div>
+                <div class="ep3-entry-desc">📋 <code>generate_skill_test</code> — 3 MC + Code-Lesen + Mini-Aufgabe · auch im Chat-Agent</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/skill-tests/submit</div>
+                <div class="ep3-entry-desc">🎓 <code>evaluate_skill_test</code> — MC + LLM semantisch + Code ausführen · 2 LLM-Aufrufe · Score 0–100</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3: LLM direkt -->
+        <div class="ep3-card c-llm feature-card" style="border-top:3px solid var(--warn);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">⚡</div>
+            <div>
+              <div class="ep3-card-title">LLM direkt</div>
+              <div class="ep3-card-sub">llm.invoke() · kein Tool, kein Agent</div>
+            </div>
+          </div>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/learning-progress/analyze</div>
+                <div class="ep3-entry-desc"><code>analyze_skill()</code> · Skill erkennen + Score · Fallback: Keywords</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4: Kein LLM -->
+        <div class="ep3-card c-gray feature-card" style="border-top:3px solid var(--muted);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">🗄️</div>
+            <div>
+              <div class="ep3-card-title">Kein LLM</div>
+              <div class="ep3-card-sub">DB · subprocess · Auth</div>
+            </div>
+          </div>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/run</div>
+                <div class="ep3-entry-desc"><code>subprocess.run()</code> · Timeout 10s</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-get">GET</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/learning-progress/{id}</div>
+                <div class="ep3-entry-desc">DB · 37 Skills + Scores laden</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/auth/login · /auth/register</div>
+                <div class="ep3-entry-desc">bcrypt + JWT Token · kein LLM</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 4 — PDF Feature Diagramm ═══════════════════════════ -->
+    <section class="slide" id="slide-4" data-num="04 / 07">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">RAG — Retrieval Augmented Generation</span>
+        <h2 class="slide-title">PDF Feature — <em>LangChain &amp; LLM im Detail</em></h2>
+      </div>
+
+      <style>
+        /* ── Slide 4: kompaktes 2-Zeilen Flussdiagramm ── */
+        .rag-diagram {
+          flex: 1; min-height: 0;
+          display: flex; flex-direction: column;
+          gap: clamp(10px,1.2vh,16px);
+        }
+
+        /* Zeilen-Label */
+        .rag-row-label {
+          font-family: var(--font-heading); font-size: clamp(0.9rem,1.05vw,1.14rem);
+          font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+          color: var(--muted); margin-bottom: 4px;
+        }
+
+        /* Horizontale Knoten-Reihe */
+        .rag-row {
+          display: flex; align-items: center; gap: 0;
+        }
+
+        /* Einzelner Knoten */
+        .rn {
+          flex: 1; border-radius: 12px;
+          padding: clamp(8px,1vh,14px) clamp(8px,1vw,14px);
+          text-align: center; display: flex; flex-direction: column;
+          align-items: center; gap: 3px;
+        }
+        .rn .ri  { font-size: clamp(1.65rem,2.25vw,2.4rem); }
+        .rn h4   { font-family:var(--font-heading); font-size:clamp(0.96rem,1.14vw,1.23rem); font-weight:800; line-height:1.2; }
+        .rn p    { font-size:clamp(0.81rem,0.96vw,1.05rem); color:var(--muted); line-height:1.3; }
+        .rn code { font-size:.82em; background:rgba(255,255,255,0.07); padding:1px 4px; border-radius:3px; color:var(--accent3); }
+
+        .rn.rn-user  { background:rgba(99,102,241,0.1);  border:2px solid rgba(99,102,241,0.4); }
+        .rn.rn-user h4 { color:var(--accent); }
+        .rn.rn-plain { background:rgba(148,163,184,0.07); border:1.5px solid rgba(148,163,184,0.25); }
+        .rn.rn-plain h4 { color:var(--muted); }
+        .rn.rn-llm   { background:linear-gradient(135deg,rgba(251,146,60,0.15),rgba(245,158,11,0.1)); border:2px solid rgba(251,146,60,0.6); }
+        .rn.rn-llm h4 { color:var(--warn); }
+        .rn.rn-save  { background:rgba(52,211,153,0.1);  border:2px solid rgba(52,211,153,0.45); }
+        .rn.rn-save h4 { color:var(--success); }
+        .rn.rn-search{ background:rgba(56,189,248,0.07); border:1.5px solid rgba(56,189,248,0.35); }
+        .rn.rn-search h4 { color:var(--accent3); }
+
+        /* LLM-Zone wrapper */
+        .rn-llm-wrap {
+          flex: 1; position: relative;
+          background:rgba(251,146,60,0.07); border:2px dashed rgba(251,146,60,0.5);
+          border-radius:12px; padding: clamp(8px,1vh,14px) clamp(8px,1vw,14px);
+          display:flex; flex-direction:column; align-items:center; gap:3px; text-align:center;
+        }
+        .rn-llm-wrap .llm-badge {
+          position:absolute; top:-9px; left:10px;
+          background:var(--surface); padding:0 6px;
+          font-family:var(--font-heading); font-size:clamp(0.78rem,0.9vw,0.99rem);
+          font-weight:700; color:var(--warn); letter-spacing:0.08em; text-transform:uppercase;
+        }
+        .rn-llm-wrap .ri  { font-size:clamp(1.65rem,2.25vw,2.4rem); }
+        .rn-llm-wrap h4   { font-family:var(--font-heading); font-size:clamp(0.96rem,1.14vw,1.23rem); font-weight:800; color:var(--warn); line-height:1.2; }
+        .rn-llm-wrap p    { font-size:clamp(0.81rem,0.96vw,1.05rem); color:var(--muted); line-height:1.3; }
+
+        /* Horizontaler Pfeil */
+        .ra {
+          display:flex; align-items:center; flex-shrink:0;
+          padding: 0 clamp(3px,0.4vw,6px);
+        }
+        .ra-line { height:2px; width:clamp(14px,1.8vw,26px); }
+        .ra-head { width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; }
+        .ra.teal  .ra-line { background:rgba(56,189,248,0.6); }
+        .ra.teal  .ra-head { border-left:7px solid rgba(56,189,248,0.6); }
+        .ra.amber .ra-line { background:rgba(251,146,60,0.6); }
+        .ra.amber .ra-head { border-left:7px solid rgba(251,146,60,0.6); }
+        .ra.green .ra-line { background:rgba(52,211,153,0.6); }
+        .ra.green .ra-head { border-left:7px solid rgba(52,211,153,0.6); }
+        .ra.blue  .ra-line { background:rgba(99,102,241,0.6); }
+        .ra.blue  .ra-head { border-left:7px solid rgba(99,102,241,0.6); }
+
+        /* Vertikaler Pfeil zwischen den zwei Zeilen */
+        .rag-down {
+          display:flex; flex-direction:column; align-items:center;
+          align-self:center; gap:0;
+        }
+        .rag-down .dl { width:2px; height:clamp(8px,1vh,12px); background:rgba(99,102,241,0.5); }
+        .rag-down .dh { width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:8px solid rgba(99,102,241,0.5); }
+
+        /* Info-Karte unten */
+        .rag-info-row {
+          display:grid; grid-template-columns:1fr 1fr;
+          gap:clamp(8px,1vw,14px);
+        }
+        .rag-info-box {
+          background:var(--card); border:1px solid var(--border);
+          border-radius:12px; padding:clamp(8px,1vh,14px) clamp(10px,1.2vw,18px);
+        }
+        .rag-info-box h4 {
+          font-family:var(--font-heading); font-size:clamp(1.08rem,1.29vw,1.41rem);
+          font-weight:700; margin-bottom:5px; display:flex; align-items:center; gap:6px;
+        }
+        .rag-info-box p {
+          font-size:clamp(0.96rem,1.14vw,1.23rem); color:var(--muted); line-height:1.5;
+        }
+        .rag-info-box code { color:var(--accent3); font-size:.9em; }
+      </style>
+
+      <div class="rag-diagram">
+
+        <!-- ── ZEILE 1: Upload Pipeline ── -->
+        <div>
+          <div class="rag-row-label">📤 Upload-Pipeline — einmalig</div>
+          <div class="rag-row">
+
+            <div class="rn rn-user">
+              <div class="ri">📄</div>
+              <h4>PDF Upload</h4>
+              <p>POST /tutor/<br>upload-material</p>
+            </div>
+
+            <div class="ra teal"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn rn-plain">
+              <div class="ri">📑</div>
+              <h4>Seiten bearbeiten</h4>
+              <p>PyMuPDF → Text<br>→ ~500 Zeichen Chunks</p>
+            </div>
+
+            <div class="ra amber"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn-llm-wrap">
+              <span class="llm-badge">⚡ LLM-AUFRUF</span>
+              <div class="ri">🧠</div>
+              <h4>Embeddings</h4>
+              <p>LangChain:<br>OpenAI oder Ollama<br>Text → Vektor</p>
+            </div>
+
+            <div class="ra green"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn rn-save">
+              <div class="ri">💾</div>
+              <h4>FAISS gespeichert</h4>
+              <p><code>index.faiss</code><br>+ <code>chunks.pkl</code></p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Pfeil nach unten ── -->
+        <div style="display:flex; align-items:center; gap:8px; padding-left:clamp(20px,3vw,40px);">
+          <div class="rag-down"><div class="dl"></div><div class="dh"></div></div>
+          <span style="font-size:clamp(0.87rem,1.02vw,1.11rem); color:var(--muted); font-family:var(--font-heading);">Student stellt Frage im Chat</span>
+        </div>
+
+        <!-- ── ZEILE 2: Chat Pipeline ── -->
+        <div>
+          <div class="rag-row-label">💬 Chat-Pipeline — bei jeder Nachricht</div>
+          <div class="rag-row">
+
+            <div class="rn rn-user">
+              <div class="ri">💬</div>
+              <h4>„Erkläre Seite 5"</h4>
+              <p>POST /tutor/chat</p>
+            </div>
+
+            <div class="ra blue"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn rn-search">
+              <div class="ri">🔎</div>
+              <h4>RAG Suche</h4>
+              <p>Regex: Seitenzahl?<br>+ FAISS semantisch</p>
+            </div>
+
+            <div class="ra amber"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn-llm-wrap">
+              <span class="llm-badge">⚡ LLM-AUFRUF</span>
+              <div class="ri">🧠</div>
+              <h4>LLM + Kontext</h4>
+              <p>Prompt = Frage<br>+ PDF-Chunks<br>als System-Kontext</p>
+            </div>
+
+            <div class="ra green"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn rn-save">
+              <div class="ri">✅</div>
+              <h4>Antwort mit<br>Lernmaterial</h4>
+              <p>Spezifisch aus<br>dem PDF — nicht<br>nur Trainingswissen</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Info-Karten unten ── -->
+        <div class="rag-info-row">
+          <div class="rag-info-box" style="border-left:3px solid var(--warn);">
+            <h4><span style="color:var(--warn);">⚡</span> LLM wird 2× aufgerufen</h4>
+            <p><strong style="color:var(--text);">Upload:</strong> <code>embed_documents()</code> — alle Chunks vektorisieren<br>
+              <strong style="color:var(--text);">Chat:</strong> <code>embed_query()</code> + <code>invoke()</code> — Frage suchen &amp; antworten</p>
+          </div>
+          <div class="rag-info-box" style="border-left:3px solid var(--success);">
+            <h4><span style="color:var(--success);">🔧</span> LangChain Rolle</h4>
+            <p><code>get_embeddings()</code> abstrahiert das Modell — gleicher Code für OpenAI und Ollama. Kein Unterschied im Backend.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 7 — Lernfortschritt Diagramm ════════════════════════ -->
+    <section class="slide" id="slide-5" data-num="05 / 07">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Skill-System</span>
+        <h2 class="slide-title">Lernfortschritt — <em>LLM erkennt &amp; bewertet Skills</em></h2>
+      </div>
+
+      <div class="rag-diagram">
+
+        <!-- ── ZEILE 1: Analyse-Pipeline ── -->
+        <div>
+          <div class="rag-row-label">🔍 Analyse-Pipeline — bei jeder Code-Eingabe</div>
+          <div class="rag-row">
+
+            <div class="rn rn-user">
+              <div class="ri">👨‍🎓</div>
+              <h4>Code + Frage</h4>
+              <p>POST /learning-<br>progress/analyze</p>
+            </div>
+
+            <div class="ra blue"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn rn-search">
+              <div class="ri">⚙️</div>
+              <h4>analyze_skill()</h4>
+              <p>skill_analyzer.py<br>versucht LLM →<br>Fallback: Keywords</p>
+            </div>
+
+            <div class="ra amber"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn-llm-wrap">
+              <span class="llm-badge">⚡ LLM-AUFRUF</span>
+              <div class="ri">🧠</div>
+              <h4>Skill erkennen</h4>
+              <p>JSON zurück:<br><code>main_skill,</code><br><code>score, mistakes</code></p>
+            </div>
+
+            <div class="ra green"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn rn-save">
+              <div class="ri">💾</div>
+              <h4>Score gespeichert</h4>
+              <p>alter × 0.7 +<br>neu × 0.3<br><em style="color:var(--success);">gleitend</em></p>
+            </div>
+
+            <div class="ra teal"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn rn-plain">
+              <div class="ri">📝</div>
+              <h4>History Event</h4>
+              <p>learning_events<br>unveränderlich<br>gespeichert</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Pfeil nach unten ── -->
+        <div style="display:flex; align-items:center; gap:8px; padding-left:clamp(20px,3vw,40px);">
+          <div class="rag-down"><div class="dl"></div><div class="dh"></div></div>
+          <span style="font-size:clamp(0.58rem,0.68vw,0.74rem); color:var(--muted); font-family:var(--font-heading);">Score ≥ 80 → nächster Skill freigeschaltet</span>
+        </div>
+
+        <!-- ── ZEILE 2: Skill-Baum + Status ── -->
+        <div>
+          <div class="rag-row-label">🌲 37 Skills — Unlock-System</div>
+          <div class="rag-row">
+
+            <div class="rn" style="background:rgba(56,189,248,0.08); border:1.5px solid rgba(56,189,248,0.3);">
+              <div class="ri">🌱</div>
+              <h4 style="color:var(--accent3);">Beginner</h4>
+              <p>13 Skills<br>Variablen → Funktionen</p>
+            </div>
+
+            <div class="ra teal"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn" style="background:rgba(167,139,250,0.08); border:1.5px solid rgba(167,139,250,0.3);">
+              <div class="ri">⚡</div>
+              <h4 style="color:var(--accent2);">Intermediate</h4>
+              <p>12 Skills<br>List Comp → Map/Filter</p>
+            </div>
+
+            <div class="ra blue"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn" style="background:rgba(251,146,60,0.08); border:1.5px solid rgba(251,146,60,0.3);">
+              <div class="ri">🔥</div>
+              <h4 style="color:var(--warn);">Advanced</h4>
+              <p>12 Skills<br>Vererbung → Testen</p>
+            </div>
+
+            <div class="ra amber"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn-llm-wrap">
+              <span class="llm-badge" style="color:var(--accent2); border-color:var(--accent2);">Status</span>
+              <div class="ri">🏆</div>
+              <h4 style="color:var(--accent2);">user_status</h4>
+              <p>alle ≥ 100% → Profi<br>Beginner ≥ 80% →<br>Fortgeschritten</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Info-Karten unten ── -->
+        <div class="rag-info-row">
+          <div class="rag-info-box" style="border-left:3px solid var(--warn);">
+            <h4><span style="color:var(--warn);">⚡</span> Score-Regeln</h4>
+            <p>
+              <strong style="color:var(--success);">75–100:</strong> <code>understood</code> — klares Verständnis<br>
+              <strong style="color:var(--warn);">40–74:</strong> <code>partial</code> — kleinere Fehler<br>
+              <strong style="color:#f87171;">0–39:</strong> <code>not_understood</code> — Grundprobleme
+            </p>
+          </div>
+          <div class="rag-info-box" style="border-left:3px solid var(--success);">
+            <h4><span style="color:var(--success);">🔧</span> Fallback ohne LLM</h4>
+            <p>Keyword-Matching: <code>"for " + "range("</code> → <code>for_loop</code><br>
+              Score: 60 wenn kein Syntaxfehler — System läuft auch ohne LLM.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 8 — Nächster Sprint ════════════════════════════════ -->
+    <section class="slide" id="slide-6" data-num="06 / 07">
+      <div class="slide-accent-bar"></div>
+      <div class="next-inner">
+
+        <div style="text-align:center;">
+          <span class="slide-label" style="display:block; margin-bottom:8px;">Nächster Sprint</span>
+          <h2 class="slide-title">Was kommt <em>als nächstes?</em></h2>
+        </div>
+
+        <div class="next-cards">
+          <div class="next-card">
+            <div class="next-card-icon">🧠</div>
+            <div class="next-card-title">Agent-Gedächtnis</div>
+            <p class="next-card-desc">Chat-History über Sessions hinweg persistieren. Agent erinnert sich an frühere Fehler und passt Erklärungen automatisch an.</p>
+            <div style="margin-top:auto; display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:clamp(0.62rem,0.74vw,0.78rem); color:var(--accent); font-family:var(--font-heading); font-weight:700;">
+                LangChain <code style="color:var(--accent3); font-size:.9em;">ConversationSummaryMemory</code>
+              </div>
+              <div style="font-size:clamp(0.6rem,0.72vw,0.78rem); color:var(--muted);">Summary per LLM-Aufruf · DB-persistent · echter Tutor-Charakter</div>
+              <span class="next-card-badge">Sprint 3</span>
+            </div>
+          </div>
+          <div class="next-card">
+            <div class="next-card-icon">🔗</div>
+            <div class="next-card-title">Code-Review Chain</div>
+            <p class="next-card-desc">Mehrstufige LangChain-Chain: Schritt 1 Syntax → Schritt 2 Stil → Schritt 3 Best Practices. Jeder Schritt ein eigener LLM-Aufruf.</p>
+            <div style="margin-top:auto; display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:clamp(0.62rem,0.74vw,0.78rem); color:var(--success); font-family:var(--font-heading); font-weight:700;">
+                LangChain <code style="color:var(--accent3); font-size:.9em;">RunnableSequence</code>
+              </div>
+              <div style="font-size:clamp(0.6rem,0.72vw,0.78rem); color:var(--muted);">Echte Chain — nicht nur einzelne Tool-Aufrufe · 3 LLM-Aufrufe</div>
+              <span class="next-card-badge">Sprint 3</span>
+            </div>
+          </div>
+          <div class="next-card">
+            <div class="next-card-icon">📊</div>
+            <div class="next-card-title">Lernstatistik</div>
+            <p class="next-card-desc">LLM analysiert alle Skill-Scores und generiert einen kurzen Fortschrittsbericht: Stärken, Schwächen, nächster empfohlener Schritt.</p>
+            <div style="margin-top:auto; display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:clamp(0.62rem,0.74vw,0.78rem); color:var(--warn); font-family:var(--font-heading); font-weight:700;">
+                Neues Tool <code style="color:var(--accent3); font-size:.9em;">generate_progress_report</code>
+              </div>
+              <div style="font-size:clamp(0.6rem,0.72vw,0.78rem); color:var(--muted);">1 LLM-Aufruf · JSON mit Stärken + Schwächen + Empfehlung</div>
+              <span class="next-card-badge">Sprint 3</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 9 — Live Demo ════════════════════════════════════════ -->
+    <section class="slide" id="slide-7" data-num="07 / 07">
+      <div class="slide-accent-bar"></div>
+      <a href="https://agentic-ai-python-tutor.vercel.app/" target="_blank"
+         style="font-family:var(--font-heading); font-size:clamp(2.4rem,5vw,5rem); font-weight:900; color:var(--accent2); text-decoration:underline; text-underline-offset:10px; text-decoration-color:rgba(99,102,241,0.5); letter-spacing:-0.01em; transition:color 0.2s;"
+         onmouseover="this.style.color='var(--accent3)'"
+         onmouseout="this.style.color='var(--accent2)'">
+        Live Demo
+      </a>
+    </section>
+
+  </main>
+
+  <div id="diag-overlay"></div>
+  <div id="diag-fullscreen"></div>
+  <div id="diag-close-hint">Klick · Escape · Enter — zum Schließen</div>
+
+  <script>
+    const slides  = document.querySelectorAll('.slide');
+    const dots    = document.querySelectorAll('.dot');
+    const counter = document.getElementById('counter');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnFS   = document.getElementById('btn-fs');
+
+    const CARD_SEL = '.tool-card-p3, .ep-list-block, .ep-info-card, .prog-fact-card, .next-card, .agenda-item, .feature-card';
+
+    let current   = 0;
+    let stepIndex = 0;
+
+    function getCards() {
+      return Array.from(slides[current].querySelectorAll(CARD_SEL));
+    }
+
+    function setStep(idx) {
+      const cards = getCards();
+      stepIndex = idx;
+      if (idx === 0 || cards.length === 0) {
+        slides[current].classList.remove('has-focus');
+        cards.forEach(c => c.classList.remove('card-focus'));
+      } else {
+        slides[current].classList.add('has-focus');
+        cards.forEach((c, i) => c.classList.toggle('card-focus', i === idx - 1));
+      }
+    }
+
+    function clearStep() {
+      const cards = getCards();
+      stepIndex = 0;
+      slides[current].classList.remove('has-focus');
+      cards.forEach(c => c.classList.remove('card-focus'));
+    }
+
+    function goTo(n) {
+      clearStep();
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+      current = Math.max(0, Math.min(n, slides.length - 1));
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+      counter.textContent = `Slide ${current + 1} / ${slides.length}`;
+      btnPrev.disabled = current === 0;
+      btnNext.disabled = current === slides.length - 1;
+      document.documentElement.style.fontSize = current === 0 ? '130%' : '149.5%';
+    }
+
+    btnPrev.addEventListener('click', () => goTo(current - 1));
+    btnNext.addEventListener('click', () => goTo(current + 1));
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => goTo(Number(dot.dataset.target) - 1));
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        const cards = getCards();
+        if (cards.length > 0 && stepIndex < cards.length) {
+          setStep(stepIndex + 1);
+        } else {
+          goTo(current + 1);
+        }
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        if (stepIndex > 0) setStep(stepIndex - 1);
+        else goTo(current - 1);
+      }
+      if (event.key === 'Escape') {
+        if (stepIndex > 0) clearStep();
+        else if (document.fullscreenElement) document.exitFullscreen();
+      }
+      if (event.key === 'f' || event.key === 'F') toggleFS();
+    });
+
+    function toggleFS() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        btnFS.textContent = '✕';
+        btnFS.title = 'Vollbild beenden';
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        btnFS.textContent = '⛶';
+        btnFS.title = 'Vollbild';
+      }
+    });
+
+    btnFS.addEventListener('click', toggleFS);
+
+    const btnTheme = document.getElementById('btn-theme');
+    btnTheme.addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+      btnTheme.textContent = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
+    });
+
+    /* ── Diagram fullscreen (alle fc-left Elemente) ── */
+    const diagOverlay    = document.getElementById('diag-overlay');
+    const diagFullscreen = document.getElementById('diag-fullscreen');
+    const diagHint       = document.getElementById('diag-close-hint');
+
+    function openDiagram(srcEl) {
+      diagFullscreen.innerHTML = srcEl.outerHTML;
+      const clone = diagFullscreen.querySelector('.fc-left');
+      if (clone) { clone.style.cursor = 'default'; clone.style.outline = 'none'; }
+      diagOverlay.classList.add('active');
+      diagFullscreen.classList.add('active');
+      diagHint.style.display = 'block';
+    }
+
+    function closeDiagram() {
+      diagOverlay.classList.remove('active');
+      diagFullscreen.classList.remove('active');
+      diagHint.style.display = 'none';
+    }
+
+    document.querySelectorAll('.fc-left').forEach(el => {
+      el.addEventListener('click', () => openDiagram(el));
+    });
+
+    diagOverlay.addEventListener('click', closeDiagram);
+    diagFullscreen.addEventListener('click', closeDiagram);
+
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'Escape' || e.key === 'Enter') && diagFullscreen.classList.contains('active')) {
+        closeDiagram();
+        e.stopPropagation();
+      }
+    });
+
+    diagHint.style.display = 'none';
+  </script>
+
+</body>
+</html>

@@ -8,12 +8,11 @@ Ein intelligenter KI-gestützter Python-Tutor, der Schüler beim Lernen, Debugge
 
 1. [Ziel des Projekts](#ziel-des-projekts)
 2. [Projektstruktur](#projektstruktur)
-3. [Datei-Erklärungen](#datei-erklärungen)
-4. [Funktionen im Detail](#funktionen-im-detail)
+3. [Neue Features — Sprint 2](#neue-features--sprint-2)
+4. [Datei-Erklärungen](#datei-erklärungen)
 5. [Datenfluss](#datenfluss)
 6. [Installation und Start](#installation-und-start)
 7. [API-Endpunkte](#api-endpunkte)
-8. [Beispiel-Request und Response](#beispiel-request-und-response)
 
 ---
 
@@ -28,232 +27,297 @@ Schüler scheitern oft beim Einstieg in Python, weil:
 Dieses System löst das Problem mit einem **KI-Agenten**, der automatisch:
 - Python-Code **erklärt** (Schritt für Schritt)
 - **Fehler erkennt** und Lösungshinweise gibt
-- **Übungsaufgaben generiert**, die zum aktuellen Lernstand passen
-
-Der Kern ist ein **LangChain-Agent**, der bei jeder Anfrage die passenden Tools aufruft.
+- **Übungsaufgaben generiert** und bewertet (inkl. LLM-Feedback)
+- Den **Lernfortschritt** pro Skill trackt (37 Skills, 3 Level)
+- **PDF-Lernmaterial** einbindet und bei der Analyse berücksichtigt (RAG)
+- **Skill-Tests** und **Level-Tests** automatisch generiert und auswertet
 
 ---
 
 ## Projektstruktur
 
 ```
-/home/emad-almousa/src/test/KI/
+/
+├── README.md
+├── start.sh                        ← Startet Backend + Frontend
 │
-├── README.md                  ← Diese Dokumentation
-├── .gitignore
-├── start.sh                   ← Startet Backend, Frontend und Ollama
+├── backend/
+│   ├── main.py                     ← FastAPI Einstiegspunkt — alle Router registriert
+│   ├── requirements.txt
+│   ├── .env.example
+│   │
+│   ├── models/
+│   │   ├── schemas.py              ← CodeRequest, TutorResponse, UploadResponse
+│   │   ├── user.py                 ← User DB-Modell
+│   │   ├── session.py              ← LearningSession DB-Modell
+│   │   ├── skill_progress.py       ← StudentSkillProgress, LearningEvent, SKILL_TREE (37 Skills)
+│   │   ├── exercise.py             ← ExerciseCompletion DB-Modell
+│   │   ├── skill_test.py           ← SkillTestResult DB-Modell
+│   │   └── level_test.py           ← LevelTestResult DB-Modell
+│   │
+│   ├── agent/
+│   │   ├── config.py               ← LLM-Factory: get_llm(), get_embeddings()
+│   │   ├── tutor_agent.py          ← ReAct-Agent: run_analysis()
+│   │   ├── tools/
+│   │   │   ├── explain_tool.py     ← Code erklären (Agent-Tool)
+│   │   │   ├── debug_tool.py       ← Fehler analysieren (Agent-Tool)
+│   │   │   ├── exercise_tool.py    ← Einfache Übung generieren (Agent-Tool)
+│   │   │   ├── rag_tool.py         ← Lernmaterial durchsuchen (Agent-Tool)
+│   │   │   ├── exercise_evaluator_tool.py  ← LLM bewertet Schüler-Lösung (direkt invoke)
+│   │   │   ├── exercise_generator_tool.py  ← LLM generiert dynamische Übung (direkt invoke)
+│   │   │   ├── hint_tool.py                ← Gestufter Hinweis Level 1–3 (direkt invoke)
+│   │   │   ├── skill_test_generator_tool.py  ← LLM generiert Skill-Test (direkt invoke)
+│   │   │   └── skill_test_evaluator_tool.py  ← LLM wertet Skill-Test aus (direkt invoke)
+│   │   └── rag/
+│   │       ├── loader.py           ← PDF → Text extrahieren (PyMuPDF)
+│   │       ├── splitter.py         ← Text → Chunks (~500 Zeichen)
+│   │       └── vectorstore.py      ← FAISS-Index: build/load/query/get_page
+│   │
+│   ├── services/
+│   │   ├── skill_analyzer.py       ← LLM erkennt Skill + Score im Code (mit Fallback)
+│   │   └── progress_service.py     ← get_or_create_skill_progress()
+│   │
+│   ├── data/
+│   │   └── exercises.py            ← Statische Übungen für Beginner-Skills
+│   │
+│   ├── core/
+│   │   ├── database.py             ← SQLAlchemy Engine + Session
+│   │   ├── security.py             ← JWT: create_token, verify_token
+│   │   └── code_runner.py          ← subprocess: Python-Code sicher ausführen
+│   │
+│   └── routers/
+│       ├── tutor.py                ← /tutor/* (analyze, chat, run, upload-material)
+│       ├── auth.py                 ← /auth/* (register, login, me)
+│       ├── progress.py             ← /progress/* (sessions, summary)
+│       ├── learning_progress.py    ← /learning-progress/* (skills, analyze, Fortschritt)
+│       ├── exercises.py            ← /exercises/* (laden, submit, hint)
+│       ├── skill_tests.py          ← /skill-tests/* (generate, submit)
+│       ├── level_tests.py          ← /level-tests/* (generate, submit, status)
+│       └── admin.py                ← /admin/* (Admin-Aktionen)
 │
-└── backend/
-    │
-    ├── main.py                ← Einstiegspunkt — FastAPI App
-    ├── requirements.txt       ← Python-Pakete
-    ├── .env.example           ← Template für Konfiguration
-    │
-    ├── models/
-    │   └── schemas.py         ← CodeRequest, TutorResponse, ChatRequest, ChatResponse
-    │
-    ├── agent/                 ← KI-Orchestrierung
-    │   ├── config.py          ← LLM-Factory: get_llm(), get_classifier_llm()
-    │   ├── tutor_agent.py     ← Orchestrator: run_analysis()
-    │   └── tools/
-    │       ├── explain_tool.py  ← Code erklären
-    │       ├── debug_tool.py    ← Fehler analysieren
-    │       └── exercise_tool.py ← Übung generieren
-    │
-    ├── services/
-    │   ├── code_explainer.py  ← Adapter → run_analysis()
-    │   └── debugger.py        ← Adapter → run_analysis()
-    │
-    ├── routers/
-    │   └── tutor.py           ← Alle HTTP-Endpunkte
-    │
-    └── tests/
-        ├── test_config.py     ← Tests: LLM-Factory
-        ├── test_tools.py      ← Tests: alle Tools
-        └── test_integration.py ← Tests: Endpoint + Orchestrator
+└── frontend/
+    ├── app/
+    │   ├── tutor/page.tsx          ← Tutor-Seite (Chat + Code-Editor)
+    │   ├── progress/page.tsx       ← Lernfortschritt-Seite
+    │   └── profile/page.tsx        ← Profil-Seite
+    ├── components/
+    │   ├── tutor/TutorView.tsx     ← Haupt-Layout Tutor
+    │   ├── LearningProgressView.tsx← Skill-Liste + Detail-Panel
+    │   ├── ExercisePanel.tsx       ← Übungs-UI
+    │   ├── SkillTestModal.tsx      ← Skill-Test UI
+    │   └── LevelTestModal.tsx      ← Level-Test UI
+    └── lib/api.ts                  ← Alle API-Aufrufe zum Backend
+```
+
+---
+
+## Neue Features — Sprint 2
+
+### 1. PDF-Upload & RAG Pipeline
+
+PDF als Lernmaterial hochladen — der Chat nutzt automatisch relevante Abschnitte.
+
+```
+POST /tutor/upload-material
+  → PyMuPDF: Text pro Seite extrahieren
+  → Splitter: ~500 Zeichen Chunks
+  → LLM Embeddings (OpenAI oder Ollama)   ← LLM-Aufruf
+  → FAISS-Index gespeichert (index.faiss + chunks.pkl)
+
+Chat-Anfrage "erkläre Seite 5":
+  → Regex erkennt Seitenzahl → get_page(5) direkt
+  → + semantische FAISS-Suche
+  → Chunks als Kontext in den System-Prompt injiziert
+  → LLM antwortet mit Wissen aus dem PDF               ← LLM-Aufruf
+```
+
+### 2. Lernfortschritt & Skill-System
+
+37 Skills in 3 Leveln. LLM erkennt Skill im Code und berechnet Score.
+
+```
+SKILL_TREE (models/skill_progress.py):
+  Beginner (13):     Variablen → ... → Funktionen
+  Intermediate (12): List Comprehension → ... → Map/Filter/Reduce
+  Advanced (12):     Vererbung → ... → Testen
+
+Score-Regeln:
+  75–100 → "understood"      → Nächster Skill wird freigeschaltet (≥ 80)
+  40–74  → "partial"
+  0–39   → "not_understood"
+
+Score-Update: neuer = alter × 0.7 + llm_score × 0.3  (gleitender Durchschnitt)
+Fallback ohne LLM: Keyword-Matching (z.B. "for " → for_loop)
+```
+
+### 3. Übungen
+
+5 Übungen pro Skill. Code wird ausgeführt und vom LLM bewertet.
+
+```
+POST /exercises/submit
+  → Code ausführen (subprocess, Timeout 5s)
+  → evaluate_exercise LLM-Tool (3 Fälle):     ← LLM-Aufruf
+      Fall 1: stdout leer        → "falsch"
+      Fall 2: stdout == expected → LLM prüft ob Konzept korrekt (nicht hardcodiert)
+      Fall 3: stdout ≠ expected  → LLM: "teilweise" oder "falsch"
+
+Score: richtig=20Pkt, teilweise=10Pkt, falsch=0Pkt
+       5 Übungen × 20 = 100% Skill-Score
+```
+
+### 4. Skill-Tests
+
+Wird freigeschaltet wenn alle 5 Übungen eines Skills abgeschlossen.
+
+```
+POST /skill-tests/generate
+  → LLM generiert Test:                          ← LLM-Aufruf
+      3 Multiple-Choice-Fragen
+      1 Code-Lese-Aufgabe
+      1 Mini-Aufgabe (Code schreiben)
+  → Test serverseitig gespeichert (test_session_id)
+
+POST /skill-tests/submit
+  → MC: reiner String-Vergleich (kein LLM) → 30 Punkte max
+  → Code-Lesen: LLM semantisch             → 30 Punkte max  ← LLM-Aufruf
+  → Mini-Aufgabe: Code ausführen + LLM     → 40 Punkte max  ← LLM-Aufruf
+  → Bestanden bei ≥ 60/100
+```
+
+### 5. Level-Tests
+
+Wenn alle Skills eines Levels ≥ 80% Score haben.
+
+```
+POST /level-tests/generate  → LLM generiert Level-Test  ← LLM-Aufruf
+POST /level-tests/submit    → LLM wertet aus            ← LLM-Aufrufe
+```
+
+### 6. Authentifizierung
+
+```
+POST /auth/register  → User erstellen, Passwort gehasht
+POST /auth/login     → JWT Token zurück
+GET  /auth/users/me  → Aktueller User
+PATCH /auth/users/me → Profil aktualisieren (name, level, goal)
 ```
 
 ---
 
 ## Datei-Erklärungen
 
-### `backend/main.py`
-
-```python
-app = FastAPI(title="Agentic AI Python Tutor System")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], ...)
-app.include_router(tutor_router)
-```
-
-- CORS erlaubt dem Frontend (Port 3000) das Backend (Port 8000) anzusprechen
-- `ServiceUnavailableError` → HTTP 503 (wenn LLM-Provider nicht erreichbar)
-- Health-Check: `GET /` gibt `{"status": "ok"}` zurück
-
----
-
-### `backend/models/schemas.py`
-
-```python
-class CodeRequest(BaseModel):
-    code: str
-
-class TutorResponse(BaseModel):
-    explanation: str
-    error_found: bool
-    error_type: str = "Kein Fehler"
-    suggestion: str
-    next_exercise: str | None = None
-```
-
----
-
 ### `backend/agent/config.py`
 
 ```python
-def get_llm()            # OpenAI (gpt-4o) wenn Key vorhanden, sonst Ollama
-def get_classifier_llm() # gpt-4o-mini oder Ollama — für Off-Topic-Filter
+def get_llm():           # OpenAI gpt-4o wenn Key vorhanden, sonst Ollama llama3.2
+def get_classifier_llm() # gpt-4o-mini oder Ollama — für Off-Topic-Filter im Chat
+def get_embeddings()     # OpenAIEmbeddings oder OllamaEmbeddings — für RAG
 ```
 
-Einzige Stelle wo Provider gewählt wird. Alle Tools rufen `get_llm()` auf — kein Provider-Wissen im Tool selbst.
+Einzige Stelle wo Provider gewählt wird. Alle Tools rufen `get_llm()` auf.
 
----
-
-### `backend/agent/tutor_agent.py`
+### `backend/services/skill_analyzer.py`
 
 ```python
-def run_analysis(code: str) -> dict:
-    llm = get_llm()
-    tools = _build_tools()          # explain + debug + exercise
-    agent = create_agent(llm, tools, system_prompt=_SYSTEM_PROMPT)
-    result = agent.invoke({"messages": [("human", f"Analysiere: {code}")]})
-    return _parse_agent_output(result["messages"][-1].content)
+def analyze_skill(code, question) -> dict:
+    # Versucht LLM → bei Fehler: Keyword-Fallback
+    # LLM-Prompt fordert JSON: detected_skills, main_skill, score, status, mistakes, feedback
+    # Whitelist: nur gültige skill_keys erlaubt
+    # Fallback: _KEYWORD_MAP matcht z.B. "for " → for_loop, Score-Heuristik
 ```
 
-**ReAct-Agent** (`create_agent` aus LangChain 1.3.x / LangGraph): der Agent entscheidet selbst welche Tools er aufruft.
-`_parse_agent_output()` extrahiert 5 Felder aus dem Free-Text der Final Answer (Regex, Safe Defaults).
-Fängt Verbindungsfehler → `ServiceUnavailableError`.
+### `backend/agent/tools/exercise_evaluator_tool.py`
 
----
+LLM bewertet Schüler-Code in 3 Fällen:
+1. **stdout leer** → direkt "falsch", LLM erklärt warum
+2. **stdout == expected** → LLM prüft ob Konzept korrekt (nicht einfach hardcodiert)
+3. **stdout ≠ expected** → LLM entscheidet "teilweise" oder "falsch"
 
-### `backend/agent/tools/`
+### `backend/agent/tools/skill_test_evaluator_tool.py`
 
-| Tool | Eingabe | Ausgabe | Was es macht |
-|---|---|---|---|
-| `explain_code_tool` | `code: str` | `str` | Schritt-für-Schritt-Erklärung auf Deutsch |
-| `debug_code_tool` | `code: str` | `dict` | `{error_found, error_type, suggestion}` als JSON |
-| `exercise_tool` | `code, error_found, suggestion` | `str` | Passende Übungsaufgabe |
-
----
-
-### `backend/routers/tutor.py`
-
-| Endpoint | Was er macht |
-|---|---|
-| `POST /tutor/analyze` | Code analysieren — ruft `run_analysis()` auf |
-| `POST /tutor/run` | Code direkt ausführen (subprocess, kein LLM) |
-| `POST /tutor/chat` | Chat mit History + Off-Topic-Filter |
-
----
-
-## Funktionen im Detail
-
-| Datei | Funktion | Eingabe | Ausgabe |
-|---|---|---|---|
-| `agent/config.py` | `get_llm()` | — | `ChatOpenAI` oder `ChatOllama` |
-| `agent/tutor_agent.py` | `run_analysis(code)` | `str` | `dict` |
-| `agent/tools/explain_tool.py` | `explain_code_tool(code)` | `str` | `str` |
-| `agent/tools/debug_tool.py` | `debug_code_tool(code)` | `str` | `dict` |
-| `agent/tools/exercise_tool.py` | `exercise_tool(code, error_found, suggestion)` | `str, bool, str` | `str` |
-| `routers/tutor.py` | `analyze_code(request)` | `CodeRequest` | `TutorResponse` |
+Scoring ohne LLM für MC (String-Vergleich) + mit LLM für Code-Lesen und Mini-Aufgabe:
+- MC: 3 × 10 = 30 Punkte
+- Code-Lesen: semantischer LLM-Vergleich = 30 Punkte
+- Mini-Aufgabe: Code ausführen + LLM bewertet = 40 Punkte
 
 ---
 
 ## Datenfluss
 
+### Code analysieren (Tutor)
+
 ```
-Browser / Frontend
-        │
-        │  POST /tutor/analyze  { "code": "..." }
-        ▼
-    routers/tutor.py → analyze_code(request)
-        │
-        └──► agent/tutor_agent.py → run_analysis(code)
-                  │
-                  ├──► create_agent(llm, tools)  ← ReAct-Agent (LangGraph)
-                  │         │
-                  │         │  ReAct-Loop (Reason → Act → Observe):
-                  │         ├──► explain_code_tool  → LLM → Erklärung (str)
-                  │         ├──► debug_code_tool    → LLM → {error_found, error_type, suggestion}
-                  │         └──► exercise_tool      → LLM → Übungsaufgabe (str)
-                  │
-                  └──► _parse_agent_output(final_text) → dict mit 5 Feldern
-        │
-        ▼
-    TutorResponse {
-        explanation, error_found, error_type,
-        suggestion, next_exercise
-    }
+Frontend → POST /tutor/analyze { code }
+  → tutor_agent.run_analysis(code)
+      → ReAct-Agent (LangChain):
+          explain_code_tool  → LLM → Erklärung
+          debug_code_tool    → LLM → {error_found, error_type, suggestion}
+          exercise_tool      → LLM → Übungsaufgabe
+          rag_tool           → FAISS → PDF-Stellen (wenn vorhanden)
+      → _parse_agent_output() → 5 Felder
+      → _get_rag_sources(code) → sources[]
+  ← TutorResponse { explanation, error_found, error_type, suggestion, next_exercise, sources }
+```
+
+### Übung einreichen
+
+```
+Frontend → POST /exercises/submit { skill_key, exercise_id, code }
+  → run_user_code(code) → subprocess → (stdout, stderr)
+  → evaluate_exercise.invoke() → LLM → { result, what_was_good, what_went_wrong, hint }
+  → ExerciseCompletion upsert → score_granted (0/10/20)
+  → StudentSkillProgress.score = SUM(alle exercise scores)
+  ← SubmitResponse { result, score_change, new_skill_score, ... }
 ```
 
 ---
 
 ## Installation und Start
 
-### Voraussetzungen
-
-**Option A — OpenAI (empfohlen):**
+**Option A — OpenAI:**
 ```bash
 # backend/.env
 OPENAI_API_KEY=sk-...
 ```
 
-**Option B — Ollama (lokal, kostenlos):**
+**Option B — Ollama (lokal):**
 ```bash
 ollama pull llama3.2
 ```
 
-### Start
-
+**Start:**
 ```bash
-# Schnellstart
 ./start.sh
 
-# Oder manuell
-cd backend
-source venv/bin/activate
+# Oder manuell:
+cd backend && source venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload
+# Frontend: cd frontend && npm run dev
 ```
 
 ---
 
 ## API-Endpunkte
 
-| Method | URL | Beschreibung |
-|---|---|---|
-| GET | `/` | Health Check |
-| POST | `/tutor/analyze` | Code analysieren |
-| POST | `/tutor/run` | Code direkt ausführen |
-| POST | `/tutor/chat` | Chat mit dem Tutor |
+| Method | URL | Auth | Beschreibung |
+|---|---|---|---|
+| GET | `/` | — | Health Check |
+| POST | `/auth/register` | — | Registrieren |
+| POST | `/auth/login` | — | Login → JWT Token |
+| POST | `/tutor/analyze` | — | Code analysieren (ReAct-Agent) |
+| POST | `/tutor/chat` | — | Chat mit RAG-Kontext |
+| POST | `/tutor/upload-material` | — | PDF hochladen → FAISS |
+| POST | `/tutor/run` | — | Code ausführen |
+| GET | `/learning-progress/{id}` | ✓ | 37 Skills + Fortschritt |
+| POST | `/learning-progress/analyze` | ✓ | Skill erkennen + Score |
+| GET | `/exercises/{skill_key}` | ✓ | Übungen laden |
+| POST | `/exercises/submit` | ✓ | Lösung einreichen → LLM bewertet |
+| POST | `/exercises/hint` | ✓ | Gestufter Hinweis |
+| POST | `/skill-tests/generate` | ✓ | Test generieren |
+| POST | `/skill-tests/submit` | ✓ | Test einreichen + auswerten |
+| POST | `/level-tests/generate` | ✓ | Level-Test generieren |
+| POST | `/level-tests/submit` | ✓ | Level-Test auswerten |
 
 **Swagger UI:** `http://127.0.0.1:8000/docs`
-
----
-
-## Beispiel-Request und Response
-
-**Analyse:**
-```json
-POST /tutor/analyze
-{ "code": "for i in range(5)\n    print(i)" }
-```
-
-```json
-{
-  "explanation": "Dein Code hat ein Problem mit der Syntax...",
-  "error_found": true,
-  "error_type": "Syntaxfehler",
-  "suggestion": "Fehlender Doppelpunkt ':' nach der for-Schleife.",
-  "next_exercise": "🎯 Aufgabe: Korrigiere die Schleife..."
-}
-```

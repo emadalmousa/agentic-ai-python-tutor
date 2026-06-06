@@ -1,28 +1,79 @@
 "use client"
 
-import { useRef, useEffect, KeyboardEvent } from "react"
+import { useRef, useEffect, useState, KeyboardEvent } from "react"
 import type { ChatMessage } from "@/types/tutor"
+import type { TranslationKey } from "@/i18n"
+import { useLang } from "@/context/LangContext"
 import MarkdownMessage from "./MarkdownMessage"
+
+const THINKING_KEYS: { after: number; key: TranslationKey }[] = [
+  { after: 0,  key: "tutor.thinking0" },
+  { after: 2,  key: "tutor.thinking1" },
+  { after: 5,  key: "tutor.thinking2" },
+  { after: 9,  key: "tutor.thinking3" },
+  { after: 14, key: "tutor.thinking4" },
+  { after: 20, key: "tutor.thinking5" },
+  { after: 28, key: "tutor.thinking6" },
+]
+
+function ThinkingIndicator({ dark, subCol }: { dark: boolean; subCol: string }) {
+  const { t } = useLang()
+  const [msgIndex, setMsgIndex] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    setMsgIndex(0)
+    setElapsed(0)
+    const interval = setInterval(() => {
+      setElapsed((prev) => {
+        const next = prev + 1
+        const nextIdx = THINKING_KEYS.findLastIndex((m) => m.after <= next)
+        setMsgIndex(nextIdx >= 0 ? nextIdx : 0)
+        return next
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const msg = THINKING_KEYS[msgIndex]
+
+  return (
+    <div className={`px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 ${dark ? "bg-[#111e30]" : "bg-gray-50"}`}>
+      <div className="flex gap-1 items-center shrink-0">
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+      </div>
+      <span className={`text-xs transition-all duration-500 ${subCol}`}>{t(msg.key)}</span>
+    </div>
+  )
+}
 
 interface Props {
   history: ChatMessage[]
   input: string
   loading: boolean
   analyzing?: boolean
+  uploading?: boolean
+  materialName?: string | null
   error: string | null
   bottomRef: React.RefObject<HTMLDivElement | null>
+  fileInputRef: React.RefObject<HTMLInputElement | null>
   onInput: (v: string) => void
   onSend: () => void
   onReset: () => void
+  onOpenFilePicker: () => void
+  onFileInput: (e: React.ChangeEvent<HTMLInputElement>) => void
   onInsertCode?: (code: string) => void
   dark: boolean
 }
 
 export default function ChatPanel({
-  history, input, loading, analyzing,
-  error, bottomRef,
-  onInput, onSend, onReset, onInsertCode, dark,
+  history, input, loading, analyzing, uploading, materialName,
+  error, bottomRef, fileInputRef,
+  onInput, onSend, onReset, onOpenFilePicker, onFileInput, onInsertCode, dark,
 }: Props) {
+  const { t } = useLang()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -39,7 +90,7 @@ export default function ChatPanel({
     }
   }
 
-  const busy    = loading || analyzing
+  const busy    = loading || analyzing || uploading
   const bg      = dark ? "bg-[#0a1628]"     : "bg-white"
   const border  = dark ? "border-[#1e2f45]" : "border-gray-200"
   const msgBg   = dark ? "bg-[#111e30]"     : "bg-gray-50"
@@ -49,31 +100,36 @@ export default function ChatPanel({
   const subCol  = dark ? "text-gray-500"    : "text-gray-400"
 
   return (
-    <div className={`flex flex-col h-full ${bg} border-l ${border}`}>
+    <div className={`flex flex-col min-h-full ${bg} border-l ${border}`}>
 
       {/* Header */}
-      <div className={`flex items-center justify-between px-4 py-3 border-b ${border}`}>
+      <div className={`sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b ${border} ${bg}`}>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-indigo-500" />
           <span className={`text-sm font-semibold ${textCol}`}>Python Tutor</span>
+          {materialName && (
+            <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${dark ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+              📚 {materialName}
+            </span>
+          )}
         </div>
         {history.length > 0 && (
           <button
             onClick={onReset}
             className={`text-xs ${subCol} hover:text-red-400 transition-colors`}
           >
-            Neues Gespräch
+            {t("tutor.newConversation")}
           </button>
         )}
       </div>
 
-      {/* Nachrichtenverlauf */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+      {/* Message history */}
+      <div className="flex-1 px-4 py-4 flex flex-col gap-3">
         {history.length === 0 && !busy && (
           <div className={`text-center mt-12 ${subCol} text-sm`}>
             <div className="text-3xl mb-3">🤖</div>
-            <p className="font-medium mb-1">Hallo! Ich bin dein Python-Tutor.</p>
-            <p className="text-xs">Stell eine Frage oder analysiere deinen Code.</p>
+            <p className="font-medium mb-1">{t("tutor.greeting")}</p>
+            <p className="text-xs">{t("tutor.greetingSub")}</p>
           </div>
         )}
 
@@ -101,20 +157,33 @@ export default function ChatPanel({
           </div>
         ))}
 
-        {/* Typing-Indikator */}
+        {/* Typing indicator */}
         {busy && (
           <div className="flex justify-start">
-            <div className="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center text-xs mr-2 mt-0.5">
+            <div className="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center text-xs mr-2 mt-0.5 shrink-0">
               🤖
             </div>
-            <div className={`${msgBg} px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2`}>
-              <div className="flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:"0ms"}} />
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:"150ms"}} />
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:"300ms"}} />
+            {analyzing ? (
+              <div className={`${msgBg} px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2`}>
+                <div className="flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className={`text-xs ${subCol}`}>{t("tutor.analyzing")}</span>
               </div>
-              {analyzing && <span className={`text-xs ${subCol}`}>Analysiere Code…</span>}
-            </div>
+            ) : uploading ? (
+              <div className={`${msgBg} px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2`}>
+                <div className="flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className={`text-xs ${subCol}`}>{t("tutor.uploading")}</span>
+              </div>
+            ) : (
+              <ThinkingIndicator dark={dark} subCol={subCol} />
+            )}
           </div>
         )}
 
@@ -125,23 +194,39 @@ export default function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {/* Eingabe */}
-      <div className={`px-4 py-3 border-t ${border}`}>
+      {/* Input */}
+      <div className={`sticky bottom-0 px-4 py-3 border-t ${border} ${bg}`}>
         <div className={`flex gap-2 items-end rounded-2xl border ${inputBg} px-3 py-2`}>
+
+          {/* Paperclip: PDF upload */}
+          <button
+            onClick={onOpenFilePicker}
+            disabled={busy}
+            title={t("tutor.uploadTitle")}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all flex-shrink-0 mb-0.5 disabled:opacity-30 disabled:cursor-not-allowed ${
+              dark
+                ? "text-gray-500 hover:text-amber-400 hover:bg-amber-500/10"
+                : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"
+            }`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
 
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => onInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Frage stellen… (Enter = senden)"
+            placeholder={t("tutor.inputPlaceholder")}
             rows={1}
             className={`flex-1 bg-transparent text-sm resize-none focus:outline-none ${dark ? "text-gray-200 placeholder-gray-500" : "text-gray-800 placeholder-gray-400"}`}
             style={{ maxHeight: 120 }}
             disabled={busy}
           />
 
-          {/* Senden */}
+          {/* Send */}
           <button
             onClick={onSend}
             disabled={!input.trim() || busy}
@@ -154,7 +239,19 @@ export default function ChatPanel({
           </button>
         </div>
 
+        <p className={`text-center text-xs mt-1.5 ${subCol}`}>
+          {t("tutor.uploadHint")}
+        </p>
       </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        className="hidden"
+        onChange={onFileInput}
+      />
     </div>
   )
 }

@@ -3,8 +3,11 @@
 import { useState } from "react"
 import { runCode } from "@/lib/api"
 import type { RunResponse } from "@/types/tutor"
+import type { TranslationKey } from "@/i18n"
 
-export function useCodeRunner() {
+type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string
+
+export function useCodeRunner(t: TFn) {
   const [output, setOutput] = useState<RunResponse | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -16,7 +19,7 @@ export function useCodeRunner() {
       const data = await runCode({ code })
       setOutput(data)
     } catch {
-      setOutput({ stdout: "", stderr: "Backend nicht erreichbar.", exit_code: 1 })
+      setOutput({ stdout: "", stderr: t("tutor.backendError"), exit_code: 1 })
     } finally {
       setLoading(false)
     }

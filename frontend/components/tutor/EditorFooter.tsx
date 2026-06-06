@@ -1,6 +1,7 @@
 "use client"
 
 import type { RunResponse } from "@/types/tutor"
+import { useLang } from "@/context/LangContext"
 
 interface Props {
   dark: boolean
@@ -10,9 +11,12 @@ interface Props {
   output: RunResponse | null
   onRun: () => void
   onAnalyze: () => void
+  outputHeight?: number
+  onOutputDragStart?: (e: React.MouseEvent) => void
 }
 
-export default function EditorFooter({ dark, code, running, analyzing, output, onRun, onAnalyze }: Props) {
+export default function EditorFooter({ dark, code, running, analyzing, output, onRun, onAnalyze, outputHeight = 160, onOutputDragStart }: Props) {
+  const { t } = useLang()
   const border = dark ? "border-[#1e2f45]" : "border-gray-200"
 
   return (
@@ -21,13 +25,18 @@ export default function EditorFooter({ dark, code, running, analyzing, output, o
       {/* Output-Panel */}
       {(output || running) && (
         <div className={`border-b ${border}`}>
+          {/* Draggable resize handle */}
+          <div
+            onMouseDown={onOutputDragStart}
+            className={`h-1 cursor-row-resize hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors ${dark ? "bg-[#1e2f45]" : "bg-gray-200"}`}
+          />
           <div className={`flex items-center justify-between px-4 py-1.5 ${dark ? "bg-[#080f1e]" : "bg-gray-50"}`}>
             <div className="flex items-center gap-2">
               {output && (
                 <span className={`w-2 h-2 rounded-full ${output.exit_code === 0 ? "bg-emerald-400" : "bg-red-400"}`} />
               )}
               <span className={`text-xs font-mono font-semibold ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                Output
+                {t("tutor.output")}
               </span>
             </div>
             {output && (
@@ -36,14 +45,14 @@ export default function EditorFooter({ dark, code, running, analyzing, output, o
               </span>
             )}
           </div>
-          <pre className={`px-4 py-3 text-xs font-mono leading-relaxed overflow-x-auto max-h-36 ${
+          <pre className={`px-4 py-3 text-xs font-mono leading-relaxed overflow-y-auto overflow-x-auto ${
             dark ? "bg-[#060e1c] text-gray-300" : "bg-gray-900 text-gray-100"
-          }`}>
-            {running && <span className="text-gray-500">Ausführen…</span>}
+          }`} style={{ height: outputHeight }}>
+            {running && <span className="text-gray-500">{t("tutor.running")}</span>}
             {output?.stdout && <span>{output.stdout}</span>}
             {output?.stderr && <span className="text-red-400">{output.stderr}</span>}
             {output && !output.stdout && !output.stderr && (
-              <span className="text-gray-500">(kein Output)</span>
+              <span className="text-gray-500">{t("tutor.noOutput")}</span>
             )}
           </pre>
         </div>
@@ -69,7 +78,7 @@ export default function EditorFooter({ dark, code, running, analyzing, output, o
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
           )}
-          {running ? "Läuft…" : "Ausführen"}
+          {running ? t("tutor.runRunning") : t("tutor.run")}
         </button>
 
         <button
@@ -90,7 +99,7 @@ export default function EditorFooter({ dark, code, running, analyzing, output, o
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
           )}
-          {analyzing ? "Analysiere…" : "Code analysieren"}
+          {analyzing ? t("tutor.analyzeRunning") : t("tutor.analyze")}
         </button>
       </div>
 
