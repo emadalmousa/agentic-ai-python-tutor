@@ -1,4 +1,3 @@
-import os
 import re
 
 from langchain.agents import create_agent
@@ -27,8 +26,6 @@ Du hast Zugriff auf folgende Werkzeuge:
 - explain_code_tool: Erklärt Python-Code kurz auf Deutsch.
 - debug_code_tool: Findet Fehler im Code.
 - exercise_tool: Generiert eine kurze Übungsaufgabe.
-- rag_tool: Sucht im Lernmaterial (nur wenn verfügbar).
-
 Analysiere den Code:
 1. Rufe explain_code_tool auf.
 2. Rufe debug_code_tool auf.
@@ -67,30 +64,7 @@ def _parse_agent_output(text: str) -> dict:
 
 
 def _build_tools() -> list:
-    """Erstellt die Tool-Liste; rag_tool wird nur eingebunden wenn der Vektorstore existiert."""
-    tools = [explain_code_tool, debug_code_tool, exercise_tool]
-    vectorstore_path = os.getenv(
-        "RAG_VECTORSTORE_PATH",
-        os.path.join(os.path.dirname(__file__), "..", "vectorstore"),
-    )
-    if os.path.isdir(vectorstore_path):
-        from agent.tools.rag_tool import rag_tool
-        tools.append(rag_tool)
-    return tools
-
-
-def _get_rag_sources(code: str) -> list[str]:
-    """Gibt relevante RAG-Quellen zurück, wenn ein Vektorstore vorhanden ist."""
-    try:
-        from agent.rag.vectorstore import load, query as vs_query
-
-        index_data = load()
-        if index_data is None:
-            return []
-        top_k = int(os.getenv("RAG_TOP_K", "3"))
-        return vs_query(index_data, code, top_k=top_k)
-    except Exception:
-        return []
+    return [explain_code_tool, debug_code_tool, exercise_tool]
 
 
 def _build_chat_tools(user_level: str, skill_progress: list[dict]) -> list:
@@ -196,9 +170,7 @@ def run_analysis(code: str) -> dict:
         })
         messages = result.get("messages", [])
         final_text = messages[-1].content if messages else ""
-        parsed = _parse_agent_output(final_text)
-        parsed["sources"] = _get_rag_sources(code)
-        return parsed
+        return _parse_agent_output(final_text)
     except Exception as e:
         if _is_connection_error(e):
             raise ServiceUnavailableError(

@@ -8,12 +8,6 @@ export interface TutorResponse {
   error_type: string
   suggestion: string
   next_exercise: string | null
-  sources: string[]
-}
-
-export interface UploadResponse {
-  status: string
-  chunks: number
 }
 
 export interface ChatMessage {
