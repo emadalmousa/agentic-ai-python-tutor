@@ -63,6 +63,11 @@ def _add_events(db: Session, user_id: int, events: list[dict]):
 
 with Session(engine) as db:
 
+    # Skip if already seeded
+    if db.query(User).first():
+        print("✓ DB already seeded, skipping")
+        raise SystemExit(0)
+
     # -----------------------------------------------------------------------
     # 1. Admin — Emad Almousa (Fortgeschritten, alle Beginner-Skills ≥ 80%)
     # -----------------------------------------------------------------------

@@ -20,6 +20,10 @@ from core.database import Base, engine
 # Auto-create tables on startup (SQLite / demo — no migration needed)
 Base.metadata.create_all(bind=engine)
 
+# Auto-seed test data if DB is empty
+import subprocess, sys
+subprocess.run([sys.executable, "seed_data.py"], cwd=__file__.rsplit("/", 1)[0])
+
 # FastAPI-Anwendung erstellen
 app = FastAPI(title="Agentic AI Python Tutor System")
 
