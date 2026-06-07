@@ -1,15 +1,12 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from core.database import Base
 
-# DEV NOTE: If the DB already exists without this UniqueConstraint, delete the
-# existing DB before starting the server — PostgreSQL/SQLite cannot add constraints
-# to existing tables without a migration. The constraint is created fresh on startup
-# via Base.metadata.create_all.
-
-# Full 37-skill tree. order is level-local (1-based within each level).
-# Each entry: key, German label, level, level-local order, unlocks_after (previous skill key or None).
 SKILL_TREE = [
     # --- Beginner (13 skills) ---
     {"key": "variables",        "label": "Variablen",             "level": "beginner",     "order": 1,  "unlocks_after": None},
@@ -53,34 +50,30 @@ SKILL_TREE = [
     {"key": "testing",          "label": "Testen",                "level": "advanced",     "order": 12, "unlocks_after": "async_await"},
 ]
 
-# Backward-compatibility alias — existing code that does `for key, label in FIXED_SKILLS` continues to work.
 FIXED_SKILLS = [(s["key"], s["label"]) for s in SKILL_TREE]
 
 
 class StudentSkillProgress(Base):
-    """Aktueller Wissensstand eines Studenten pro Skill (wird bei jeder Analyse aktualisiert)."""
     __tablename__ = "student_skill_progress"
 
-    # DEV NOTE: UniqueConstraint added — existing DB must be dropped before first run.
     __table_args__ = (UniqueConstraint("user_id", "skill_key"),)
 
-    id        = Column(Integer, primary_key=True)
-    user_id   = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    skill_key = Column(String, nullable=False)           # z. B. "for_loop"
-    score     = Column(Integer, default=0)               # 0–100
-    status    = Column(String, default="not_understood") # understood | partial | not_understood
-    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    skill_key: Mapped[str] = mapped_column(String)
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String, default="not_understood")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LearningEvent(Base):
-    """Einzelnes Analyse-Ereignis — unveränderlich, dient als History."""
     __tablename__ = "learning_events"
 
-    id                    = Column(Integer, primary_key=True)
-    user_id               = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    skill_key             = Column(String, nullable=False)
-    score                 = Column(Integer, nullable=False)
-    mistakes              = Column(JSON, default=list)   # list[str]
-    feedback              = Column(Text)
-    recommended_exercise  = Column(Text)
-    created_at            = Column(DateTime(timezone=True), server_default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    skill_key: Mapped[str] = mapped_column(String)
+    score: Mapped[int] = mapped_column(Integer)
+    mistakes: Mapped[list[Any] | None] = mapped_column(JSON, default=list)
+    feedback: Mapped[str | None] = mapped_column(Text)
+    recommended_exercise: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

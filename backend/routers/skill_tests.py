@@ -120,7 +120,7 @@ def submit_test(
     if not session_row:
         raise HTTPException(status_code=404, detail="Test-Session nicht gefunden.")
 
-    test_data = session_row.generated_test
+    test_data = session_row.generated_test or {}
 
     # 1. Run mini_task_code via subprocess
     mini_stdout, _mini_stderr = run_user_code(data.mini_task_code)

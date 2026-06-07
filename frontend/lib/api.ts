@@ -20,10 +20,12 @@ export async function analyzeCode(payload: CodeRequest): Promise<TutorResponse> 
   return res.json()
 }
 
-export async function sendChatMessage(payload: ChatRequest): Promise<ChatResponse> {
+export async function sendChatMessage(payload: ChatRequest, token?: string): Promise<ChatResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) headers["Authorization"] = `Bearer ${token}`
   const res = await fetch(`${API_URL}/tutor/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error(`Backend error: ${res.status}`)
@@ -71,11 +73,14 @@ export async function getSkills(token: string): Promise<SkillInfo[]> {
   return res.json()
 }
 
-export async function uploadMaterial(file: File): Promise<UploadResponse> {
+export async function uploadMaterial(file: File, token?: string): Promise<UploadResponse> {
   const form = new FormData()
   form.append("file", file)
+  const headers: Record<string, string> = {}
+  if (token) headers["Authorization"] = `Bearer ${token}`
   const res = await fetch(`${API_URL}/tutor/upload-material`, {
     method: "POST",
+    headers,
     body: form,
   })
   if (!res.ok) {

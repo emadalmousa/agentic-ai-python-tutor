@@ -5,9 +5,9 @@ import os
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from models.schemas import CodeRequest, TutorResponse, ChatRequest, ChatResponse, ChatMessage, RunRequest, RunResponse, UploadResponse
-from agent.tutor_agent import run_analysis, run_chat
-from agent.config import get_llm, get_classifier_llm
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from agent.tutor_agent import run_analysis, run_chat, run_chat_with_context
+from agent.config import get_classifier_llm
+from langchain_core.messages import SystemMessage, HumanMessage
 from core.database import get_db
 from routers.auth import get_current_user
 from models.user import User
@@ -30,18 +30,16 @@ def analyze_code(request: CodeRequest) -> TutorResponse:
 
 
 @router.post("/upload-material", response_model=UploadResponse)
-async def upload_material(file: UploadFile = File(...)) -> UploadResponse:
-    """Lädt ein PDF als Lernmaterial hoch und speichert es als FAISS-Index."""
-
-    # --- Validierung (kein LLM) ---
-    # Prüft ob die Datei wirklich ein PDF ist (Content-Type oder Dateiendung)
+async def upload_material(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+) -> UploadResponse:
+    """Lädt ein PDF als Lernmaterial hoch und speichert es als FAISS-Index für den eingeloggten User."""
     content_type = file.content_type or ""
     filename = file.filename or ""
     if content_type != "application/pdf" and not filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Nur PDF-Dateien sind erlaubt.")
 
-    # --- Bytes lesen (kein LLM) ---
-    # Die rohen Binärdaten der PDF werden komplett in den RAM geladen
     pdf_bytes = await file.read()
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="Die hochgeladene Datei ist leer.")
@@ -51,21 +49,9 @@ async def upload_material(file: UploadFile = File(...)) -> UploadResponse:
         from agent.rag.splitter import split_pages
         from agent.rag.vectorstore import build_and_save
 
-        # --- Text extrahieren (kein LLM) ---
-        # PyMuPDF liest jede Seite und gibt [(text, seitennummer), ...] zurück
         pages = extract_pages(pdf_bytes)
-
-        # --- Chunks erstellen (kein LLM) ---
-        # Langer Text wird in kleine Abschnitte (~500 Zeichen) aufgeteilt
-        # damit die spätere Suche präziser ist
         chunks = split_pages(pages)
-
-        # --- FAISS-Index bauen (LLM/LangChain!) ---
-        # Hier wird get_embeddings() aufgerufen: OpenAI oder Ollama wandelt
-        # jeden Text-Chunk in einen Zahlen-Vektor um (Embedding).
-        # FAISS speichert diese Vektoren auf Disk (index.faiss + chunks.pkl).
-        # Ab jetzt kann der Chat semantisch in diesem Material suchen.
-        build_and_save(chunks)
+        build_and_save(chunks, user_id=current_user.id)
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -127,21 +113,20 @@ def _is_python_related(message: str, code: str) -> bool:
     llm = get_classifier_llm()
     context = f"Code des Schülers:\n```python\n{code}\n```\n\nFrage: {message}" if code.strip() else message
     response = llm.invoke([_CLASSIFY_SYSTEM, HumanMessage(content=context)])
-    return response.content.strip().lower().startswith("ja")
+    return str(response.content).strip().lower().startswith("ja") # type: ignore
 
 
-def _get_rag_context(message: str) -> str:
-    """Gibt relevante Passagen aus dem Vectorstore zurück.
+def _get_rag_context(message: str, user_id: int) -> str:
+    """Sucht im PDF-Index des Users.
 
-    Kombiniert immer beide Strategien:
-    1. Wenn Seitenzahl erkannt → alle Chunks dieser Seite (direkte Suche)
-    2. Semantische FAISS-Suche nach dem Inhalt der Frage
+    1. Seitenzahl erkannt → alle Chunks dieser Seite
+    2. Immer zusätzlich semantische FAISS-Suche
     Duplikate werden entfernt, Seiteninhalt steht zuerst.
     """
     try:
         from agent.rag.vectorstore import load, query_with_pages, get_page
 
-        index_data = load()
+        index_data = load(user_id)
         if index_data is None:
             return ""
 
@@ -204,13 +189,24 @@ def chat(
         if row.skill_key in skill_map
     ]
 
-    reply = run_chat(
-        message=request.message,
-        code=request.code,
-        history=request.history,
-        user_level=current_user.level,
-        skill_progress=skill_progress,
-    )
+    rag_context = _get_rag_context(request.message, current_user.id)
+
+    if rag_context:
+        reply = run_chat_with_context(
+            message=request.message,
+            code=request.code,
+            history=request.history,
+            user_level=current_user.level,
+            rag_context=rag_context,
+        )
+    else:
+        reply = run_chat(
+            message=request.message,
+            code=request.code,
+            history=request.history,
+            user_level=current_user.level,
+            skill_progress=skill_progress,
+        )
 
     new_history = list(request.history) + [
         ChatMessage(role="user", content=request.message),

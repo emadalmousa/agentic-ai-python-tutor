@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-from core.database import get_db, Base, engine
+from core.database import get_db
 from models import User, LearningSession, StudentSkillProgress, LearningEvent, ExerciseCompletion, SkillTestResult
 
 router = APIRouter(prefix="/admin", tags=["admin"])

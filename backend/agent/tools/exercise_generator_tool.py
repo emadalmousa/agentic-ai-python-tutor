@@ -63,7 +63,7 @@ def generate_exercise(
     ))
     response = llm.invoke([system, human])
     try:
-        result = _parse_json(response.content)
+        result = _parse_json(str(response.content))
         # Ensure all required fields are present
         for field in ("title", "description", "expected_output", "hint"):
             if not result.get(field):

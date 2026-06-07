@@ -31,4 +31,4 @@ def exercise_tool(code: str, error_found: bool, suggestion: str) -> str:
         )
     human = HumanMessage(content=context)
     response = llm.invoke([system, human])
-    return response.content
+    return str(response.content)

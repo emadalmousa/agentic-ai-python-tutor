@@ -79,7 +79,7 @@ def evaluate_skill_test(
     ))
     try:
         cr_response = llm.invoke([cr_system, cr_human])
-        cr_result = _parse_json(cr_response.content)
+        cr_result = _parse_json(str(cr_response.content))
         code_reading_correct_flag = bool(cr_result.get("correct", False))
         code_reading_explanation = cr_result.get("explanation", "")
         if code_reading_correct_flag:
@@ -129,7 +129,7 @@ def evaluate_skill_test(
     ))
     try:
         mt_response = llm.invoke([mt_system, mt_human])
-        mt_result = _parse_json(mt_response.content)
+        mt_result = _parse_json(str(mt_response.content))
         mini_task_correct = bool(mt_result.get("correct", False))
         mini_task_explanation = mt_result.get("explanation", "")
         if mini_task_correct:

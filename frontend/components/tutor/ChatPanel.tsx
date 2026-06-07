@@ -56,6 +56,8 @@ interface Props {
   analyzing?: boolean
   uploading?: boolean
   materialName?: string | null
+  hasPdf?: boolean
+  onOpenPdf?: () => void
   error: string | null
   bottomRef: React.RefObject<HTMLDivElement | null>
   fileInputRef: React.RefObject<HTMLInputElement | null>
@@ -69,7 +71,7 @@ interface Props {
 }
 
 export default function ChatPanel({
-  history, input, loading, analyzing, uploading, materialName,
+  history, input, loading, analyzing, uploading, materialName, hasPdf, onOpenPdf,
   error, bottomRef, fileInputRef,
   onInput, onSend, onReset, onOpenFilePicker, onFileInput, onInsertCode, dark,
 }: Props) {
@@ -108,9 +110,13 @@ export default function ChatPanel({
           <div className="w-2 h-2 rounded-full bg-indigo-500" />
           <span className={`text-sm font-semibold ${textCol}`}>Python Tutor</span>
           {materialName && (
-            <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${dark ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+            <button
+              onClick={hasPdf ? onOpenPdf : undefined}
+              title={hasPdf ? "PDF öffnen" : undefined}
+              className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-opacity ${hasPdf ? "cursor-pointer hover:opacity-75" : "cursor-default"} ${dark ? "bg-amber-500/15 text-amber-400 border-amber-500/30" : "bg-amber-50 text-amber-700 border-amber-200"}`}
+            >
               📚 {materialName}
-            </span>
+            </button>
           )}
         </div>
         {history.length > 0 && (

@@ -104,7 +104,7 @@ def submit_level_test(
     if not row:
         raise HTTPException(status_code=404, detail="Test-Session nicht gefunden.")
 
-    test_data = row.generated_test
+    test_data = row.generated_test or {}
     mini_stdout, _ = run_user_code(data.mini_task_code)
 
     mc_questions = test_data.get("multiple_choice", [])

@@ -52,7 +52,7 @@ def generate_skill_test(skill_key: str, skill_label: str, user_level: str) -> st
     ))
     response = llm.invoke([system, human])
     try:
-        result = _parse_json(response.content)
+        result = _parse_json(str(response.content))
         # Validate structure minimally
         if "multiple_choice" not in result or len(result["multiple_choice"]) != 3:
             raise ValueError("multiple_choice must have exactly 3 questions")

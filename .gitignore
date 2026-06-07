@@ -36,3 +36,7 @@ Thumbs.db
 
 # RAG FAISS vectorstore (generated at runtime)
 backend/agent/rag/vectorstore/
+backend/agent/rag/*.faiss
+backend/agent/rag/*.pkl
+backend/rag_stores/
+rag_stores/

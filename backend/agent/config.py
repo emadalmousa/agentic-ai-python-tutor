@@ -2,6 +2,7 @@ import os
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
+from pydantic import SecretStr
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
@@ -17,7 +18,7 @@ def get_classifier_llm():
             import openai
             client = openai.OpenAI(api_key=api_key)
             client.models.list()
-            return ChatOpenAI(api_key=api_key, model="gpt-4o-mini", temperature=0)
+            return ChatOpenAI(api_key=SecretStr(api_key), model="gpt-4o-mini", temperature=0)
         except Exception as e:
             logger.warning("OpenAI nicht verfügbar für Klassifikation (%s) — Fallback auf Ollama", e)
     from langchain_ollama import ChatOllama
@@ -39,7 +40,7 @@ def get_llm():
             client.models.list()
             logger.info("OpenAI API aktiv — verwende gpt-4o")
             return ChatOpenAI(
-                api_key=api_key,
+                api_key=SecretStr(api_key),
                 model=os.getenv("LLM_MODEL", "gpt-4o"),
                 temperature=0,
             )
@@ -66,7 +67,7 @@ def get_embeddings():
             client = openai.OpenAI(api_key=api_key)
             client.models.list()
             logger.info("OpenAI API aktiv — verwende OpenAIEmbeddings")
-            return OpenAIEmbeddings(api_key=api_key)
+            return OpenAIEmbeddings(api_key=SecretStr(api_key))
         except Exception as e:
             logger.warning("OpenAI nicht verfügbar für Embeddings (%s) — Fallback auf Ollama", e)
 

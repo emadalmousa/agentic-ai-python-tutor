@@ -54,6 +54,6 @@ def get_hint(code: str, exercise_description: str, hint_level: int) -> str:
     ))
     try:
         response = llm.invoke([system, human])
-        return response.content
+        return str(response.content)
     except Exception:
         return "Ein Tipp ist gerade nicht verfügbar. Bitte versuche es erneut."

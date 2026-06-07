@@ -17,4 +17,4 @@ def explain_code_tool(code: str) -> str:
     ))
     human = HumanMessage(content=f"Code:\n```python\n{code}\n```")
     response = llm.invoke([system, human])
-    return response.content
+    return str(response.content)

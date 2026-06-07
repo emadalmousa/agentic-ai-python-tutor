@@ -66,7 +66,7 @@ export default function TutorView() {
   const router = useRouter()
   const {
     history, input, setInput,
-    loading, analyzing, uploading, materialName,
+    loading, analyzing, uploading, materialName, hasPdf, openPdf,
     error,
     send, analyze, reset,
     openFilePicker, handleFileInput, fileInputRef,
@@ -159,6 +159,8 @@ export default function TutorView() {
             analyzing={analyzing}
             uploading={uploading}
             materialName={materialName}
+            hasPdf={hasPdf}
+            onOpenPdf={openPdf}
             error={error}
             bottomRef={bottomRef}
             fileInputRef={fileInputRef}

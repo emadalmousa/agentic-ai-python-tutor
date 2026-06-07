@@ -2,7 +2,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from core.database import get_db
 from models.skill_progress import StudentSkillProgress, LearningEvent, FIXED_SKILLS, SKILL_TREE

@@ -22,7 +22,7 @@ def debug_code_tool(code: str) -> dict:
     ))
     human = HumanMessage(content=f"Code:\n```python\n{code}\n```")
     response = llm.invoke([system, human])
-    return _parse_debug_response(response.content)
+    return _parse_debug_response(str(response.content))
 
 
 def _parse_debug_response(content: str) -> dict:

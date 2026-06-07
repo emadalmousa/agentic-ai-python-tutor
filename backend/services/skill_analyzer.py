@@ -212,7 +212,7 @@ def analyze_skill(code: str, question: str = "") -> dict:
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=prompt_content),
         ])
-        raw = response.content if hasattr(response, "content") else str(response)
+        raw = str(response.content) if hasattr(response, "content") else str(response)
         result = _parse_llm_json(raw)
         if result:
             logger.info("LLM-Skill-Analyse erfolgreich: main_skill=%s score=%d", result["main_skill"], result["score"])

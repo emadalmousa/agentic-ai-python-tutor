@@ -43,7 +43,7 @@ def evaluate_exercise(
         ))
         response = llm.invoke([system, human])
         try:
-            return json.dumps(_parse_json(response.content), ensure_ascii=False)
+            return json.dumps(_parse_json(str(response.content)), ensure_ascii=False)
         except (json.JSONDecodeError, ValueError):
             return json.dumps({
                 "result": "falsch",
@@ -80,7 +80,7 @@ def evaluate_exercise(
         ))
         response = llm.invoke([system, human])
         try:
-            result = _parse_json(response.content)
+            result = _parse_json(str(response.content))
             # Normalise the result field — LLM may return the literal placeholder
             if result.get("result") == "richtig_oder_teilweise":
                 result["result"] = "richtig"
@@ -125,7 +125,7 @@ def evaluate_exercise(
     ))
     response = llm.invoke([system, human])
     try:
-        result = _parse_json(response.content)
+        result = _parse_json(str(response.content))
         if result.get("result") not in ("richtig", "teilweise", "falsch"):
             result["result"] = "falsch"
         if not result.get("what_was_good"):

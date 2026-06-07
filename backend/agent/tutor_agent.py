@@ -1,6 +1,8 @@
+import os
 import re
 
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
 
 from agent.config import get_llm
@@ -71,11 +73,12 @@ def _build_chat_tools(user_level: str, skill_progress: list[dict]) -> list:
     """Baut Chat-Tools mit eingebettetem User-Kontext (Closure)."""
     skill_keys = ", ".join(s["skill_key"] for s in skill_progress) if skill_progress else "keine"
 
-    @tool
+    @tool(description=(
+        "Generiert eine personalisierte Übungsaufgabe basierend auf dem Lernfortschritt des Studenten. "
+        f"Verfügbare skill_keys: {skill_keys}. Wähle einen passenden skill_key aus der Liste."
+    ))
     def suggest_personalized_exercise(skill_key: str) -> str:
-        f"""Generiert eine personalisierte Übungsaufgabe basierend auf dem Lernfortschritt des Studenten.
-        Verfügbare skill_keys: {skill_keys}.
-        Wähle einen passenden skill_key aus der Liste."""
+        """Generiert eine personalisierte Übungsaufgabe."""
         skill = next((s for s in skill_progress if s["skill_key"] == skill_key), None)
         if not skill:
             return f"Skill '{skill_key}' nicht gefunden. Verfügbare Skills: {skill_keys}"
@@ -86,11 +89,12 @@ def _build_chat_tools(user_level: str, skill_progress: list[dict]) -> list:
             "completed_exercise_titles": skill.get("completed_titles", ""),
         })
 
-    @tool
+    @tool(description=(
+        "Generiert einen Skill-Test zur Klausurvorbereitung. "
+        f"Verfügbare skill_keys: {skill_keys}. Wähle einen passenden skill_key aus der Liste."
+    ))
     def suggest_skill_test(skill_key: str) -> str:
-        f"""Generiert einen Skill-Test zur Klausurvorbereitung.
-        Verfügbare skill_keys: {skill_keys}.
-        Wähle einen passenden skill_key aus der Liste."""
+        """Generiert einen Skill-Test."""
         skill = next((s for s in skill_progress if s["skill_key"] == skill_key), None)
         if not skill:
             return f"Skill '{skill_key}' nicht gefunden. Verfügbare Skills: {skill_keys}"
@@ -129,7 +133,6 @@ def _build_chat_system_prompt(user_level: str, skill_progress: list[dict], code:
         "- exercise_tool: Für einfache Code-basierte Übungen\n"
         "- suggest_personalized_exercise: Wenn Student üben will (nutzt Lernfortschritt)\n"
         "- suggest_skill_test: Wenn Student Klausur üben oder sich testen will\n"
-        "- rag_tool: Bei Fragen zum hochgeladenen Lernmaterial\n"
         "Du kannst auch direkt antworten ohne Tool wenn kein Tool passt."
     )
 
@@ -159,13 +162,49 @@ def run_chat(
     return agent_messages[-1].content if agent_messages else ""
 
 
+def run_chat_with_context(
+    message: str,
+    code: str,
+    history: list,
+    user_level: str,
+    rag_context: str,
+) -> str:
+    """Beantwortet eine Frage direkt mit dem gefundenen PDF-Inhalt — kein Agent, kein Tool-Aufruf."""
+    llm = get_llm()
+
+    history_text = ""
+    for msg in history[-6:]:  # letzte 3 Runden für Kontext
+        role = msg.role if hasattr(msg, "role") else msg.get("role", "user")
+        content = msg.content if hasattr(msg, "content") else msg.get("content", "")
+        prefix = "Schüler" if role == "user" else "Tutor"
+        history_text += f"{prefix}: {content}\n"
+
+    system = SystemMessage(content=(
+        "Du bist ein freundlicher Python-Tutor. Antworte auf Deutsch, klar und verständlich.\n"
+        f"Student-Level: {user_level}\n"
+        f"Aktueller Code des Schülers:\n```python\n{code}\n```"
+    ))
+    human = HumanMessage(content=(
+        f"Aus dem hochgeladenen Lernmaterial wurden folgende relevante Passagen gefunden:\n\n"
+        f"{rag_context}\n\n"
+        f"{'Bisheriger Chatverlauf:' + chr(10) + history_text if history_text else ''}"
+        f"Frage des Schülers: {message}\n\n"
+        "Beantworte die Frage auf Basis der Passagen aus dem Lernmaterial. "
+        "Wenn die Antwort direkt im Material steht, zitiere die relevante Stelle und erkläre sie. "
+        "Ergänze mit deinem Wissen nur wenn nötig."
+    ))
+
+    response = llm.invoke([system, human])
+    return str(response.content)
+
+
 def run_analysis(code: str) -> dict:
     """ReAct-Agent analysiert den Code mit allen verfügbaren Tools und gibt ein strukturiertes Ergebnis zurück."""
     try:
         llm = get_llm()
         tools = _build_tools()
         agent = create_agent(llm, tools, system_prompt=_SYSTEM_PROMPT)
-        result = agent.invoke({
+        result = agent.invoke({  # type: ignore[arg-type]
             "messages": [("human", f"Analysiere diesen Python-Code:\n```python\n{code}\n```")]
         })
         messages = result.get("messages", [])

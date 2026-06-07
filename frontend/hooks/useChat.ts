@@ -46,33 +46,80 @@ async function saveSession(payload: {
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string
 
+const _HISTORY_KEY = "ki_tutor_chat_history"
+const _MATERIAL_KEY = "ki_tutor_material_name"
+
+// PDF blob survives SPA navigation (module scope), lost on hard reload
+let _pdfBlob: Blob | null = null
+
 export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []) {
   const { user } = useAuth()
   // If initialHistory starts with a user message, treat it as a pending auto-send
   const pendingMsg = initialHistory.length === 1 && initialHistory[0].role === "user"
     ? initialHistory[0].content : null
-  const [history, setHistory] = useState<ChatMessage[]>(pendingMsg ? [] : initialHistory)
+  const hasRedirect = initialHistory.length > 0
+
+  const [history, setHistory] = useState<ChatMessage[]>(() => {
+    if (hasRedirect) return pendingMsg ? [] : initialHistory
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(_HISTORY_KEY) : null
+      return raw ? (JSON.parse(raw) as ChatMessage[]) : []
+    } catch { return [] }
+  })
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [materialName, setMaterialName] = useState<string | null>(null)
+  const [materialName, setMaterialName] = useState<string | null>(() => {
+    try {
+      return typeof window !== "undefined" ? localStorage.getItem(_MATERIAL_KEY) : null
+    } catch { return null }
+  })
+  // true = blob is available (can open PDF), false = no blob (e.g. after hard reload)
+  const [hasPdf, setHasPdf] = useState<boolean>(() => _pdfBlob !== null)
   const [error, setError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  function persistHistory(next: ChatMessage[]) {
+    setHistory(next)
+    try { localStorage.setItem(_HISTORY_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+  }
+
+  function persistMaterialName(name: string | null, blob: Blob | null = null) {
+    setMaterialName(name)
+    setHasPdf(blob !== null)
+    _pdfBlob = blob
+    try {
+      if (name) localStorage.setItem(_MATERIAL_KEY, name)
+      else localStorage.removeItem(_MATERIAL_KEY)
+    } catch { /* ignore */ }
+  }
+
+  function openPdf() {
+    if (!_pdfBlob) return
+    const url = URL.createObjectURL(_pdfBlob)
+    window.open(url, "_blank", "noopener")
+    // revoke after a short delay so the browser has time to load it
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [history, loading, analyzing])
+
+  function getToken(): string | undefined {
+    return localStorage.getItem("ki_tutor_token") ?? undefined
+  }
 
   // Auto-send pending topic explanation on mount
   useEffect(() => {
     if (!pendingMsg) return
     setLoading(true)
     const userMsg: ChatMessage = { role: "user", content: pendingMsg }
-    setHistory([userMsg])
-    sendChatMessage({ code, message: pendingMsg, history: [] })
-      .then((data) => setHistory(data.history))
+    persistHistory([userMsg])
+    sendChatMessage({ code, message: pendingMsg, history: [] }, getToken())
+      .then((data) => persistHistory(data.history))
       .catch(() => setError(t("tutor.backendError")))
       .finally(() => setLoading(false))
   }, [])
@@ -83,11 +130,11 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     setInput("")
     setError(null)
     const optimistic: ChatMessage[] = [...history, { role: "user", content: msg }]
-    setHistory(optimistic)
+    persistHistory(optimistic)
     setLoading(true)
     try {
-      const data = await sendChatMessage({ code, message: msg, history })
-      setHistory(data.history)
+      const data = await sendChatMessage({ code, message: msg, history }, getToken())
+      persistHistory(data.history)
 
       if (user) {
         const lastTwo = data.history.slice(-2)
@@ -100,7 +147,7 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
       }
     } catch {
       setError(t("tutor.backendError"))
-      setHistory(history)
+      persistHistory(history)
     } finally {
       setLoading(false)
     }
@@ -110,12 +157,12 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     if (loading || analyzing) return
     setError(null)
     const trigger: ChatMessage = { role: "user", content: `🔍 ${t("tutor.analyzeAction")}` }
-    setHistory(prev => [...prev, trigger])
+    persistHistory([...history, trigger])
     setAnalyzing(true)
     try {
       const data = await analyzeCode({ code })
       const formatted = formatAnalysis(data)
-      setHistory(prev => [...prev, { role: "assistant", content: formatted }])
+      persistHistory([...history, trigger, { role: "assistant", content: formatted }])
 
       if (user) {
         const errors = data.error_found && data.error_type ? [data.error_type] : []
@@ -131,7 +178,7 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
       }
     } catch {
       setError(t("tutor.analyzeError"))
-      setHistory(prev => prev.slice(0, -1))
+      persistHistory(history)
     } finally {
       setAnalyzing(false)
     }
@@ -145,17 +192,17 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     }
     setError(null)
     setUploading(true)
-    setMaterialName(file.name)
+    persistMaterialName(file.name, file)
     try {
-      const data = await uploadMaterial(file)
+      const data = await uploadMaterial(file, getToken())
       const msg: ChatMessage = {
         role: "assistant",
         content: `📚 **${t("tutor.materialLoaded", { name: file.name })}**\n\n${t("tutor.materialChunks", { chunks: data.chunks })}`,
       }
-      setHistory(prev => [...prev, msg])
+      persistHistory([...history, msg])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t("tutor.uploadError"))
-      setMaterialName(null)
+      persistMaterialName(null)
     } finally {
       setUploading(false)
     }
@@ -172,15 +219,15 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
   }
 
   function reset() {
-    setHistory([])
+    persistHistory([])
     setInput("")
     setError(null)
-    setMaterialName(null)
+    persistMaterialName(null)
   }
 
   return {
     history, input, setInput,
-    loading, analyzing, uploading, materialName,
+    loading, analyzing, uploading, materialName, hasPdf, openPdf,
     error,
     send, analyze, reset,
     openFilePicker, handleFileInput, fileInputRef,
