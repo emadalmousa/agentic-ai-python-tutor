@@ -1,3 +1,4 @@
+"""RAG-Tool: Sucht im pgvector-Index des Users nach relevanten PDF-Passagen."""
 from langchain_core.tools import tool
 
 
@@ -9,6 +10,7 @@ def rag_tool(query: str) -> str:
     Gibt die relevanten Textstellen zurück, oder einen Hinweis wenn kein Material verfügbar ist.
     """
     try:
+        # Lazy-Import damit vectorstore nur bei Bedarf geladen wird
         from agent.rag.vectorstore import load, query_with_pages
 
         index_data = load()
@@ -19,6 +21,7 @@ def rag_tool(query: str) -> str:
         if not results:
             return "Keine relevanten Passagen im Lernmaterial gefunden."
 
+        # Ergebnisse mit Seitenreferenzen formatieren
         parts = []
         for text, page in results:
             ref = f"[Seite {page}]" if page > 0 else ""

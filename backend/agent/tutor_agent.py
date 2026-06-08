@@ -1,3 +1,10 @@
+"""Tutor-Agent: orchestriert LLM-Tools für Code-Analyse und Chat.
+
+Zwei Haupt-Entry-Points:
+  - run_analysis(): ReAct-Agent analysiert Code mit 3 Tools (explain, debug, exercise)
+  - run_chat(): ReAct-Agent beantwortet Chat-Nachrichten mit dynamischen personalisierten Tools
+  - run_chat_with_context(): Direktes LLM-Gespräch wenn RAG-Kontext verfügbar ist
+"""
 import os
 import re
 
@@ -18,6 +25,7 @@ from agent.tools.skill_test_generator_tool import generate_skill_test
 
 
 class ServiceUnavailableError(Exception):
+    """Wird geworfen wenn das LLM nicht erreichbar ist (Verbindungsfehler)."""
     pass
 
 
@@ -46,11 +54,12 @@ Nächste Übung: <kurze Aufgabe, max. 3 Sätze>
 def _parse_agent_output(text: str) -> dict:
     """Extrahiert die 5 Pflichtfelder aus der Agenten-Antwort. Gibt Defaults zurück wenn Felder fehlen."""
     def extract(label: str) -> str | None:
+        # Regex sucht nach "Label: Inhalt" bis zum nächsten Label oder Textende
         pattern = rf"(?i){re.escape(label)}[:\s]+(.+?)(?=\n[A-ZÄÖÜa-zäöü][^\n]*:|$)"
         match = re.search(pattern, text, re.DOTALL)
         return match.group(1).strip() if match else None
 
-    explanation = extract("Erklärung") or text
+    explanation = extract("Erklärung") or text  # Fallback: gesamter Text wenn kein Feld gefunden
     error_found_raw = (extract("Fehler gefunden") or "nein").lower()
     error_type = extract("Fehlertyp") or "Kein Fehler"
     suggestion = extract("Verbesserungsvorschlag") or "Keine Angabe"
@@ -58,7 +67,7 @@ def _parse_agent_output(text: str) -> dict:
 
     return {
         "explanation": explanation,
-        "error_found": "ja" in error_found_raw,
+        "error_found": "ja" in error_found_raw,  # String "ja" → bool
         "error_type": error_type,
         "suggestion": suggestion,
         "next_exercise": next_exercise,
@@ -66,11 +75,17 @@ def _parse_agent_output(text: str) -> dict:
 
 
 def _build_tools() -> list:
+    """Gibt die 3 Basis-Tools für die Code-Analyse zurück (explain, debug, exercise)."""
     return [explain_code_tool, debug_code_tool, exercise_tool]
 
 
 def _build_chat_tools(user_level: str, skill_progress: list[dict]) -> list:
-    """Baut Chat-Tools mit eingebettetem User-Kontext (Closure)."""
+    """Baut Chat-Tools mit eingebettetem User-Kontext (Closure).
+
+    suggest_personalized_exercise und suggest_skill_test werden als Closures definiert,
+    damit sie direkten Zugriff auf user_level und skill_progress haben ohne Parameter-Übergabe.
+    Das rag_tool wird nur geladen wenn ein Vektorstore auf Disk existiert.
+    """
     skill_keys = ", ".join(s["skill_key"] for s in skill_progress) if skill_progress else "keine"
 
     @tool(description=(
@@ -82,6 +97,7 @@ def _build_chat_tools(user_level: str, skill_progress: list[dict]) -> list:
         skill = next((s for s in skill_progress if s["skill_key"] == skill_key), None)
         if not skill:
             return f"Skill '{skill_key}' nicht gefunden. Verfügbare Skills: {skill_keys}"
+        # generate_exercise.invoke() ruft das LangChain-Tool direkt auf (kein Agent-Umweg)
         return generate_exercise.invoke({
             "skill_key": skill_key,
             "skill_label": skill["skill_label"],
@@ -107,6 +123,7 @@ def _build_chat_tools(user_level: str, skill_progress: list[dict]) -> list:
     tools = [explain_code_tool, debug_code_tool, exercise_tool,
              suggest_personalized_exercise, suggest_skill_test]
 
+    # RAG-Tool nur laden wenn der Vektorstore für diesen User existiert
     vectorstore_path = os.getenv(
         "RAG_VECTORSTORE_PATH",
         os.path.join(os.path.dirname(__file__), "..", "vectorstore"),
@@ -119,6 +136,8 @@ def _build_chat_tools(user_level: str, skill_progress: list[dict]) -> list:
 
 
 def _build_chat_system_prompt(user_level: str, skill_progress: list[dict], code: str) -> str:
+    """Erstellt den System-Prompt für den Chat-Agenten mit personalisierten Schüler-Infos."""
+    # Schwache Bereiche helfen dem Agenten, die richtigen Tools zu priorisieren
     partial_skills = [s["skill_label"] for s in skill_progress if s["status"] in ("partial", "not_understood")]
     weak_info = ", ".join(partial_skills) if partial_skills else "keine bekannten Schwächen"
 
@@ -144,21 +163,27 @@ def run_chat(
     user_level: str,
     skill_progress: list[dict],
 ) -> str:
-    """ReAct-Agent beantwortet Chat-Nachrichten mit dynamischer Tool-Selektion."""
+    """ReAct-Agent beantwortet Chat-Nachrichten mit dynamischer Tool-Selektion.
+
+    Der Agent entscheidet selbst welche Tools er aufruft (ReAct-Muster: Reason + Act).
+    Die Chat-History wird als Liste von (role, content)-Tuples übergeben.
+    """
     llm = get_llm()
     tools = _build_chat_tools(user_level, skill_progress)
     system_prompt = _build_chat_system_prompt(user_level, skill_progress, code)
     agent = create_agent(llm, tools, system_prompt=system_prompt)
 
+    # History-Objekte können Pydantic-Modelle (mit .role) oder Dicts sein → beide behandeln
     messages = []
     for msg in history:
         role = msg.role if hasattr(msg, "role") else msg.get("role", "user")
         content = msg.content if hasattr(msg, "content") else msg.get("content", "")
         messages.append((role, content))
-    messages.append(("human", message))
+    messages.append(("human", message))  # aktuelle Nachricht ans Ende
 
     result = agent.invoke({"messages": messages})
     agent_messages = result.get("messages", [])
+    # Letzte Nachricht ist die finale Antwort des Agenten
     return agent_messages[-1].content if agent_messages else ""
 
 
@@ -169,11 +194,16 @@ def run_chat_with_context(
     user_level: str,
     rag_context: str,
 ) -> str:
-    """Beantwortet eine Frage direkt mit dem gefundenen PDF-Inhalt — kein Agent, kein Tool-Aufruf."""
+    """Beantwortet eine Frage direkt mit dem gefundenen PDF-Inhalt — kein Agent, kein Tool-Aufruf.
+
+    Wird verwendet wenn _get_rag_context() relevante Passagen gefunden hat.
+    Direktes LLM-Gespräch ist schneller als Agent-Loop für RAG-Antworten.
+    Nur die letzten 6 Nachrichten (3 Runden) werden als Kontext übergeben.
+    """
     llm = get_llm()
 
     history_text = ""
-    for msg in history[-6:]:  # letzte 3 Runden für Kontext
+    for msg in history[-6:]:  # letzte 3 Runden — mehr würde den Kontext unnötig verlängern
         role = msg.role if hasattr(msg, "role") else msg.get("role", "user")
         content = msg.content if hasattr(msg, "content") else msg.get("content", "")
         prefix = "Schüler" if role == "user" else "Tutor"
@@ -199,7 +229,12 @@ def run_chat_with_context(
 
 
 def run_analysis(code: str) -> dict:
-    """ReAct-Agent analysiert den Code mit allen verfügbaren Tools und gibt ein strukturiertes Ergebnis zurück."""
+    """ReAct-Agent analysiert den Code mit allen verfügbaren Tools und gibt ein strukturiertes Ergebnis zurück.
+
+    Der Agent ruft explain_code_tool, debug_code_tool und exercise_tool auf und
+    parst die finale Textantwort in ein strukturiertes Dict.
+    Bei Verbindungsfehlern wird ServiceUnavailableError geworfen (→ 503-Response).
+    """
     try:
         llm = get_llm()
         tools = _build_tools()
@@ -211,6 +246,7 @@ def run_analysis(code: str) -> dict:
         final_text = messages[-1].content if messages else ""
         return _parse_agent_output(final_text)
     except Exception as e:
+        # Verbindungsfehler → 503 statt 500 damit das Frontend klar kommunizieren kann
         if _is_connection_error(e):
             raise ServiceUnavailableError(
                 "LLM ist nicht erreichbar. Bitte prüfe die KI-Engine-Konfiguration."
@@ -219,7 +255,9 @@ def run_analysis(code: str) -> dict:
 
 
 def _is_connection_error(e: Exception) -> bool:
+    """Erkennt ob eine Exception ein Netzwerk/Verbindungsproblem zum LLM ist."""
     msg = str(e).lower()
     class_name = type(e).__name__.lower()
     keywords = ["connection", "connect", "refused", "unreachable", "timeout"]
+    # Prüft sowohl die Exception-Message als auch den Klassennamen (z.B. ConnectionRefusedError)
     return any(kw in msg or kw in class_name for kw in keywords)

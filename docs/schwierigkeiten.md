@@ -2,6 +2,10 @@
 
 ## TODOs
 
+- [x] Per-User PDF-Index: jeder User hat seinen eigenen FAISS-Index unter `rag_stores/{user_id}/`
+- [x] Upload-Endpoint JWT-geschützt: `get_current_user` Dependency
+- [x] Chat-History und materialName persistieren in localStorage (useChat.ts)
+- [x] PDF-Badge im Chat klickbar: öffnet PDF im neuen Tab via Blob-URL
 - [ ] Chat-Filter anpassen: Nachrichten filtern/sortieren
 - [ ] PDF: Seitenbereich-Auswahl beim Upload (z.B. "Seite 1-50") für große PDFs
 :await file.read() lädt die Bytes in den Arbeitsspeicher des laufenden uvicorn/Python-Prozesses. Das ist Serverspeicher, nicht der RAM deines Computers, auf dem der Browser läuft. Der

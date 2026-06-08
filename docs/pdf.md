@@ -7,7 +7,7 @@ Der PDF-Upload-Prozess verwandelt eine beliebige PDF-Datei in ein durchsuchbares
 Der Prozess besteht aus **5 Phasen**, von denen nur die letzte (Embedding) das LLM benötigt:
 
 ```
-PDF-Datei → Text extrahieren → Chunks aufteilen → Vektoren berechnen → FAISS speichern → Chat sucht darin
+PDF-Datei → Text extrahieren → Chunks aufteilen → Vektoren berechnen → pgvector (PostgreSQL) speichern → Chat sucht darin
 ```
 
 ---
@@ -48,17 +48,19 @@ Während des Uploads wird der gesamte Chat-Bereich gesperrt (`busy = loading || 
 
 **Datei:** `frontend/lib/api.ts`
 
-Die Datei wird als `multipart/form-data` an das Backend geschickt. Kein Auth-Token notwendig — der Upload-Endpoint ist öffentlich:
+Die Datei wird als `multipart/form-data` an das Backend geschickt. Ein Bearer-Token ist erforderlich — der Endpoint ist JWT-geschützt:
 
 ```typescript
-export async function uploadMaterial(file: File): Promise<UploadResponse> {
+export async function uploadMaterial(file: File, token?: string): Promise<UploadResponse> {
   const form = new FormData()
   form.append("file", file)          // Schlüssel muss "file" heißen (passt zum FastAPI-Parameter)
+  const headers: Record<string, string> = {}
+  if (token) headers["Authorization"] = `Bearer ${token}`
 
   const res = await fetch(`${API_URL}/tutor/upload-material`, {
     method: "POST",
+    headers,
     body: form,
-    // Content-Type wird automatisch auf multipart/form-data gesetzt (mit Boundary)
   })
 
   if (!res.ok) {
@@ -89,7 +91,16 @@ const msg: ChatMessage = {
 POST /tutor/upload-material
 ```
 
-FastAPI nimmt die multipart-Form-Daten entgegen und stellt sie als `UploadFile` bereit:
+FastAPI nimmt die multipart-Form-Daten entgegen und stellt sie als `UploadFile` bereit. Der Endpoint erfordert einen gültigen JWT-Token:
+
+```python
+@router.post("/upload-material", response_model=UploadResponse)
+async def upload_material(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+```
+
+Die User-ID des eingeloggten Nutzers wird zu `build_and_save()` übergeben.
 
 ### 2.1 Validierung (kein LLM)
 
@@ -243,55 +254,50 @@ def get_embeddings():
 - OpenAI verfügbar → `text-embedding-ada-002` (1536 Dimensionen, hohe Qualität)
 - OpenAI nicht verfügbar → Ollama lokal (Dimension abhängig vom Modell, z.B. llama3.2: 3072)
 
-### 5.2 Embedding berechnen und FAISS-Index aufbauen
+### 5.2 Embedding berechnen und pgvector-Index aufbauen
 
 ```python
-def build_and_save(chunks: list[tuple[str, int]]) -> None:
-    texts = [c for c, _ in chunks]              # Nur die Texte für das Embedding
+def build_and_save(chunks: list[dict], user_id: int) -> None:
+    texts = [c["text"] for c in chunks]         # Nur die Texte für das Embedding
+    metadatas = [{"page": c["page"]} for c in chunks]  # Seitennummer als Metadaten
 
     embeddings_model = get_embeddings()
-    vectors = embeddings_model.embed_documents(texts)  # ← LLM-Aufruf: Text → Zahlenvektor
+    # PGVector.from_texts ruft embed_documents() intern auf → LLM-Aufruf: Text → Zahlenvektor
     #  Beispiel: "Python ist eine Sprache" → [0.021, -0.153, 0.847, ...]
     #                                          ↑ 1536 oder 3072 Zahlen pro Chunk
 
-    vectors_array = np.array(vectors, dtype="float32")
-
-    dimension = vectors_array.shape[1]          # Dimension des Embedding-Modells
-    index = faiss.IndexFlatL2(dimension)        # L2-Distanz (euklidische Ähnlichkeit)
-    index.add(vectors_array)                    # Alle Vektoren in den Index laden
+    PGVector.from_texts(
+        texts=texts,
+        embedding=embeddings_model,
+        metadatas=metadatas,
+        collection_name=f"user_{user_id}",   # Pro-User-Isolation via Collection-Name
+        connection=_get_connection(),          # postgresql+psycopg://... (psycopg3-Format)
+        pre_delete_collection=True,           # Alten Index löschen → frischer Upload
+    )
 ```
 
-**Was `embed_documents()` macht:**
+**Was `PGVector.from_texts()` macht:**
 - Jeder Text-Chunk wird in einen hochdimensionalen Zahlenvektor umgewandelt
 - Texte mit ähnlicher Bedeutung landen geometrisch nah beieinander
 - `"Python Variable"` und `"Variable in Python deklarieren"` haben einen ähnlichen Vektor
 - Das ist die Grundlage für semantische Suche (nicht nur Keyword-Suche)
 
-### 5.3 Auf Disk speichern
+### 5.3 In PostgreSQL speichern
 
 ```python
-    vectorstore_path = Path(_get_vectorstore_path())
-    # Standard: backend/agent/rag/vectorstore/
-    # Überschreibbar mit RAG_VECTORSTORE_PATH env var
-
-    vectorstore_path.mkdir(parents=True, exist_ok=True)
-
-    # FAISS-Index: die rohen Vektoren
-    faiss.write_index(index, str(vectorstore_path / "index.faiss"))
-
-    # Chunk-Metadaten: Texte + Seitennummern
-    with open(vectorstore_path / "chunks.pkl", "wb") as f:
-        pickle.dump(chunks, f)  # [(text, page_number), ...]
+# PGVector speichert automatisch in zwei PostgreSQL-Tabellen:
+# langchain_pg_collection → { name: "user_42", ... }
+# langchain_pg_embedding  → { collection_id, embedding: vector, document: text, cmetadata: {"page": 3} }
 ```
 
-**Zwei Dateien werden gespeichert:**
+**PostgreSQL-Tabellen:**
 
-| Datei | Inhalt | Größe (Beispiel) |
-|-------|--------|-----------------|
-| `index.faiss` | Nur die Zahlenvektoren (binär) | ~1–5 MB pro 100 Chunks |
-| `chunks.pkl` | Original-Texte + Seitennummern | ~200 KB pro 100 Chunks |
+| Tabelle | Inhalt |
+|---------|--------|
+| `langchain_pg_collection` | Index-Name (`user_<id>`) und UUID |
+| `langchain_pg_embedding` | Vektoren, Original-Texte und Seitennummern (cmetadata) |
 
-Diese zwei Dateien bilden zusammen den vollständigen Index. Beim nächsten Start des Backends werden sie automatisch geladen.
+Der Index lebt in PostgreSQL — kein Filesystem, kein Datenverlust bei Redeploy.
 
 ---
 
@@ -310,34 +316,48 @@ Das Frontend zeigt im Chat:
 
 ## Phase 7 — Wie die Suche danach funktioniert
 
-**Dateien:** `backend/agent/rag/vectorstore.py`, `backend/routers/tutor.py`
+**Dateien:** `backend/agent/rag/vectorstore.py`, `backend/routers/tutor.py`, `backend/agent/tutor_agent.py`
 
-### 7.1 Normaler Chat: Semantische Suche via `rag_tool`
+### 7.1 Chat mit PDF: Direkter LLM-Aufruf via `_get_rag_context()`
 
 ```python
-# rag_tool.py — wird vom Agenten bei passenden Fragen aufgerufen
-def rag_tool(query: str) -> str:
-    index_data = load()           # index.faiss + chunks.pkl laden
-    passages = vs_query(index_data, query, top_k=3)
-    return "\n\n---\n\n".join(passages)
+# routers/tutor.py — bei jeder Chat-Anfrage
+rag_context = _get_rag_context(request.message, current_user.id)
+
+if rag_context:
+    # PDF hochgeladen → direkter LLM-Aufruf, KEIN Agent, KEIN ReAct-Loop
+    reply = run_chat_with_context(
+        message=request.message,
+        code=request.code,
+        history=request.history,
+        user_level=current_user.level,
+        rag_context=rag_context,
+    )
+else:
+    # Kein PDF → normaler ReAct-Agent mit Tools
+    reply = run_chat(message=..., code=..., history=..., ...)
 ```
 
 ```python
-# vectorstore.py — die eigentliche Suche
-def query_with_pages(index_data, question: str, top_k: int = 3):
-    query_vector = embeddings_model.embed_query(question)  # Frage → Vektor
-    query_array = np.array([query_vector], dtype="float32")
-
-    _, indices = index.search(query_array, top_k)  # k nächste Vektoren finden
-    return [chunks[i] for i in indices[0]]         # Zugehörige Texte zurückgeben
+# tutor_agent.py
+def run_chat_with_context(message, code, history, user_level, rag_context) -> str:
+    llm = get_llm()
+    system = SystemMessage(content="Du bist ein freundlicher Python-Tutor...")
+    human = HumanMessage(content=(
+        f"Aus dem hochgeladenen Lernmaterial wurden folgende relevante Passagen gefunden:\n\n"
+        f"{rag_context}\n\n"
+        f"Frage des Schülers: {message}\n\n"
+        "Beantworte die Frage auf Basis der Passagen aus dem Lernmaterial..."
+    ))
+    response = llm.invoke([system, human])
+    return str(response.content)
 ```
 
-**Ablauf bei einer Chat-Frage:**
-1. Nutzer schreibt: `"Wie funktioniert eine for-Schleife?"`
-2. Frage wird in einen Vektor umgewandelt (`embed_query`)
-3. FAISS sucht die 3 geometrisch nächsten Vektoren im Index (`top_k=3`)
-4. Die dazugehörigen Original-Texte werden als Kontext dem LLM gegeben
-5. Das LLM antwortet mit Bezug auf das Lernmaterial
+**Ablauf bei einer Chat-Frage wenn PDF hochgeladen:**
+1. `_get_rag_context(message, user_id)` sucht im pgvector-Index des Users
+2. Wenn Kontext gefunden → `run_chat_with_context()` aufgerufen (kein Agent)
+3. PDF-Chunks werden direkt in den Prompt eingebettet
+4. LLM antwortet mit Bezug auf das Lernmaterial — deterministisch, ohne ReAct-Loop
 
 ### 7.2 Seitenzahl-Suche: `"Erkläre Seite 5"`
 
@@ -345,7 +365,9 @@ def query_with_pages(index_data, question: str, top_k: int = 3):
 # tutor.py — _get_rag_context()
 _PAGE_PATTERN = re.compile(r"\b(?:seite|page|s\.)\s*(\d+)\b", re.IGNORECASE)
 
-def _get_rag_context(message: str) -> str:
+def _get_rag_context(message: str, user_id: int) -> str:
+    index_data = load(user_id)  # lädt pgvector-Collection user_{user_id} aus PostgreSQL
+    
     page_num = _extract_page_number(message)  # Erkennt "Seite 5", "page 5", "s. 5"
 
     if page_num is not None:
@@ -361,7 +383,7 @@ def _get_rag_context(message: str) -> str:
 
 Diese hybride Strategie kombiniert:
 - **Direkte Suche** (wenn Seitenzahl genannt wird) — 100% präzise
-- **Semantische Suche** (FAISS) — findet thematisch ähnliche Stellen
+- **Semantische Suche** (pgvector) — findet thematisch ähnliche Stellen
 
 ---
 
@@ -391,7 +413,7 @@ Nutzer klickt Büroklammer
         │  chunk_size=500, chunk_overlap=50
         │  → [("chunk text...", page_num), ...]
         ▼
-[Backend] build_and_save(chunks)
+[Backend] build_and_save(chunks, user_id)
         │
         ├─► get_embeddings()
         │     OpenAI verfügbar? → OpenAIEmbeddings (text-embedding-ada-002)
@@ -400,10 +422,9 @@ Nutzer klickt Büroklammer
         ├─► embed_documents(texts)   ← EINZIGER LLM-AUFRUF beim Upload
         │     ["chunk1", "chunk2", ...] → [[0.02, -0.15, ...], ...]
         │
-        ├─► faiss.IndexFlatL2 aufbauen + Vektoren hinzufügen
-        │
-        ├─► index.faiss speichern    (Vektoren, binär)
-        └─► chunks.pkl speichern     (Texte + Seitennummern)
+        ├─► PGVector.from_texts()
+        │     → langchain_pg_collection + langchain_pg_embedding (PostgreSQL)
+        │       collection_name: "user_42", cmetadata: {"page": 3}
         │
         ▼
 [HTTP]  { "status": "ok", "chunks": 42 }
@@ -412,7 +433,9 @@ Nutzer klickt Büroklammer
 [Frontend] Chat zeigt: "📚 dokument.pdf — 42 Chunks indexiert"
         │
         ▼
-[Ab jetzt] Jede Chat-Frage kann über rag_tool in diesem Index suchen
+[Ab jetzt] Jede Chat-Frage sucht automatisch im pgvector-Index des Users
+           → wenn Kontext gefunden: run_chat_with_context() — kein Agent
+           → wenn kein PDF:        run_chat() — ReAct-Agent mit Tools
 ```
 
 ---
@@ -423,7 +446,7 @@ Nutzer klickt Büroklammer
 |----------|----------|-----------|
 | `RAG_CHUNK_SIZE` | `500` | Maximale Zeichenanzahl pro Chunk |
 | `RAG_CHUNK_OVERLAP` | `50` | Überlapp zwischen aufeinanderfolgenden Chunks |
-| `RAG_VECTORSTORE_PATH` | `backend/agent/rag/vectorstore/` | Speicherort für index.faiss und chunks.pkl |
+| `DATABASE_URL` | `postgresql://app:app@localhost:5432/ki_tutor` | PostgreSQL-Verbindung (psycopg3-Format wird automatisch angepasst) |
 | `RAG_TOP_K` | `3` | Anzahl der zurückgegebenen Chunks bei Suche |
 | `OPENAI_API_KEY` | — | OpenAI-Key für Embeddings (Ollama-Fallback wenn nicht gesetzt) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama-Server-URL |
@@ -433,7 +456,68 @@ Nutzer klickt Büroklammer
 
 ## Wichtige Einschränkungen
 
-1. **Kein persistenter Multi-User-Support** — der FAISS-Index ist global. Ein neuer Upload überschreibt den vorherigen für alle Nutzer.
+1. **Per-User-Index** — jeder User hat seine eigene pgvector-Collection `user_{id}` in PostgreSQL. Ein neuer Upload überschreibt nur seine eigene Collection (`pre_delete_collection=True`).
 2. **Eingescannte PDFs** ohne Text-Layer funktionieren nicht — pypdf braucht einen Text-Layer (kein OCR).
 3. **RAM-Limit** — die gesamte PDF wird beim Upload in den RAM geladen.
-4. **Kein Hot-Reload** — der Index wird bei jedem `rag_tool`-Aufruf frisch von Disk geladen (kein In-Memory-Cache).
+4. **Kein Hot-Reload** — der Index wird bei jedem Aufruf frisch aus PostgreSQL geladen (kein In-Memory-Cache).
+5. **Render-Persistenz** — Vektoren überleben Redeploys, da sie in PostgreSQL gespeichert sind (kein Datenverlust wie bei Filesystem-basiertem FAISS).
+
+---
+
+## Zusammenfassung — Fokus LLM & LangChain
+
+### Was passiert wenn ein User ein PDF hochlädt?
+
+```
+User lädt PDF hoch
+        ↓
+1. PyPDF liest jede Seite → Text extrahieren
+        ↓
+2. Text in Chunks schneiden (500 Zeichen, 50 Überlappung)
+        ↓
+3. LangChain ruft Embedding-Modell auf (OpenAI / Ollama)
+        ↓
+4. PGVector speichert die Vektoren in PostgreSQL  →  collection: user_42
+```
+
+### Die Rolle von LangChain
+
+LangChain ist der **Vermittler** zwischen dem Text und dem LLM:
+
+| LangChain | Was es macht |
+|---|---|
+| `PGVector.from_texts()` | ruft Embedding-Modell auf, speichert Vektoren in PostgreSQL |
+| `PGVector(...)` | verbindet sich mit bestehender Collection in PostgreSQL |
+| `similarity_search()` | sucht semantisch ähnliche Chunks via pgvector |
+
+Ohne LangChain müsste man das alles selbst bauen — API-Aufrufe, Vektoren speichern, Ähnlichkeit berechnen.
+
+### Die Rolle des LLM (Embedding-Modell)
+
+Das LLM macht **Text → Zahlen**:
+
+```
+"for-Schleife wiederholt Code"  →  [0.23, -0.11, 0.87, ...]
+"Schleife läuft mehrmals"       →  [0.21, -0.09, 0.84, ...]  ← nah dran
+"Hund bellt laut"               →  [-0.92, 0.45, -0.33, ...]  ← weit weg
+```
+
+Ähnliche Bedeutung → ähnliche Zahlen. Das erlaubt semantische Suche.
+
+### Beim Chat danach
+
+```
+Schüler fragt: "Was ist eine Schleife?"
+        ↓
+LangChain: Frage → Embedding-Modell → Vektor
+        ↓
+pgvector (PostgreSQL) vergleicht gegen alle gespeicherten Vektoren
+        ↓
+Top-3 ähnlichste Chunks aus dem PDF zurück
+        ↓
+LLM (gpt-4o / Ollama) beantwortet Frage MIT diesem Kontext
+```
+
+### Kernaussage
+
+> Das PDF wird **einmalig** beim Upload in Vektoren umgewandelt und in PostgreSQL gespeichert. Bei jeder Chat-Frage sucht LangChain+pgvector semantisch die passenden Stellen — und das LLM antwortet dann auf Basis des echten Lernmaterials, nicht aus seinem allgemeinen Wissen. Die Vektoren überleben Redeploys, da sie in der Datenbank leben.

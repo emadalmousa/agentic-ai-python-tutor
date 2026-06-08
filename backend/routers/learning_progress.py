@@ -69,12 +69,19 @@ _SKILL_META: dict[str, dict] = {s["key"]: s for s in SKILL_TREE}
 
 
 def _build_progress_response(user_id: int, db: Session) -> ProgressResponse:
+    """Baut die vollständige Fortschrittsantwort für einen Studenten.
+
+    Lädt alle Skill-Zeilen aus der DB, befüllt fehlende Skills mit Defaults (score=0),
+    berechnet den Overall-Score als Durchschnitt und bestimmt den User-Status.
+    Unlock-Logik: Skill ist freigeschalten wenn kein Vorgänger (unlocks_after=None)
+    oder der Vorgänger einen Score >= 80 hat.
+    """
     rows = {
         r.skill_key: r
         for r in db.query(StudentSkillProgress).filter_by(user_id=user_id).all()
     }
 
-    # Build a score lookup for unlock checks
+    # Schneller Score-Lookup für Unlock-Checks ohne weitere DB-Abfragen
     scores_by_key: dict[str, int] = {key: (rows[key].score if key in rows else 0) for key, _ in FIXED_SKILLS}
 
     skills_out: list[SkillProgressOut] = []
@@ -82,19 +89,19 @@ def _build_progress_response(user_id: int, db: Session) -> ProgressResponse:
         row = rows.get(key)
         meta = _SKILL_META.get(key, {})
 
-        # Unlock logic: skill is unlocked if it has no predecessor (unlocks_after is None)
-        # or its predecessor has score >= 80
         unlocks_after = meta.get("unlocks_after")
         if unlocks_after is None:
+            # Kein Vorgänger → immer freigeschalten (Einstiegs-Skills)
             is_unlocked = True
         else:
+            # Vorgänger muss >= 80 Punkte haben
             predecessor_score = scores_by_key.get(unlocks_after, 0)
             is_unlocked = predecessor_score >= 80
 
         skills_out.append(SkillProgressOut(
             skill_key   = key,
             skill_label = label,
-            score       = row.score if row else 0,
+            score       = row.score if row else 0,         # 0 wenn noch kein Eintrag
             status      = row.status if row else "not_understood",
             updated_at  = row.updated_at.isoformat() if row and row.updated_at else None,
             level       = meta.get("level", "beginner"),
@@ -105,7 +112,7 @@ def _build_progress_response(user_id: int, db: Session) -> ProgressResponse:
     scores = [s.score for s in skills_out]
     overall = round(sum(scores) / len(scores)) if scores else 0
 
-    # Determine user_status
+    # User-Status: Anfänger/Fortgeschritten/Profi basierend auf Skill-Scores
     beginner_skills = [s for s in skills_out if s.level == "beginner"]
     all_max = all(s.score == 100 for s in skills_out)
     all_beginner_advanced = all(s.score >= 80 for s in beginner_skills)
@@ -117,6 +124,7 @@ def _build_progress_response(user_id: int, db: Session) -> ProgressResponse:
     else:
         user_status = "Anfänger"
 
+    # Letzte 5 Lern-Ereignisse für die Aktivitäts-Timeline
     recent = (
         db.query(LearningEvent)
         .filter_by(user_id=user_id)
@@ -127,7 +135,7 @@ def _build_progress_response(user_id: int, db: Session) -> ProgressResponse:
     recent_events = [
         {
             "skill_key":             e.skill_key,
-            "skill_label":           _SKILL_LABEL.get(e.skill_key, e.skill_key),
+            "skill_label":           _SKILL_LABEL.get(e.skill_key, e.skill_key),  # Fallback: key selbst
             "score":                 e.score,
             "mistakes":              e.mistakes or [],
             "feedback":              e.feedback,
@@ -175,27 +183,29 @@ def analyze_and_save(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Analysiert Code / Frage, erkennt den Skill, berechnet Score und
-    speichert das Ergebnis. Gibt den aktualisierten Gesamtfortschritt zurück.
+    """Analysiert Code/Frage, erkennt Skill, berechnet Score und speichert das Ergebnis.
+
+    Score-Aktualisierung: 70/30 gleitender Durchschnitt — neuer Wert hat 30 % Gewicht.
+    Das verhindert starke Schwankungen durch einzelne schlechte Submissions.
     """
     result = analyze_skill(data.code, data.question)
 
-    # Skill-Fortschritt aktualisieren (gleitender Durchschnitt mit neuem Score)
+    # Skill-Fortschritt mit gleitendem Durchschnitt aktualisieren
     skill_key = result["main_skill"]
     row = get_or_create_skill_progress(current_user.id, skill_key, db)
-    # Neuer Score = 70 % alter Wert + 30 % neuer Wert (sanfte Aktualisierung)
+    # 70 % alter Score + 30 % neuer Score (sanfte Aktualisierung)
+    # Wenn score=0 (neuer Skill): direkt den neuen Wert nehmen
     row.score  = round(row.score * 0.7 + result["score"] * 0.3) if row.score else result["score"]
     row.status = result["status"]
-    # Timestamp manuell setzen (server_default gilt nur beim INSERT)
+    # Timestamp manuell setzen — server_default greift nur beim ersten INSERT, nicht bei UPDATE
     from datetime import datetime, timezone
     row.updated_at = datetime.now(timezone.utc)
 
-    # Ereignis speichern
+    # Lern-Ereignis für Timeline speichern
     event = LearningEvent(
         user_id             = current_user.id,
         skill_key           = skill_key,
-        score               = result["score"],
+        score               = result["score"],  # Roh-Score (nicht geglättet) für Timeline
         mistakes            = result["mistakes"],
         feedback            = result["feedback"],
         recommended_exercise= result["recommended_next_exercise"],

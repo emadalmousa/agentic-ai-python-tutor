@@ -1,3 +1,8 @@
+"""Tutor-Router: Code-Analyse, Chat, Code-Ausführung und PDF-Upload.
+
+Alle Chat-Anfragen werden auf Python-Relevanz geprüft bevor das LLM aufgerufen wird.
+RAG-Kontext (vom hochgeladenen PDF) hat Vorrang vor dem Agent-Loop.
+"""
 import subprocess
 import sys
 import tempfile
@@ -34,7 +39,7 @@ async def upload_material(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ) -> UploadResponse:
-    """Lädt ein PDF als Lernmaterial hoch und speichert es als FAISS-Index für den eingeloggten User."""
+    """Lädt ein PDF als Lernmaterial hoch und speichert es als pgvector-Index für den eingeloggten User."""
     content_type = file.content_type or ""
     filename = file.filename or ""
     if content_type != "application/pdf" and not filename.lower().endswith(".pdf"):
@@ -63,6 +68,11 @@ async def upload_material(
 
 @router.post("/run", response_model=RunResponse)
 def run_code(request: RunRequest) -> RunResponse:
+    """Führt Schüler-Code in einer temporären Datei aus und gibt stdout/stderr zurück.
+
+    Temporäre Datei statt -c wird verwendet damit Multi-Zeilen-Code und Syntaxfehler
+    korrekt gemeldet werden (bessere Zeilennummern im Traceback).
+    """
     with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False, encoding="utf-8") as f:
         f.write(request.code)
         tmp_path = f.name
@@ -71,7 +81,7 @@ def run_code(request: RunRequest) -> RunResponse:
             [sys.executable, tmp_path],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=10,  # Schutz gegen Endlosschleifen
         )
         return RunResponse(
             stdout=result.stdout,
@@ -81,7 +91,7 @@ def run_code(request: RunRequest) -> RunResponse:
     except subprocess.TimeoutExpired:
         return RunResponse(stdout="", stderr="Timeout: Code lief länger als 10 Sekunden.", exit_code=1)
     finally:
-        os.unlink(tmp_path)
+        os.unlink(tmp_path)  # temporäre Datei immer löschen — auch bei Exceptions
 
 
 import re as _re
@@ -110,29 +120,38 @@ def _extract_page_number(message: str) -> int | None:
 
 
 def _is_python_related(message: str, code: str) -> bool:
+    """Klassifiziert ob eine Nachricht Python/Programmier-Bezug hat.
+
+    Verwendet das günstige gpt-4o-mini Classifier-LLM für schnelle ja/nein-Entscheidung.
+    Gibt bei Fehlern implizit True zurück (False würde legitime Fragen blockieren).
+    """
     llm = get_classifier_llm()
+    # Schüler-Code mitschicken — Kontext hilft bei mehrdeutigen Fragen ("was macht das hier?")
     context = f"Code des Schülers:\n```python\n{code}\n```\n\nFrage: {message}" if code.strip() else message
     response = llm.invoke([_CLASSIFY_SYSTEM, HumanMessage(content=context)])
     return str(response.content).strip().lower().startswith("ja") # type: ignore
 
 
 def _get_rag_context(message: str, user_id: int) -> str:
-    """Sucht im PDF-Index des Users.
+    """Sucht im PDF-Index des Users nach relevanten Passagen.
 
-    1. Seitenzahl erkannt → alle Chunks dieser Seite
-    2. Immer zusätzlich semantische FAISS-Suche
-    Duplikate werden entfernt, Seiteninhalt steht zuerst.
+    Strategie:
+    1. Seitenzahl erkannt → alle Chunks dieser Seite (exakter Match)
+    2. Immer zusätzlich semantische pgvector-Suche (top_k aus Env-Variable)
+    Duplikate werden über seen-Set entfernt, Seiteninhalt steht zuerst.
+    Gibt leeren String zurück wenn kein Index vorhanden oder Fehler aufgetreten.
     """
     try:
         from agent.rag.vectorstore import load, query_with_pages, get_page
 
         index_data = load(user_id)
         if index_data is None:
-            return ""
+            return ""  # Kein PDF hochgeladen
 
         seen: set[str] = set()
         results: list[tuple[str, int]] = []
 
+        # Schritt 1: Explizite Seitenreferenz → direkte Chunk-Abfrage
         page_num = _extract_page_number(message)
         if page_num is not None:
             page_chunks = get_page(index_data, page_num)
@@ -143,15 +162,17 @@ def _get_rag_context(message: str, user_id: int) -> str:
                     seen.add(item[0])
                     results.append(item)
 
+        # Schritt 2: Semantische Suche immer ausführen (auch wenn Seite gefunden)
         top_k = int(os.getenv("RAG_TOP_K", "3"))
         for item in query_with_pages(index_data, message, top_k=top_k):
-            if item[0] not in seen:
+            if item[0] not in seen:  # Duplikate aus Seiten-Lookup überspringen
                 seen.add(item[0])
                 results.append(item)
 
         if not results:
             return ""
 
+        # Ausgabe formatieren: Seitennummer als Referenz voranstellen
         parts = []
         for text, page in results:
             ref = f"[Seite {page}]" if page > 0 else ""
@@ -159,7 +180,7 @@ def _get_rag_context(message: str, user_id: int) -> str:
 
         return "\n\n---\n\n".join(parts)
     except Exception:
-        return ""
+        return ""  # Fehler im RAG → normalen Chat fortsetzen
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -168,13 +189,22 @@ def chat(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ChatResponse:
+    """Chat-Endpunkt mit Off-Topic-Filter, RAG-Priorität und personalisiertem Agent.
+
+    Ablauf:
+    1. Off-Topic-Check: nicht-Python-Fragen werden mit Standardantwort abgelehnt
+    2. RAG-Kontext laden: wenn PDF-Index vorhanden → direktes LLM-Gespräch mit Kontext
+    3. Kein RAG → ReAct-Agent mit personalisierten Tools (basierend auf Skill-Fortschritt)
+    """
     if not _is_python_related(request.message, request.code):
+        # Off-Topic: History trotzdem aktualisieren damit Frontend konsistent bleibt
         new_history = list(request.history) + [
             ChatMessage(role="user", content=request.message),
             ChatMessage(role="assistant", content=OFF_TOPIC_REPLY),
         ]
         return ChatResponse(reply=OFF_TOPIC_REPLY, history=new_history)
 
+    # Skill-Fortschritt für personalisierte Tool-Auswahl laden
     progress_rows = db.query(StudentSkillProgress).filter_by(user_id=current_user.id).all()
     skill_map = {s["key"]: s for s in SKILL_TREE}
     skill_progress = [
@@ -183,12 +213,13 @@ def chat(
             "skill_label": skill_map[row.skill_key]["label"] if row.skill_key in skill_map else row.skill_key,
             "status": row.status,
             "score": row.score,
-            "completed_titles": "",
+            "completed_titles": "",  # wird aktuell nicht befüllt — Platzhalter für spätere Erweiterung
         }
         for row in progress_rows
-        if row.skill_key in skill_map
+        if row.skill_key in skill_map  # nur bekannte Skills übergeben
     ]
 
+    # RAG hat Vorrang: wenn PDF-Kontext gefunden → direktes LLM-Gespräch (kein Agent)
     rag_context = _get_rag_context(request.message, current_user.id)
 
     if rag_context:
@@ -200,6 +231,7 @@ def chat(
             rag_context=rag_context,
         )
     else:
+        # Kein RAG → ReAct-Agent mit dynamischen personalisierten Tools
         reply = run_chat(
             message=request.message,
             code=request.code,
@@ -208,6 +240,7 @@ def chat(
             skill_progress=skill_progress,
         )
 
+    # Neue Nachricht ans Ende der History hängen — Frontend nutzt dies für Anzeige
     new_history = list(request.history) + [
         ChatMessage(role="user", content=request.message),
         ChatMessage(role="assistant", content=reply),

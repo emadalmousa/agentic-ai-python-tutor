@@ -97,17 +97,22 @@ _COMMON_MISTAKES: dict[str, list[str]] = {
 
 
 def _rule_based_analysis(code: str, question: str) -> dict:
-    """Keyword-Matching — wird verwendet, wenn kein LLM verfügbar ist."""
-    text = (code + " " + question).lower()
+    """Keyword-Matching — wird verwendet, wenn kein LLM verfügbar ist.
+
+    Kombiniert Code und Frage zu einem einzigen Text für die Keyword-Suche.
+    Score-Heuristik: Syntaxfehler-Indikator im Text → 35, sonst 60 (niedrig genug
+    um LLM-Ergebnis zu unterscheiden).
+    """
+    text = (code + " " + question).lower()  # kombiniert für einfache Keyword-Suche
 
     detected: list[str] = []
     for skill, keywords in _KEYWORD_MAP.items():
         if any(kw.lower() in text for kw in keywords):
             detected.append(skill)
 
-    main_skill = detected[0] if detected else "variables"
+    main_skill = detected[0] if detected else "variables"  # Fallback: variables ist der Einstiegs-Skill
 
-    # Einfache Score-Heuristik: Syntaxfehler → tiefer Score
+    # Syntaxfehler-Erkennung: "SyntaxError" im Text ODER def ohne Doppelpunkt
     has_syntax_error = (
         re.search(r"\bsyntaxerror\b", text) is not None
         or (code and not code.strip().endswith(":") and "def " in code and ":" not in code)
@@ -120,7 +125,7 @@ def _rule_based_analysis(code: str, question: str) -> dict:
         "main_skill":      main_skill,
         "score":           score,
         "status":          _status_from_score(score),
-        "mistakes":        mistakes[:2],
+        "mistakes":        mistakes[:2],  # max. 2 Fehler zurückgeben
         "feedback":        "Regelbasierte Analyse (kein LLM verfügbar).",
         "recommended_next_exercise": f"Übe das Thema '{main_skill}' mit einem einfachen Beispiel.",
     }
@@ -164,10 +169,15 @@ Antworte AUSSCHLIESSLICH mit dem JSON-Objekt."""
 
 
 def _parse_llm_json(raw: str) -> dict | None:
-    """Extrahiert JSON aus LLM-Antwort (tolerant gegenüber Markdown-Wrapping)."""
-    # Markdown-Code-Block entfernen
+    """Extrahiert JSON aus LLM-Antwort (tolerant gegenüber Markdown-Wrapping).
+
+    Gibt None zurück wenn kein gültiges JSON gefunden oder Skill-Keys alle ungültig.
+    Skill-Keys werden gegen VALID_SKILLS geprüft — verhindert halluzinierte Skills.
+    Score wird auf 0-100 geclampt um Grenzwertprobleme zu vermeiden.
+    """
+    # Markdown-Code-Block-Marker entfernen (LLM gibt manchmal ```json ... ``` zurück)
     cleaned = re.sub(r"```(?:json)?", "", raw).replace("```", "").strip()
-    # Erstes {...} herausschneiden
+    # Erstes {...} herausschneiden — ignoriert Text vor/nach dem JSON-Objekt
     match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if not match:
         return None
@@ -176,12 +186,14 @@ def _parse_llm_json(raw: str) -> dict | None:
     except json.JSONDecodeError:
         return None
 
-    # Skill-Keys auf Whitelist begrenzen
+    # Skill-Keys gegen Whitelist filtern — LLM darf nur definierte Keys zurückgeben
     detected = [s for s in data.get("detected_skills", []) if s in VALID_SKILLS]
     main = data.get("main_skill", "")
     if main not in VALID_SKILLS:
+        # ungültiger main_skill → ersten erkannten nehmen oder Fallback
         main = detected[0] if detected else "variables"
 
+    # Score auf gültigen Bereich begrenzen
     score = max(0, min(100, int(data.get("score", 0))))
 
     return {
@@ -196,10 +208,12 @@ def _parse_llm_json(raw: str) -> dict | None:
 
 
 def analyze_skill(code: str, question: str = "") -> dict:
-    """
-    Analysiert Code / Frage und gibt ein strukturiertes Skill-Ergebnis zurück.
+    """Analysiert Code / Frage und gibt ein strukturiertes Skill-Ergebnis zurück.
 
-    Versucht LLM-Analyse; fällt bei Fehler auf Regellogik zurück.
+    Versucht LLM-Analyse mit strukturierter JSON-Ausgabe.
+    Fallback auf regelbasierte Keyword-Analyse wenn LLM nicht verfügbar oder JSON-Parse fehlschlägt.
+
+    Lazy-Import von get_llm um zirkuläre Imports zu vermeiden (services ↔ agent).
     """
     prompt_content = f"Code:\n```python\n{code}\n```\n\nFrage: {question}" if code else f"Frage: {question}"
 
@@ -217,6 +231,7 @@ def analyze_skill(code: str, question: str = "") -> dict:
         if result:
             logger.info("LLM-Skill-Analyse erfolgreich: main_skill=%s score=%d", result["main_skill"], result["score"])
             return result
+        # JSON-Parse fehlgeschlagen → Regellogik (LLM hat kein gültiges JSON zurückgegeben)
         logger.warning("LLM-JSON-Parse fehlgeschlagen — Fallback auf Regellogik")
     except Exception as e:
         logger.warning("LLM nicht verfügbar (%s) — Fallback auf Regellogik", e)

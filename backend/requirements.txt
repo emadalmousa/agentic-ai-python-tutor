@@ -6,8 +6,8 @@ langchain-core
 langchain-ollama
 langchain-openai
 langchain-community
+langchain-postgres
 python-dotenv
-faiss-cpu
 pypdf
 python-multipart
 sqlalchemy

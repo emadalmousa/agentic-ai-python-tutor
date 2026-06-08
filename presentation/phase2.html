@@ -378,7 +378,7 @@
           </div>
           <span class="feat-label">03 — RAG</span>
           <div class="feat-title">PDF Feature &amp; RAG Pipeline</div>
-          <p class="feat-desc">Upload → Chunks → LLM Embeddings → FAISS Vector Store. Chat nutzt automatisch relevante Abschnitte als Kontext.</p>
+          <p class="feat-desc">Upload → Chunks → LLM Embeddings → pgvector (PostgreSQL). Chat nutzt automatisch relevante Abschnitte als Kontext.</p>
         </div>
 
         <!-- 3 Lernfortschritt -->
@@ -536,21 +536,21 @@
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/analyze</div>
-                <div class="ep3-entry-desc"><code>explain → debug → exercise → rag</code> — feste Reihenfolge</div>
+                <div class="ep3-entry-desc"><code>explain → debug → exercise</code> — feste Reihenfolge, kein RAG</div>
               </div>
             </div>
             <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/chat</div>
-                <div class="ep3-entry-desc">Dynamisch aus 6 Tools · Lernfortschritt als Kontext</div>
+                <div class="ep3-entry-desc">PDF hochgeladen → <code>run_chat_with_context()</code> direkt · sonst Agent mit 5 Tools · Lernfortschritt als Kontext</div>
               </div>
             </div>
             <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/upload-material</div>
-                <div class="ep3-entry-desc"><code>get_embeddings()</code> → FAISS Index</div>
+                <div class="ep3-entry-desc"><code>get_embeddings()</code> → pgvector Index · pro User isoliert · JWT erforderlich</div>
               </div>
             </div>
           </div>
@@ -790,7 +790,7 @@
             <div class="rn rn-plain">
               <div class="ri">📑</div>
               <h4>Seiten bearbeiten</h4>
-              <p>PyMuPDF → Text<br>→ ~500 Zeichen Chunks</p>
+              <p>pypdf → Text<br>→ ~500 Zeichen Chunks</p>
             </div>
 
             <div class="ra amber"><div class="ra-line"></div><div class="ra-head"></div></div>
@@ -805,9 +805,9 @@
             <div class="ra green"><div class="ra-line"></div><div class="ra-head"></div></div>
 
             <div class="rn rn-save">
-              <div class="ri">💾</div>
-              <h4>FAISS gespeichert</h4>
-              <p><code>index.faiss</code><br>+ <code>chunks.pkl</code></p>
+              <div class="ri">🐘</div>
+              <h4>pgvector gespeichert</h4>
+              <p><code>langchain_pg_embedding</code><br><code>collection: user_{id}</code><br><em style="color:var(--success);">pro User isoliert</em></p>
             </div>
 
           </div>
@@ -835,7 +835,7 @@
             <div class="rn rn-search">
               <div class="ri">🔎</div>
               <h4>RAG Suche</h4>
-              <p>Regex: Seitenzahl?<br>+ FAISS semantisch</p>
+              <p>Regex: Seitenzahl?<br>+ pgvector semantisch<br><code>load(user_id)</code></p>
             </div>
 
             <div class="ra amber"><div class="ra-line"></div><div class="ra-head"></div></div>
@@ -843,8 +843,8 @@
             <div class="rn-llm-wrap">
               <span class="llm-badge">⚡ LLM-AUFRUF</span>
               <div class="ri">🧠</div>
-              <h4>LLM + Kontext</h4>
-              <p>Prompt = Frage<br>+ PDF-Chunks<br>als System-Kontext</p>
+              <h4>run_chat_with_context()</h4>
+              <p>Direkt — kein Agent<br>kein ReAct-Loop<br>PDF-Chunks im Prompt</p>
             </div>
 
             <div class="ra green"><div class="ra-line"></div><div class="ra-head"></div></div>
@@ -863,7 +863,7 @@
           <div class="rag-info-box" style="border-left:3px solid var(--warn);">
             <h4><span style="color:var(--warn);">⚡</span> LLM wird 2× aufgerufen</h4>
             <p><strong style="color:var(--text);">Upload:</strong> <code>embed_documents()</code> — alle Chunks vektorisieren<br>
-              <strong style="color:var(--text);">Chat:</strong> <code>embed_query()</code> + <code>invoke()</code> — Frage suchen &amp; antworten</p>
+              <strong style="color:var(--text);">Chat:</strong> <code>embed_query()</code> + <code>invoke()</code> — suchen &amp; direkt antworten · Agent wird bypassed</p>
           </div>
           <div class="rag-info-box" style="border-left:3px solid var(--success);">
             <h4><span style="color:var(--success);">🔧</span> LangChain Rolle</h4>

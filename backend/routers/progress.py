@@ -1,3 +1,4 @@
+"""Progress-Router: speichert und aggregiert Lern-Sessions für Fortschrittsanzeige."""
 from collections import Counter
 
 from fastapi import APIRouter, Depends
@@ -46,9 +47,10 @@ def create_session(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Speichert eine neue Lern-Session mit Code, Themen, Fehlern und Chat-Verlauf."""
     session = LearningSession(
         user_id=current_user.id,
-        code_snippet=data.code or None,
+        code_snippet=data.code or None,  # leerer String → None in DB
         topics=data.topics,
         errors=data.errors,
         chat_messages=data.chat_messages,
@@ -59,7 +61,7 @@ def create_session(
     return SessionResponse(
         id=session.id,
         code_snippet=session.code_snippet,
-        topics=session.topics or [],
+        topics=session.topics or [],      # None → leere Liste für konsistente API
         errors=session.errors or [],
         chat_messages=session.chat_messages or [],
     )
@@ -70,6 +72,12 @@ def get_summary(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Gibt eine aggregierte Übersicht aller Lern-Sessions zurück.
+
+    frequent_errors: Fehler die mindestens 2-mal aufgetreten sind → zeigt Muster.
+    topics: dedupliziert aber reihenfolge-erhaltend via dict.fromkeys().
+    recent_sessions: nur die letzten 10 Sessions für die Anzeige.
+    """
     sessions = (
         db.query(LearningSession)
         .filter(LearningSession.user_id == current_user.id)
@@ -84,6 +92,7 @@ def get_summary(
         all_errors.extend(s.errors or [])
 
     error_counts = Counter(all_errors)
+    # Nur Fehler die mehrfach vorkommen sind relevant für das Fortschritts-Feedback
     frequent_errors = [err for err, count in error_counts.items() if count >= 2]
 
     recent = sessions[:10]
@@ -100,7 +109,7 @@ def get_summary(
 
     return ProgressSummary(
         analyzed_count=len(sessions),
-        topics=list(dict.fromkeys(all_topics)),  # unique, preserving order
+        topics=list(dict.fromkeys(all_topics)),  # dict.fromkeys() dedupliziert ohne Reihenfolge zu ändern
         frequent_errors=frequent_errors,
         recent_sessions=recent_sessions,
     )

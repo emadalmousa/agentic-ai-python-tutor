@@ -80,50 +80,55 @@ Frontend: uploadMaterial(file)          [lib/api.ts:74]
 Backend: routers/tutor.py → upload_material()
          │
          ▼
-agent/rag/loader.py → load_pdf(file_bytes)
-         │  PyMuPDF: extrahiert Text seitenweise
+agent/rag/loader.py → extract_pages(file_bytes)
+         │  pypdf: extrahiert Text seitenweise
          │  Gibt liste[(text, page_number)] zurück
          ▼
 agent/rag/splitter.py → split_chunks(pages)
          │  Teilt langen Text in 500-Zeichen-Chunks
          │  Behält Seiten-Nummer pro Chunk
          ▼
-agent/rag/vectorstore.py → build_and_save(chunks)
+agent/rag/vectorstore.py → build_and_save(chunks, user_id)
          │
-         ├── get_embeddings()            [config.py:58]
-         │       ├── OpenAI: text-embedding-3-small  ← LLM-AUFRUF
+         ├── get_embeddings()            [config.py]
+         │       ├── OpenAI: text-embedding-ada-002  ← LLM-AUFRUF
          │       └── Ollama: embed_documents()        ← LLM-AUFRUF
          │
-         ├── faiss.IndexFlatL2(dimension)
-         │       Erstellt L2-Distanz-Index
-         ├── index.add(vectors_array)
+         ├── FAISS.from_texts(texts, embeddings)
          │
-         ├── faiss.write_index() → vectorstore/index.faiss
-         └── pickle.dump(chunks) → vectorstore/chunks.pkl
+         ├── store.save_local() → rag_stores/{user_id}/index.faiss
+         └── pickle.dump(chunks) → rag_stores/{user_id}/chunks.pkl
+         │   (chunks als list[dict]: {"text": ..., "page": ...})
          │
          ▼
 Response: { status: "ok", chunks: 42 }
 ```
 
-### RAG-Abfrage bei Code-Analyse
+### RAG-Abfrage im Chat
 
 ```
-run_analysis(code)                      [tutor_agent.py:93]
+POST /tutor/chat
          │
          ▼
-_get_rag_sources(code)                  [tutor_agent.py:79]
+_get_rag_context(message, current_user.id)   [tutor.py]
          │
-         ├── vectorstore.load()
-         │       Lädt index.faiss + chunks.pkl von Disk
+         ├── load(user_id)                   # lädt rag_stores/{user_id}/index.faiss
+         │       → None wenn kein PDF hochgeladen
          │
-         ├── get_embeddings().embed_query(code)   ← LLM-AUFRUF
-         │       Erstellt Vektor für den Nutzer-Code
+         ├── Regex: Seitenzahl in Nachricht? → get_page(index_data, page_num)
          │
-         ├── index.search(query_vector, top_k=3)
-         │       FAISS sucht die 3 ähnlichsten Chunks
+         └── FAISS semantische Suche: query_with_pages(index_data, message, top_k=3)
          │
-         └── Gibt [chunk_text, ...] zurück
-                 → wird als "sources" im Response angehängt
+         ▼
+wenn rag_context vorhanden:
+  run_chat_with_context()              [tutor_agent.py]
+         │  → direkter llm.invoke([system, human])
+         │  → kein Agent, kein ReAct-Loop
+         │  → PDF-Chunks eingebettet im Prompt
+         ▼
+wenn kein rag_context:
+  run_chat()                           [tutor_agent.py]
+         │  → ReAct-Agent mit 5 Tools
 ```
 
 ### Schlüsseldateien
@@ -521,6 +526,7 @@ Wenn alle Skills eines Levels ≥ 80 Score haben, erscheint der Button "Level-Te
 ```
 Frontend prüft:
   levelSkills(activeLevel).every(s => s.score >= 80)  → Button wird sichtbar
+  (Button ist immer am Ende jedes Level-Tabs sichtbar sobald alle Skills ≥ 80%)
          │
          ├── generateLevelTest(level, token)  [api.ts:142]
          │        POST /level-tests/generate
@@ -628,7 +634,8 @@ def get_classifier_llm():
 | `explain_code_tool` | `tools/explain_tool.py` | Code erklären (ReAct-Agent) |
 | `debug_code_tool` | `tools/debug_tool.py` | Fehler finden (ReAct-Agent) |
 | `exercise_tool` | `tools/exercise_tool.py` | Übung vorschlagen (ReAct-Agent) |
-| `rag_tool` | `tools/rag_tool.py` | Lernmaterial suchen (ReAct-Agent) |
+| `rag_tool` | `tools/rag_tool.py` | Lernmaterial suchen (nur im Analyze-Agent verfügbar, nicht im Chat) |
+| `run_chat_with_context` | `tutor_agent.py` | Direkter LLM-Aufruf mit PDF-Kontext — bypasses Agent |
 | `analyze_skill` | `services/skill_analyzer.py` | Skill erkennen, Score berechnen |
 | `generate_exercise` | `tools/exercise_generator_tool.py` | Dynamische Übung generieren |
 | `evaluate_exercise` | `tools/exercise_evaluator_tool.py` | Übungs-Lösung bewerten |
@@ -636,7 +643,7 @@ def get_classifier_llm():
 | `generate_skill_test` | `tools/skill_test_generator_tool.py` | Test-Fragen generieren |
 | `evaluate_skill_test` | `tools/skill_test_evaluator_tool.py` | Test auswerten (Code-Lesen + Mini) |
 | `get_embeddings()` | `config.py` | PDF-Chunks → Vektoren (Upload) |
-| `embed_query()` | `vectorstore.py` | Nutzer-Code → Vektor (RAG-Suche) |
+| `embed_query()` | `vectorstore.py` | Nutzer-Frage → Vektor (RAG-Suche im Chat) |
 
 ### ReAct-Agent (`tutor_agent.py`)
 
