@@ -269,7 +269,7 @@ export default function LearningProgressView() {
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState<string | null>(null)
   const [selectedSkill, setSelectedSkill] = useState<SkillProgress | null>(null)
-  const [showSkillTest, setShowSkillTest] = useState(false)
+  const [skillTestSkill, setSkillTestSkill] = useState<SkillProgress | null>(null)
   const [showLevelTest, setShowLevelTest] = useState<LevelKey | null>(null)
   const [refreshTick, setRefreshTick]     = useState(0)
   const [activeLevel, setActiveLevel]     = useState<LevelKey>("beginner")
@@ -297,8 +297,8 @@ export default function LearningProgressView() {
     setSelectedSkill((prev) => prev?.skill_key === skillKey ? { ...prev, score: newScore } : prev)
   }
 
-  function handleTestPassed(skillKey: string) {
-    void skillKey
+  function handleTestPassed(_skillKey: string) {
+    setSkillTestSkill(null)
     refreshProgress()
   }
 
@@ -423,10 +423,10 @@ export default function LearningProgressView() {
             />
           ) : !selectedSkill || !selectedSkill.is_unlocked ? (
             <EmptyState dark={dark} />
-          ) : showSkillTest ? (
+          ) : skillTestSkill ? (
             <SkillTestModal
-              skill={selectedSkill}
-              onClose={() => { setShowSkillTest(false); setSelectedSkill(null) }}
+              skill={skillTestSkill}
+              onClose={() => setSkillTestSkill(null)}
               onTestPassed={handleTestPassed}
               inline
             />
@@ -434,7 +434,7 @@ export default function LearningProgressView() {
             <ExercisePanel
               skill={selectedSkill}
               onSkillScoreUpdate={handleSkillScoreUpdate}
-              onStartSkillTest={() => setShowSkillTest(true)}
+              onStartSkillTest={() => setSkillTestSkill(selectedSkill)}
             />
           )}
         </div>
