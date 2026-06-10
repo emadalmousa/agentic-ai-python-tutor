@@ -291,7 +291,7 @@
     /* ══════════════════════════════════════════════════════
        DEMO SLIDE
     ══════════════════════════════════════════════════════ */
-    #slide-7 {
+    #slide-8 {
       justify-content: center; align-items: center; text-align: center; padding: 4vh 8vw;
       background:
         radial-gradient(ellipse 55% 60% at 28% 40%, rgba(52,211,153,0.10) 0%, transparent 70%),
@@ -306,7 +306,7 @@
   <!-- Navigation -->
   <nav class="nav">
     <div class="nav-inner">
-      <span class="slide-counter" id="counter">Slide 1 / 7</span>
+      <span class="slide-counter" id="counter">Slide 1 / 8</span>
       <div class="dot-nav" id="dots">
         <button class="dot active" data-target="1"></button>
         <button class="dot" data-target="2"></button>
@@ -315,6 +315,7 @@
         <button class="dot" data-target="5"></button>
         <button class="dot" data-target="6"></button>
         <button class="dot" data-target="7"></button>
+        <button class="dot" data-target="8"></button>
       </div>
       <button class="nav-btn" id="btn-prev" disabled>◀ Zurück</button>
       <button class="nav-btn" id="btn-next">Weiter ▶</button>
@@ -333,6 +334,12 @@
 
       <div class="title-dots">
         <div class="title-dot-item">
+          <div class="icon" style="background:rgba(251,146,60,0.12); border-color:rgba(251,146,60,0.3);">
+            <i class="fa-solid fa-book-open" style="color:var(--warn);"></i>
+          </div>
+          <span>PDF & RAG</span>
+        </div>
+        <div class="title-dot-item">
           <div class="icon" style="background:rgba(52,211,153,0.12); border-color:rgba(52,211,153,0.3);">
             <i class="fa-solid fa-chart-line" style="color:var(--success);"></i>
           </div>
@@ -344,44 +351,48 @@
           </div>
           <span>Agent Tools</span>
         </div>
-        <div class="title-dot-item">
-          <div class="icon" style="background:rgba(251,146,60,0.12); border-color:rgba(251,146,60,0.3);">
-            <i class="fa-solid fa-book-open" style="color:var(--warn);"></i>
-          </div>
-          <span>PDF & RAG</span>
-        </div>
       </div>
     </section>
 
     <!-- ══ SLIDE 2 — Agenda ══════════════════════════════════════════ -->
-    <section class="slide" id="slide-2" data-num="02 / 07">
+    <section class="slide" id="slide-2" data-num="02 / 08">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">Agenda</span>
       </div>
       <div class="features-grid">
 
-        <!-- 1 Endpoints -->
-        <div class="feature-card" style="border-top:3px solid var(--accent3);">
-          <div class="feat-icon blue">
-            <i class="fa-solid fa-bolt" style="color:var(--accent3);"></i>
-          </div>
-          <span class="feat-label">01 — Backend</span>
-          <div class="feat-title">Neue FastAPI Endpoints</div>
-          <p class="feat-desc">/exercises · /skill-tests · /level-tests · /learning-progress · /auth — jeder Endpoint mit JWT-Schutz.</p>
-        </div>
-
-        <!-- 2 PDF / RAG -->
+        <!-- 1 PDF / RAG -->
         <div class="feature-card" style="border-top:3px solid var(--warn);">
           <div class="feat-icon amber">
             <i class="fa-solid fa-file-pdf" style="color:var(--warn);"></i>
           </div>
-          <span class="feat-label">03 — RAG</span>
+          <span class="feat-label">01 — RAG</span>
           <div class="feat-title">PDF Feature &amp; RAG Pipeline</div>
           <p class="feat-desc">Upload → Chunks → LLM Embeddings → pgvector (PostgreSQL). Chat nutzt automatisch relevante Abschnitte als Kontext.</p>
         </div>
 
-        <!-- 3 Lernfortschritt -->
+        <!-- 2 Endpoints -->
+        <div class="feature-card" style="border-top:3px solid var(--accent3);">
+          <div class="feat-icon blue">
+            <i class="fa-solid fa-bolt" style="color:var(--accent3);"></i>
+          </div>
+          <span class="feat-label">02 — Backend</span>
+          <div class="feat-title">Neue FastAPI Endpoints</div>
+          <p class="feat-desc">/exercises · /skill-tests · /level-tests · /learning-progress · /auth — jeder Endpoint mit JWT-Schutz.</p>
+        </div>
+
+        <!-- 3 Agent Tools -->
+        <div class="feature-card" style="border-top:3px solid var(--accent2);">
+          <div class="feat-icon indigo">
+            <i class="fa-solid fa-screwdriver-wrench" style="color:var(--accent2);"></i>
+          </div>
+          <span class="feat-label">03 — Tools</span>
+          <div class="feat-title">5 neue Agent Tools</div>
+          <p class="feat-desc"><em style="color:var(--accent2);">evaluate_exercise</em> · <em style="color:#f87171;">generate_exercise</em> · <em style="color:var(--success);">get_hint</em> · <em style="color:var(--accent2);">generate_skill_test</em> · <em style="color:var(--warn);">evaluate_skill_test</em></p>
+        </div>
+
+        <!-- 4 Lernfortschritt -->
         <div class="feature-card feature-special" style="border-top:3px solid var(--success);">
           <div class="feat-icon teal">
             <i class="fa-solid fa-chart-line" style="color:var(--success);"></i>
@@ -389,16 +400,6 @@
           <span class="feat-label">04 — Kern</span>
           <div class="feat-title">Lernfortschritt &amp; Skills</div>
           <p class="feat-desc">37 Skills in 3 Level. LLM erkennt Skill im Code, berechnet Score 0–100. Unlock-Logik: Vorgänger ≥ 80% nötig.</p>
-        </div>
-
-        <!-- 4 Agent Tools -->
-        <div class="feature-card" style="border-top:3px solid var(--accent2);">
-          <div class="feat-icon indigo">
-            <i class="fa-solid fa-screwdriver-wrench" style="color:var(--accent2);"></i>
-          </div>
-          <span class="feat-label">02 — Tools</span>
-          <div class="feat-title">5 neue Agent Tools</div>
-          <p class="feat-desc"><em style="color:var(--accent2);">evaluate_exercise</em> · <em style="color:#f87171;">generate_exercise</em> · <em style="color:var(--success);">get_hint</em> · <em style="color:var(--accent2);">generate_skill_test</em> · <em style="color:var(--warn);">evaluate_skill_test</em></p>
         </div>
 
         <!-- 5 Nächster Sprint -->
@@ -425,7 +426,7 @@
     </section>
 
     <!-- ══ SLIDE 3 — Endpoint Übersicht ══════════════════════════════ -->
-    <section class="slide" id="slide-3" data-num="03 / 07">
+    <section class="slide" id="slide-3" data-num="03 / 08">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">Backend — Architektur</span>
@@ -522,13 +523,40 @@
 
       <div class="ep3-grid">
 
-        <!-- 1: LangChain Agent -->
-        <div class="ep3-card c-lc feature-card" style="border-top:3px solid var(--accent);">
+        <!-- 1: LangChain + LLM — tote Karte -->
+        <div class="ep3-card c-gray feature-card" style="border-top:3px solid var(--muted); opacity:0.45; pointer-events:none;">
           <div class="ep3-card-head">
-            <div class="ep3-card-icon">🤖</div>
+            <div class="ep3-card-icon" style="background:rgba(148,163,184,0.1);">🤖</div>
             <div>
-              <div class="ep3-card-title">LangChain Agent</div>
-              <div class="ep3-card-sub">ReAct-Loop · LLM wählt Tools</div>
+              <div class="ep3-card-title" style="color:var(--muted);">LangChain + LLM</div>
+              <div class="ep3-card-sub">ReAct-Agent · LLM entscheidet</div>
+            </div>
+          </div>
+          <div class="ep3-entries">
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/chat <em style="color:var(--muted); font-style:normal;">(kein PDF)</em></div>
+                <div class="ep3-entry-desc">Agent mit 5 Tools · LLM wählt Tool im ReAct-Loop</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/analyze</div>
+                <div class="ep3-entry-desc"><code>explain → debug → exercise</code> — LangChain Chain · LLM pro Schritt</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2: Nur LangChain -->
+        <div class="ep3-card c-tool feature-card" style="border-top:3px solid var(--success);">
+          <div class="ep3-card-head">
+            <div class="ep3-card-icon">🔗</div>
+            <div>
+              <div class="ep3-card-title">Nur LangChain</div>
+              <div class="ep3-card-sub">Embeddings · Tool-Wrapper · kein Agent-Loop</div>
             </div>
           </div>
           <div class="ep3-entries">
@@ -536,81 +564,33 @@
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/upload-material</div>
-                <div class="ep3-entry-desc"><code>get_embeddings()</code> → pgvector Index · pro User isoliert</div>
+                <div class="ep3-entry-desc"><code>get_embeddings()</code> → pgvector · LangChain für Chunks, kein Chat-LLM</div>
               </div>
             </div>
-            <div class="ep3-entry" style="opacity:0.38;">
+            <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/tutor/chat <em style="color:var(--muted); font-style:normal;">(kein PDF)</em></div>
-                <div class="ep3-entry-desc">Agent mit 5 Tools · Lernfortschritt als Kontext</div>
+                <div class="ep3-entry-path">/exercises/submit · /exercises/hint</div>
+                <div class="ep3-entry-desc">LangChain Tool direkt aufgerufen · kein Agent-Loop · <code>tool.invoke()</code></div>
               </div>
             </div>
-            <div class="ep3-entry" style="opacity:0.38;">
+            <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/tutor/analyze</div>
-                <div class="ep3-entry-desc"><code>explain → debug → exercise</code> — feste Reihenfolge, kein RAG</div>
+                <div class="ep3-entry-path">/exercises/generate · /skill-tests/generate · /skill-tests/submit</div>
+                <div class="ep3-entry-desc">LangChain Tool-Wrapper · Code ruft Tool fix auf · kein ReAct</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 2: Tool direkt -->
-        <div class="ep3-card c-tool feature-card" style="border-top:3px solid var(--success);">
-          <div class="ep3-card-head">
-            <div class="ep3-card-icon">🛠️</div>
-            <div>
-              <div class="ep3-card-title">Tool direkt</div>
-              <div class="ep3-card-sub">tool.invoke() · deterministisch</div>
-            </div>
-          </div>
-          <div class="ep3-entries">
-            <div class="ep3-entry">
-              <span class="ep3-method m-post">POST</span>
-              <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/exercises/submit</div>
-                <div class="ep3-entry-desc">⚖️ <code>evaluate_exercise</code> — stdout leer / korrekt / falsch · 1 LLM-Aufruf</div>
-              </div>
-            </div>
-            <div class="ep3-entry">
-              <span class="ep3-method m-post">POST</span>
-              <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/exercises/hint</div>
-                <div class="ep3-entry-desc">💡 <code>get_hint</code> — gestufter Hinweis Level 1–3 · Lösung nie direkt</div>
-              </div>
-            </div>
-            <div class="ep3-entry" style="opacity:0.38;">
-              <span class="ep3-method m-post">POST</span>
-              <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/exercises/generate</div>
-                <div class="ep3-entry-desc">🏭 <code>generate_exercise</code> — neue Aufgabe · keine Wiederholung · auch im Chat-Agent</div>
-              </div>
-            </div>
-            <div class="ep3-entry">
-              <span class="ep3-method m-post">POST</span>
-              <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/skill-tests/generate</div>
-                <div class="ep3-entry-desc">📋 <code>generate_skill_test</code> — 3 MC + Code-Lesen + Mini-Aufgabe · auch im Chat-Agent</div>
-              </div>
-            </div>
-            <div class="ep3-entry">
-              <span class="ep3-method m-post">POST</span>
-              <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/skill-tests/submit</div>
-                <div class="ep3-entry-desc">🎓 <code>evaluate_skill_test</code> — MC + LLM semantisch + Code ausführen · 2 LLM-Aufrufe · Score 0–100</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3: LLM direkt -->
+        <!-- 3: Nur LLM -->
         <div class="ep3-card c-llm feature-card" style="border-top:3px solid var(--warn);">
           <div class="ep3-card-head">
             <div class="ep3-card-icon">⚡</div>
             <div>
-              <div class="ep3-card-title">LLM direkt</div>
-              <div class="ep3-card-sub">llm.invoke() · kein Tool, kein Agent</div>
+              <div class="ep3-card-title">Nur LLM</div>
+              <div class="ep3-card-sub">llm.invoke() · kein LangChain</div>
             </div>
           </div>
           <div class="ep3-entries">
@@ -618,47 +598,47 @@
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/chat <em style="color:var(--muted); font-style:normal;">(PDF hochgeladen)</em></div>
-                <div class="ep3-entry-desc"><code>run_chat_with_context()</code> · PDF-Chunks im Prompt · kein Agent</div>
+                <div class="ep3-entry-desc"><code>run_chat_with_context()</code> · PDF-Chunks im Prompt · direkt <code>llm.invoke()</code></div>
               </div>
             </div>
             <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/learning-progress/analyze</div>
-                <div class="ep3-entry-desc"><code>analyze_skill()</code> · Skill erkennen + Score · Fallback: Keywords</div>
+                <div class="ep3-entry-desc"><code>analyze_skill()</code> · Skill erkennen + Score · direkt <code>llm.invoke()</code></div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 4: Kein LLM -->
-        <div class="ep3-card c-gray feature-card" style="border-top:3px solid var(--muted);">
+        <!-- 4: Kein LLM, kein LangChain -->
+        <div class="ep3-card feature-card" style="border-top:3px solid #a855f7; border:1px solid rgba(168,85,247,0.25); background:var(--card);">
           <div class="ep3-card-head">
-            <div class="ep3-card-icon">🗄️</div>
+            <div class="ep3-card-icon" style="background:rgba(168,85,247,0.12);">🗄️</div>
             <div>
-              <div class="ep3-card-title">Kein LLM</div>
+              <div class="ep3-card-title" style="color:#a855f7;">Kein LLM, kein LangChain</div>
               <div class="ep3-card-sub">DB · subprocess · Auth</div>
             </div>
           </div>
           <div class="ep3-entries">
-            <div class="ep3-entry">
+            <div class="ep3-entry" style="background:rgba(168,85,247,0.07);">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/auth/login · /auth/register</div>
-                <div class="ep3-entry-desc">bcrypt + JWT Token · kein LLM</div>
+                <div class="ep3-entry-path" style="color:#a855f7;">/auth/login · /auth/register</div>
+                <div class="ep3-entry-desc">bcrypt + JWT · reines Python</div>
               </div>
             </div>
-            <div class="ep3-entry">
+            <div class="ep3-entry" style="background:rgba(168,85,247,0.07);">
               <span class="ep3-method m-get">GET</span>
               <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/learning-progress/{id}</div>
+                <div class="ep3-entry-path" style="color:#a855f7;">/learning-progress/{id}</div>
                 <div class="ep3-entry-desc">DB · 37 Skills + Scores laden</div>
               </div>
             </div>
-            <div class="ep3-entry" style="opacity:0.38;">
+            <div class="ep3-entry" style="background:rgba(168,85,247,0.07); opacity:0.45; pointer-events:none;">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/tutor/run</div>
+                <div class="ep3-entry-path" style="color:#a855f7;">/tutor/run</div>
                 <div class="ep3-entry-desc"><code>subprocess.run()</code> · Timeout 10s</div>
               </div>
             </div>
@@ -669,7 +649,7 @@
     </section>
 
     <!-- ══ SLIDE 4 — PDF Feature Diagramm ═══════════════════════════ -->
-    <section class="slide" id="slide-4" data-num="04 / 07">
+    <section class="slide" id="slide-4" data-num="04 / 08">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">RAG — Retrieval Augmented Generation</span>
@@ -882,7 +862,7 @@
     </section>
 
     <!-- ══ SLIDE 7 — Lernfortschritt Diagramm ════════════════════════ -->
-    <section class="slide" id="slide-5" data-num="05 / 07">
+    <section class="slide" id="slide-5" data-num="05 / 08">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">Skill-System</span>
@@ -1003,8 +983,113 @@
       </div>
     </section>
 
-    <!-- ══ SLIDE 8 — Nächster Sprint ════════════════════════════════ -->
-    <section class="slide" id="slide-6" data-num="06 / 07">
+    <!-- ══ SLIDE 6 — Probleme & Schwierigkeiten ═════════════════════ -->
+    <section class="slide" id="slide-6" data-num="06 / 08">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Reflexion</span>
+        <h2 class="slide-title">Probleme &amp; <em>Schwierigkeiten</em></h2>
+      </div>
+
+      <style>
+        .prob-grid {
+          flex: 1; min-height: 0;
+          display: grid; grid-template-columns: 1fr 1fr 1fr;
+          gap: clamp(12px,1.4vw,20px);
+          align-items: stretch;
+        }
+        .prob-card {
+          background: var(--card); border: 1px solid var(--border);
+          border-radius: 16px; padding: clamp(16px,1.8vh,26px) clamp(16px,1.8vw,24px);
+          display: flex; flex-direction: column; gap: clamp(8px,0.9vh,12px);
+          position: relative; overflow: hidden;
+        }
+        .prob-card::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+        .prob-card.c-red::before   { background: linear-gradient(90deg, #f87171, #fb923c); }
+        .prob-card.c-amber::before { background: linear-gradient(90deg, #fb923c, #fbbf24); }
+        .prob-card.c-blue::before  { background: linear-gradient(90deg, rgba(99,102,241,0.9), rgba(167,139,250,0.9)); }
+        .prob-icon {
+          font-size: clamp(1.8rem,2.4vw,2.8rem);
+          line-height: 1;
+        }
+        .prob-title {
+          font-family: var(--font-heading);
+          font-size: clamp(0.95rem,1.15vw,1.25rem);
+          font-weight: 800; line-height: 1.2;
+        }
+        .prob-card.c-red   .prob-title { color: #f87171; }
+        .prob-card.c-amber .prob-title { color: var(--warn); }
+        .prob-card.c-blue  .prob-title { color: var(--accent2); }
+        .prob-desc {
+          font-size: clamp(0.82rem,0.96vw,1.04rem);
+          color: var(--muted); line-height: 1.55;
+        }
+        .prob-detail {
+          background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+          border-radius: 10px; padding: clamp(8px,0.9vh,12px) clamp(10px,1vw,14px);
+          font-size: clamp(0.76rem,0.88vw,0.96rem); color: var(--muted); line-height: 1.5;
+        }
+        .prob-detail code {
+          color: var(--accent3); font-size: .88em;
+          background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 3px;
+        }
+        .prob-badge {
+          margin-top: auto; display: inline-flex; align-items: center; gap: 5px;
+          font-family: var(--font-heading); font-size: clamp(0.6rem,0.72vw,0.76rem);
+          font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+          padding: 4px 12px; border-radius: 100px; width: fit-content;
+        }
+        .prob-badge.open   { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+        .prob-badge.workaround { background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.3); color: var(--warn); }
+        .prob-badge.solved { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3); color: var(--success); }
+      </style>
+
+      <div class="prob-grid">
+
+        <!-- Problem 1 -->
+        <div class="prob-card c-red feature-card">
+          <div class="prob-icon">🤖</div>
+          <div class="prob-title">Filter: Chat erkennt Python-Kontext nicht immer</div>
+          <p class="prob-desc">Der Agent antwortet manchmal auf allgemeine Fragen, obwohl der Filter nur Python-Themen erlauben soll.</p>
+          <div class="prob-detail">
+            <strong style="color:var(--text);">Ursache:</strong> LLM-basierte Klassifikation ist nicht deterministisch — gleiche Frage, unterschiedliches Ergebnis.<br><br>
+            <strong style="color:var(--text);">Beispiel:</strong> <code>"Was ist eine Liste?"</code> wird je nach Kontext als Python oder Allgemeinwissen eingestuft.
+          </div>
+          <span class="prob-badge open">⚠ Offen</span>
+        </div>
+
+        <!-- Problem 2 -->
+        <div class="prob-card c-red feature-card">
+          <div class="prob-icon">📄</div>
+          <div class="prob-title">Eingescannte PDFs ohne Text-Layer funktionieren nicht</div>
+          <p class="prob-desc">pypdf kann nur Text aus PDFs lesen, die einen eingebetteten Text-Layer haben — gescannte Bilder werden als leere Seiten behandelt.</p>
+          <div class="prob-detail">
+            <strong style="color:var(--text);">Einschränkung:</strong> Kein OCR implementiert — <code>pypdf</code> liest nur <code>.text</code> Layer, nicht Pixel.<br><br>
+            <strong style="color:var(--text);">Workaround:</strong> Nur digital erstellte PDFs hochladen (Word-Export, LaTeX etc.)
+          </div>
+          <span class="prob-badge workaround">⚙ Workaround</span>
+        </div>
+
+        <!-- Problem 3 -->
+        <div class="prob-card c-red feature-card">
+          <div class="prob-icon">📊</div>
+          <div class="prob-title">Notensystem: Punkte-Balance unklar</div>
+          <p class="prob-desc">Wie viele Punkte gibt eine Übung? Wie viele eine Chat-Frage? Wann wird der Score erhöht oder gesenkt — und um wie viel?</p>
+          <div class="prob-detail">
+            <strong style="color:var(--text);">Problem:</strong> Kein klares Regelwerk für <code>+</code> / <code>−</code> Punkte — Score fühlt sich zufällig an.<br><br>
+            <strong style="color:var(--text);">Offen:</strong> Soll eine Chat-Frage weniger zählen als eine gelöste Übung? Welche Gewichtung ist pädagogisch sinnvoll?
+          </div>
+          <span class="prob-badge open">⚠ Offen</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 7 — Nächster Sprint ════════════════════════════════ -->
+    <section class="slide" id="slide-7" data-num="07 / 08">
+
       <div class="slide-accent-bar"></div>
       <div class="next-inner">
 
@@ -1055,8 +1140,8 @@
       </div>
     </section>
 
-    <!-- ══ SLIDE 9 — Live Demo ════════════════════════════════════════ -->
-    <section class="slide" id="slide-7" data-num="07 / 07">
+    <!-- ══ SLIDE 8 — Live Demo ════════════════════════════════════════ -->
+    <section class="slide" id="slide-8" data-num="08 / 08">
       <div class="slide-accent-bar"></div>
       <a href="http://localhost:3000/" target="_blank"
          style="font-family:var(--font-heading); font-size:clamp(2.4rem,5vw,5rem); font-weight:900; color:var(--accent2); text-decoration:underline; text-underline-offset:10px; text-decoration-color:rgba(99,102,241,0.5); letter-spacing:-0.01em; transition:color 0.2s;"
