@@ -109,26 +109,36 @@ with Session(engine) as db:
         "variables":       100,
         "datatypes":       100,
         "input_output":    100,
-        "string_methods":  95,
-        "type_conversion": 90,
+        "string_methods":  80,  # 4 Übungen gelöst (4×20=80)
+        "type_conversion": 80,  # 4 Übungen gelöst
         "if_else":         100,
         "for_loop":        100,
-        "while_loop":      95,
-        "lists":           90,
-        "tuples":          85,
-        "sets":            80,
-        "dictionaries":    85,
+        "while_loop":      80,  # 4 Übungen gelöst
+        "lists":           80,  # 4 Übungen gelöst
+        "tuples":          80,  # 4 Übungen gelöst
+        "sets":            80,  # 4 Übungen gelöst
+        "dictionaries":    80,  # 4 Übungen gelöst
         "functions":       100,
-        "list_comprehension": 70,
-        "error_handling":  60,
+        "list_comprehension": 20,  # 1 Übung gelöst
+        "error_handling":  20,     # 1 Übung gelöst
     })
 
-    # Übungsabschlüsse für die 4 vollständig gelösten Skills (alle 5 Übungen = 100%)
+    # Vollständig gelöste Skills (5×20=100)
     _add_exercise_completions(db, emad.id, {
-        "variables_1": 20, "variables_2": 20, "variables_3": 20, "variables_4": 20, "variables_5": 20,
-        "datatypes_1": 20, "datatypes_2": 20, "datatypes_3": 20, "datatypes_4": 20, "datatypes_5": 20,
-        "for_loop_1":  20, "for_loop_2":  20, "for_loop_3":  20, "for_loop_4":  20, "for_loop_5":  20,
-        "functions_1": 20, "functions_2": 20, "functions_3": 20, "functions_4": 20, "functions_5": 20,
+        f"{skill}_{i}": 20
+        for skill in ["variables", "datatypes", "if_else", "for_loop", "input_output", "functions"]
+        for i in range(1, 6)
+    })
+    # Teilweise gelöste Skills (4×20=80) — 5. Übung noch offen
+    _add_exercise_completions(db, emad.id, {
+        f"{skill}_{i}": 20
+        for skill in ["string_methods", "type_conversion", "while_loop", "lists", "tuples", "sets", "dictionaries"]
+        for i in range(1, 5)  # nur 1-4
+    })
+    # Begonnen (1 Übung)
+    _add_exercise_completions(db, emad.id, {
+        "list_comprehension_1": 20,
+        "error_handling_1":     20,
     })
 
     _add_events(db, emad.id, [
@@ -165,7 +175,8 @@ with Session(engine) as db:
 
     _add_exercise_completions(db, anna.id, {
         "variables_1": 20, "variables_2": 20, "variables_3": 20, "variables_4": 20, "variables_5": 20,
-        "datatypes_1": 20, "datatypes_2": 20, "datatypes_3": 20, "datatypes_4": 20, "datatypes_5": 20,
+        # datatypes score=90 → 4 vollständig gelöst + 1 teilweise (4×20 + 10 = 90)
+        "datatypes_1": 20, "datatypes_2": 20, "datatypes_3": 20, "datatypes_4": 20, "datatypes_5": 10,
         "if_else_1":   20, "if_else_2":   10,  # teilweise gelöst
     })
 
