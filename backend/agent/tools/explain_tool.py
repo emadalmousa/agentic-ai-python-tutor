@@ -1,3 +1,4 @@
+"""LangChain-Tool: erklärt Python-Code in einfacher deutscher Sprache."""
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
 from agent.config import get_llm
@@ -5,7 +6,11 @@ from agent.config import get_llm
 
 @tool
 def explain_code_tool(code: str) -> str:
-    """Erklärt Python-Code Schritt für Schritt auf Deutsch."""
+    """Erklärt Python-Code Schritt für Schritt auf Deutsch.
+
+    Wird vom ReAct-Agenten bei Verständnisfragen aufgerufen.
+    Antwort ist bewusst kurz (3-4 Sätze) — Anfänger überfordert zu viel Text.
+    """
     llm = get_llm()
     system = SystemMessage(content=(
         "Du bist ein Python-Tutor für Anfänger. Antworte KURZ und EINFACH.\n\n"

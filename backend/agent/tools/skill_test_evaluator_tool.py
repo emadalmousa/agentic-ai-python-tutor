@@ -1,3 +1,14 @@
+"""LangChain-Tool: bewertet die Antworten eines Skill-Tests.
+
+Scoring-Übersicht:
+- MC (3 Fragen): je 10 Punkte per Python-Stringvergleich — kein LLM nötig
+- Code-Lesen:    30 Punkte per LLM (semantischer Vergleich, toleriert Formulierungsunterschiede)
+- Mini-Task:     40 Punkte per LLM (prüft ob Code die erwartete Ausgabe produziert)
+- Gesamt:        0-100, bestanden wenn >= 60
+
+Für Code-Lesen und Mini-Task gibt es Conservative Fallbacks auf exakten Stringvergleich
+falls das LLM nicht erreichbar ist oder kein gültiges JSON zurückgibt.
+"""
 import json
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -26,15 +37,15 @@ def evaluate_skill_test(
     - Jede MC-Frage: 10 Punkte × 3 = 30 Punkte gesamt (exakter String-Vergleich, kein LLM)
     - Code-Lesen: 30 Punkte (LLM bewertet semantisch)
     - Mini-Aufgabe: 40 Punkte (LLM bewertet ob Code die erwartete Ausgabe produziert)
-    - Gesamt: 0-100, bestanden wenn >= 60 (MC=30%, code_reading=30%, mini_task=40%)
+    - Gesamt: 0-100, bestanden wenn >= 60
     """
     llm = get_llm()
 
-    # --- MC evaluation (pure Python, no LLM) ---
+    # --- MC-Bewertung (reines Python, kein LLM) ---
     answers = [a.strip().upper() for a in mc_answers.split(",") if a.strip()]
     corrects = [c.strip().upper() for c in mc_correct.split(",") if c.strip()]
 
-    # Pad to 3 items in case of malformed input
+    # Auf genau 3 Einträge auffüllen falls Eingabe fehlerhaft ist
     while len(answers) < 3:
         answers.append("")
     while len(corrects) < 3:
@@ -43,7 +54,7 @@ def evaluate_skill_test(
     mc_feedback = []
     mc_score = 0
     for i in range(3):
-        is_correct = answers[i] == corrects[i]
+        is_correct = answers[i] == corrects[i]  # exakter Vergleich: "A" == "A"
         if is_correct:
             mc_score += 10
         mc_feedback.append({
@@ -57,7 +68,7 @@ def evaluate_skill_test(
             ),
         })
 
-    # --- Code reading evaluation (LLM) ---
+    # --- Code-Lesen-Bewertung (LLM, semantisch) ---
     code_reading_score = 0
     code_reading_correct_flag = False
     code_reading_explanation = ""
@@ -69,7 +80,7 @@ def evaluate_skill_test(
         '{"correct": true, "explanation": "..."}\n\n'
         "Regeln:\n"
         "- correct: true wenn die Antwort semantisch mit der richtigen Antwort übereinstimmt "
-        "(kleine Unterschiede in Formulierung sind ok)\n"
+        "(kleine Unterschiede in Formulierung sind ok — z.B. 'gibt 8 aus' = '8')\n"
         "- explanation: kurze deutsche Erklärung ob und warum die Antwort korrekt/falsch ist"
     ))
     cr_human = HumanMessage(content=(
@@ -85,7 +96,7 @@ def evaluate_skill_test(
         if code_reading_correct_flag:
             code_reading_score = 30
     except (json.JSONDecodeError, ValueError):
-        # Conservative fallback: exact string comparison
+        # Konservativer Fallback: exakter Stringvergleich (case-insensitive)
         code_reading_correct_flag = (
             code_reading_answer.strip().lower() == code_reading_correct.strip().lower()
         )
@@ -101,7 +112,7 @@ def evaluate_skill_test(
         "explanation": code_reading_explanation,
     }
 
-    # --- Mini task evaluation (LLM) ---
+    # --- Mini-Task-Bewertung (LLM) ---
     mini_task_score = 0
     mini_task_correct = False
     mini_task_explanation = ""
@@ -115,6 +126,7 @@ def evaluate_skill_test(
         "- Kleine Formatierungsunterschiede (z.B. zusätzlicher Zeilenumbruch) sind tolerierbar\n"
         "- explanation: kurze deutsche Erklärung"
     ))
+    # Wenn subprocess-Ausgabe verfügbar → LLM bekommt die echte Ausgabe als zusätzlichen Kontext
     actual_output_section = (
         f"Tatsächliche Ausgabe (ausgeführt): {mini_task_actual_output}\n\n"
         if mini_task_actual_output
@@ -135,6 +147,7 @@ def evaluate_skill_test(
         if mini_task_correct:
             mini_task_score = 40
     except (json.JSONDecodeError, ValueError):
+        # LLM-Fehler → als falsch werten (kein Guess bei 40-Punkte-Aufgabe)
         mini_task_correct = False
         mini_task_explanation = "Die Bewertung konnte nicht durchgeführt werden."
 
@@ -144,10 +157,11 @@ def evaluate_skill_test(
         "explanation": mini_task_explanation,
     }
 
-    # --- Aggregate results ---
+    # --- Gesamt-Score berechnen ---
     total_score = mc_score + code_reading_score + mini_task_score
-    passed = total_score >= 60
+    passed = total_score >= 60  # Bestehensgrenze: 60 von 100 Punkten
 
+    # Feedback-Liste: 3 MC + code_reading + mini_task (in dieser Reihenfolge)
     per_question_feedback = mc_feedback + [code_reading_feedback, mini_task_feedback]
 
     result = {

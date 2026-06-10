@@ -1,3 +1,13 @@
+"""LangChain-Tool: generiert einen vollständigen Skill-Test per LLM.
+
+Der Test besteht aus drei Teilen:
+- multiple_choice: 3 Fragen mit je 4 Optionen (A/B/C/D), 10 Punkte each
+- code_reading: ein kurzes Code-Snippet mit Verständnisfrage, 30 Punkte
+- mini_task: eine Programmieraufgabe, 40 Punkte
+
+Bei LLM-Fehler oder ungültigem JSON-Format wird ein Fallback-Test zurückgegeben
+damit der Student immer einen Test bekommt.
+"""
 import json
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -11,6 +21,7 @@ def generate_skill_test(skill_key: str, skill_label: str, user_level: str) -> st
     einer Code-Lese-Aufgabe und einer Mini-Aufgabe.
 
     Gibt ein JSON-Objekt zurück das dem Skill Test Question Shape entspricht.
+    Validerung: genau 3 MC-Fragen, code_reading und mini_task müssen vorhanden sein.
     """
     llm = get_llm()
 
@@ -53,16 +64,16 @@ def generate_skill_test(skill_key: str, skill_label: str, user_level: str) -> st
     response = llm.invoke([system, human])
     try:
         result = _parse_json(str(response.content))
-        # Validate structure minimally
+        # Struktur minimal validieren — LLM hält sich nicht immer an genau 3 MC-Fragen
         if "multiple_choice" not in result or len(result["multiple_choice"]) != 3:
-            raise ValueError("multiple_choice must have exactly 3 questions")
+            raise ValueError("multiple_choice muss genau 3 Fragen haben")
         if "code_reading" not in result:
-            raise ValueError("code_reading section missing")
+            raise ValueError("code_reading-Abschnitt fehlt")
         if "mini_task" not in result:
-            raise ValueError("mini_task section missing")
+            raise ValueError("mini_task-Abschnitt fehlt")
         return json.dumps(result, ensure_ascii=False)
     except (json.JSONDecodeError, ValueError):
-        # Return a minimal valid fallback test
+        # Fallback-Test damit der Student nicht blockiert wird wenn LLM fehlschlägt
         fallback = {
             "multiple_choice": [
                 {

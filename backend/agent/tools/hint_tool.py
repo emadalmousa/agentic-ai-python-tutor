@@ -1,7 +1,15 @@
+"""LangChain-Tool: gibt gestufte Tipps für Übungsaufgaben zurück.
+
+Drei Tipp-Stufen mit bewusst unterschiedlicher Tiefe:
+- Stufe 1: nur die Idee/den Ansatz (kein Code, keine Syntax)
+- Stufe 2: konkrete Funktion oder Methode, aber kein vollständiges Beispiel
+- Stufe 3: partieller Code-Schnipsel mit Lücken (Lösung bleibt offen)
+"""
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
 from agent.config import get_llm
 
+# Stufen-spezifische Anweisungen für den LLM-Prompt
 _HINT_LEVEL_INSTRUCTIONS = {
     1: (
         "Stufe 1 — Konzepthinweis:\n"
@@ -31,8 +39,10 @@ def get_hint(code: str, exercise_description: str, hint_level: int) -> str:
 
     hint_level 1 = konzeptueller Tipp, 2 = Syntaxtipp, 3 = lösungsnaher Tipp.
     Gibt einen deutschen Klartext-String zurück (kein JSON).
+    hint_level wird auf 1-3 geclampt um ungültige Werte abzufangen.
     """
     llm = get_llm()
+    # Wert auf gültigen Bereich 1-3 begrenzen
     level = max(1, min(3, int(hint_level)))
     level_instruction = _HINT_LEVEL_INSTRUCTIONS[level]
 
@@ -56,4 +66,5 @@ def get_hint(code: str, exercise_description: str, hint_level: int) -> str:
         response = llm.invoke([system, human])
         return str(response.content)
     except Exception:
+        # LLM nicht erreichbar → neutraler Fallback damit der Student nicht hängt
         return "Ein Tipp ist gerade nicht verfügbar. Bitte versuche es erneut."

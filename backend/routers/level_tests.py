@@ -1,4 +1,9 @@
-"""Level-Tests router — generates and evaluates end-of-level tests covering all skills of a level."""
+"""Level-Tests-Router: generiert und bewertet Level-übergreifende Abschlusstests.
+
+Ein Level-Test deckt ALLE Skills eines Levels ab (z.B. alle 13 Beginner-Skills).
+Der Test wird aus einem kombinierten skill_label generiert, das alle Skills auflistet.
+Struktur und Scoring identisch zu Skill-Tests.
+"""
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,35 +21,42 @@ from agent.tools.skill_test_evaluator_tool import evaluate_skill_test
 
 router = APIRouter(prefix="/level-tests", tags=["level-tests"])
 
+# Deutsche Bezeichnungen für die drei Level
 LEVEL_LABELS = {
     "beginner":     "Anfänger",
     "intermediate": "Fortgeschritten",
     "advanced":     "Profi",
 }
 
+
 def _skills_for_level(level: str) -> list[dict]:
+    """Gibt alle Skills eines bestimmten Levels aus dem SKILL_TREE zurück."""
     return [s for s in SKILL_TREE if s["level"] == level]
 
 
 class GenerateRequest(BaseModel):
+    """Anfrage zur Level-Test-Generierung."""
     level: str  # "beginner" | "intermediate" | "advanced"
 
 
 class GenerateResponse(BaseModel):
+    """Antwort mit Session-ID, Level und den Testfragen."""
     test_session_id: int
     level: str
     test_data: dict
 
 
 class SubmitRequest(BaseModel):
+    """Abgabe der Level-Test-Antworten."""
     test_session_id: int
     level: str
-    mc_answers: dict[str, str]
+    mc_answers: dict[str, str]    # {"0": "A", "1": "B", "2": "C"}
     code_reading_answer: str
     mini_task_code: str
 
 
 class SubmitResponse(BaseModel):
+    """Bewertungsergebnis des Level-Tests."""
     total_score: int
     passed: bool
     mc_score: int
@@ -60,6 +72,11 @@ def generate_level_test(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Generiert einen Level-Test der alle Skills des Levels abdeckt.
+
+    Der kombinierte skill_label ("Anfänger — Variablen, Datentypen, ...") informiert das LLM
+    über alle relevanten Themen, damit die Testfragen das volle Level abdecken.
+    """
     if data.level not in LEVEL_LABELS:
         raise HTTPException(status_code=400, detail=f"Unbekanntes Level: {data.level}")
 
@@ -67,10 +84,11 @@ def generate_level_test(
     if not skills:
         raise HTTPException(status_code=404, detail="Keine Skills für dieses Level gefunden.")
 
-    # Build a combined label covering all skills of the level
+    # Kombinierten Label für LLM erstellen — deckt alle Skills des Levels ab
     skill_labels = ", ".join(s["label"] for s in skills)
     level_label = LEVEL_LABELS[data.level]
 
+    # Gleiche generate_skill_test-Funktion wie Skill-Tests — skill_key ist hier "level_beginner" o.ä.
     raw = generate_skill_test.invoke({
         "skill_key": f"level_{data.level}",
         "skill_label": f"{level_label} — {skill_labels}",
@@ -78,6 +96,7 @@ def generate_level_test(
     })
     test_data = json.loads(raw)
 
+    # Versuchs-Nummer für dieses Level berechnen
     prior = db.query(LevelTestResult).filter_by(user_id=current_user.id, level=data.level).count()
     row = LevelTestResult(
         user_id=current_user.id,
@@ -85,7 +104,7 @@ def generate_level_test(
         score=0,
         passed=False,
         attempt_number=prior + 1,
-        generated_test=test_data,
+        generated_test=test_data,  # inklusive richtiger Antworten — server-seitig gesichert
     )
     db.add(row)
     db.commit()
@@ -100,19 +119,26 @@ def submit_level_test(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Bewertet die eingereichten Level-Test-Antworten anhand der server-seitigen Daten."""
+    # Session laden und Eigentümerschaft prüfen
     row = db.query(LevelTestResult).filter_by(id=data.test_session_id, user_id=current_user.id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Test-Session nicht gefunden.")
 
     test_data = row.generated_test or {}
+
+    # Mini-Task-Code ausführen → stdout für LLM-Bewertung
     mini_stdout, _ = run_user_code(data.mini_task_code)
 
+    # Richtige Antworten aus server-seitigen DB-Daten extrahieren
     mc_questions = test_data.get("multiple_choice", [])
     mc_correct_str = ",".join(q.get("correct", "") for q in mc_questions)
     mc_answers_str = ",".join(data.mc_answers.get(str(i), "") for i in range(len(mc_questions)))
+
     code_reading = test_data.get("code_reading", {})
     mini_task = test_data.get("mini_task", {})
 
+    # Bewertung: identisch zu Skill-Tests — gleicher evaluator
     raw = evaluate_skill_test.invoke({
         "skill_key": f"level_{data.level}",
         "mc_answers": mc_answers_str,
@@ -126,6 +152,7 @@ def submit_level_test(
     })
     result = json.loads(raw)
 
+    # Score in DB speichern
     row.score = result["total_score"]
     row.passed = result["passed"]
     db.commit()
@@ -147,7 +174,12 @@ def get_level_test_status(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Returns whether the user has passed the level test."""
+    """Gibt den besten Test-Versuch und Bestanden-Status für ein Level zurück.
+
+    Nützlich damit das Frontend den "Level-Test starten"-Button nur anzeigt
+    wenn der Student das Level noch nicht bestanden hat.
+    """
+    # Besten Versuch (höchster Score) laden
     best = (
         db.query(LevelTestResult)
         .filter_by(user_id=current_user.id, level=level)

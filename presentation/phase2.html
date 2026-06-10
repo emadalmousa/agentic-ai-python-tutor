@@ -362,24 +362,24 @@
       </div>
       <div class="features-grid">
 
-        <!-- 1 PDF / RAG -->
-        <div class="feature-card" style="border-top:3px solid var(--warn);">
-          <div class="feat-icon amber">
-            <i class="fa-solid fa-file-pdf" style="color:var(--warn);"></i>
-          </div>
-          <span class="feat-label">01 — RAG</span>
-          <div class="feat-title">PDF Feature &amp; RAG Pipeline</div>
-          <p class="feat-desc">Upload → Chunks → LLM Embeddings → pgvector (PostgreSQL). Chat nutzt automatisch relevante Abschnitte als Kontext.</p>
-        </div>
-
-        <!-- 2 Endpoints -->
+        <!-- 1 Endpoints -->
         <div class="feature-card" style="border-top:3px solid var(--accent3);">
           <div class="feat-icon blue">
             <i class="fa-solid fa-bolt" style="color:var(--accent3);"></i>
           </div>
-          <span class="feat-label">02 — Backend</span>
+          <span class="feat-label">01 — Backend</span>
           <div class="feat-title">Neue FastAPI Endpoints</div>
           <p class="feat-desc">/exercises · /skill-tests · /level-tests · /learning-progress · /auth — jeder Endpoint mit JWT-Schutz.</p>
+        </div>
+
+        <!-- 2 PDF / RAG -->
+        <div class="feature-card" style="border-top:3px solid var(--warn);">
+          <div class="feat-icon amber">
+            <i class="fa-solid fa-file-pdf" style="color:var(--warn);"></i>
+          </div>
+          <span class="feat-label">02 — RAG</span>
+          <div class="feat-title">PDF Feature &amp; RAG Pipeline</div>
+          <p class="feat-desc">Upload → Chunks → LLM Embeddings → pgvector (PostgreSQL). Chat nutzt automatisch relevante Abschnitte als Kontext.</p>
         </div>
 
         <!-- 3 Agent Tools -->
@@ -523,13 +523,13 @@
 
       <div class="ep3-grid">
 
-        <!-- 1: LangChain + LLM — tote Karte -->
+        <!-- 1: LangChain Agent + LLM — tote Karte -->
         <div class="ep3-card c-gray feature-card" style="border-top:3px solid var(--muted); opacity:0.45; pointer-events:none;">
           <div class="ep3-card-head">
             <div class="ep3-card-icon" style="background:rgba(148,163,184,0.1);">🤖</div>
             <div>
-              <div class="ep3-card-title" style="color:var(--muted);">LangChain + LLM</div>
-              <div class="ep3-card-sub">ReAct-Agent · LLM entscheidet</div>
+              <div class="ep3-card-title" style="color:var(--muted);">LangChain Agent + LLM</div>
+              <div class="ep3-card-sub">agent.invoke() · LLM wählt Tool · ReAct-Loop</div>
             </div>
           </div>
           <div class="ep3-entries">
@@ -537,60 +537,60 @@
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/chat <em style="color:var(--muted); font-style:normal;">(kein PDF)</em></div>
-                <div class="ep3-entry-desc">Agent mit 5 Tools · LLM wählt Tool im ReAct-Loop</div>
+                <div class="ep3-entry-desc"><code>run_chat()</code> → <code>agent.invoke()</code> · LLM entscheidet welches Tool · nicht deterministisch</div>
               </div>
             </div>
             <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/analyze</div>
-                <div class="ep3-entry-desc"><code>explain → debug → exercise</code> — LangChain Chain · LLM pro Schritt</div>
+                <div class="ep3-entry-desc"><code>run_analysis()</code> → <code>agent.invoke()</code> · <code>explain → debug → exercise</code></div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 2: Nur LangChain -->
+        <!-- 2: @tool + LangChain + LLM -->
         <div class="ep3-card c-tool feature-card" style="border-top:3px solid var(--success);">
           <div class="ep3-card-head">
-            <div class="ep3-card-icon">🔗</div>
+            <div class="ep3-card-icon">🛠️</div>
             <div>
-              <div class="ep3-card-title">Nur LangChain</div>
-              <div class="ep3-card-sub">Embeddings · Tool-Wrapper · kein Agent-Loop</div>
+              <div class="ep3-card-title">@tool + LangChain + LLM</div>
+              <div class="ep3-card-sub">tool.invoke() · fix aufgerufen · kein Agent-Loop</div>
             </div>
           </div>
           <div class="ep3-entries">
             <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/tutor/upload-material</div>
-                <div class="ep3-entry-desc"><code>get_embeddings()</code> → pgvector · LangChain für Chunks, kein Chat-LLM</div>
-              </div>
-            </div>
-            <div class="ep3-entry">
-              <span class="ep3-method m-post">POST</span>
-              <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/exercises/submit · /exercises/hint</div>
-                <div class="ep3-entry-desc">LangChain Tool direkt aufgerufen · kein Agent-Loop · <code>tool.invoke()</code></div>
+                <div class="ep3-entry-desc"><code>evaluate_exercise.invoke()</code> · <code>get_hint.invoke()</code> · LLM im Tool</div>
               </div>
             </div>
             <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/exercises/generate · /skill-tests/generate · /skill-tests/submit</div>
-                <div class="ep3-entry-desc">LangChain Tool-Wrapper · Code ruft Tool fix auf · kein ReAct</div>
+                <div class="ep3-entry-path">/skill-tests/generate · /skill-tests/submit</div>
+                <div class="ep3-entry-desc"><code>generate_skill_test.invoke()</code> · <code>evaluate_skill_test.invoke()</code> · LLM im Tool</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/upload-material</div>
+                <div class="ep3-entry-desc">LangChain <code>PGVector</code> · <code>get_embeddings()</code> → pgvector · kein Chat-LLM</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 3: Nur LLM -->
+        <!-- 3: llm.invoke() direkt -->
         <div class="ep3-card c-llm feature-card" style="border-top:3px solid var(--warn);">
           <div class="ep3-card-head">
             <div class="ep3-card-icon">⚡</div>
             <div>
-              <div class="ep3-card-title">Nur LLM</div>
-              <div class="ep3-card-sub">llm.invoke() · kein LangChain</div>
+              <div class="ep3-card-title">llm.invoke() direkt</div>
+              <div class="ep3-card-sub">LangChain-Objekt · kein @tool · kein Agent</div>
             </div>
           </div>
           <div class="ep3-entries">
@@ -598,14 +598,21 @@
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/chat <em style="color:var(--muted); font-style:normal;">(PDF hochgeladen)</em></div>
-                <div class="ep3-entry-desc"><code>run_chat_with_context()</code> · PDF-Chunks im Prompt · direkt <code>llm.invoke()</code></div>
+                <div class="ep3-entry-desc"><code>run_chat_with_context()</code> · PDF-Chunks im Prompt · <code>llm.invoke()</code> direkt</div>
               </div>
             </div>
             <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/learning-progress/analyze</div>
-                <div class="ep3-entry-desc"><code>analyze_skill()</code> · Skill erkennen + Score · direkt <code>llm.invoke()</code></div>
+                <div class="ep3-entry-desc"><code>analyze_skill()</code> · Skill + Score erkennen · <code>llm.invoke()</code> direkt</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/tutor/chat <em style="color:var(--muted); font-style:normal;">(alle Requests)</em></div>
+                <div class="ep3-entry-desc"><code>_is_python_related()</code> · Classifier · <code>get_classifier_llm().invoke()</code></div>
               </div>
             </div>
           </div>

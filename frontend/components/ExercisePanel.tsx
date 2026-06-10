@@ -252,9 +252,19 @@ export default function ExercisePanel({ skill, onSkillScoreUpdate, onStartSkillT
 
       {/* Skill header */}
       <div className="flex items-center justify-between gap-3">
-        <h2 className={`text-base font-bold ${dark ? "text-white" : "text-gray-900"}`}>
-          {skill.skill_label} — Übungen
-        </h2>
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className={`text-base font-bold ${dark ? "text-white" : "text-gray-900"}`}>
+            {skill.skill_label} — Übungen
+          </h2>
+          {skill.score >= 100 && (
+            <button
+              onClick={onStartSkillTest}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-600 active:scale-[0.97] text-white transition-all shadow-md shadow-emerald-500/30"
+            >
+              🎯 Skill testen
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className={`text-xs tabular-nums font-mono px-2 py-0.5 rounded-full ${dark ? "bg-[#1e2f45] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
             {exercises.filter((e) => e.is_locked).length} / {exercises.length} gelöst

@@ -1,3 +1,10 @@
+"""LangChain-Tool: generiert dynamisch neue Übungsaufgaben für Intermediate/Advanced-Skills.
+
+Wird vom Chat-Agenten über suggest_personalized_exercise aufgerufen wenn der Student
+eine neue Übung für einen bestimmten Skill möchte.
+Anders als die statische exercises.py-Bibliothek generiert dieses Tool jedes Mal neue,
+abwechslungsreiche Aufgaben und vermeidet bereits abgeschlossene Aufgabentitel.
+"""
 import json
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -15,10 +22,12 @@ def generate_exercise(
     """Generiert dynamisch eine neue Übungsaufgabe für Intermediate- oder Advanced-Skills.
 
     Gibt ein JSON-Objekt mit title, description, expected_output und hint zurück.
-    completed_exercise_titles ist eine kommagetrennte Liste bereits abgeschlossener Aufgabentitel.
+    completed_exercise_titles ist eine kommagetrennte Liste bereits abgeschlossener Aufgabentitel —
+    das LLM soll diese nicht wiederholen um Abwechslung zu gewährleisten.
     """
     llm = get_llm()
 
+    # Level-spezifische Schwierigkeitsbeschreibung für den LLM-Prompt
     difficulty_guidance = {
         "intermediate": (
             "Das Schwierigkeitsniveau ist 'Fortgeschritten' (Intermediate). "
@@ -32,6 +41,7 @@ def generate_exercise(
         ),
     }.get(level, "Das Schwierigkeitsniveau ist Fortgeschritten.")
 
+    # Bereits abgeschlossene Aufgaben in den Prompt einbauen damit keine Wiederholungen entstehen
     already_done = ""
     if completed_exercise_titles.strip():
         already_done = (
@@ -64,12 +74,13 @@ def generate_exercise(
     response = llm.invoke([system, human])
     try:
         result = _parse_json(str(response.content))
-        # Ensure all required fields are present
+        # Alle Pflichtfelder auf Vorhandensein prüfen
         for field in ("title", "description", "expected_output", "hint"):
             if not result.get(field):
                 result[field] = f"[{field} nicht verfügbar]"
         return json.dumps(result, ensure_ascii=False)
     except (json.JSONDecodeError, ValueError):
+        # Fallback damit der Student immer eine Aufgabe bekommt
         return json.dumps({
             "title": f"Aufgabe zu {skill_label}",
             "description": "Schreibe ein Python-Programm, das das aktuelle Konzept demonstriert.",

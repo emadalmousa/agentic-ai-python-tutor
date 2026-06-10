@@ -1,3 +1,9 @@
+"""LangChain-Tool: generiert eine passende Übungsaufgabe basierend auf dem aktuellen Code.
+
+Wird vom ReAct-Agenten als einfaches, code-basiertes Übungstool verwendet.
+Anders als generate_exercise (für Intermediate/Advanced) ist dieses Tool für spontane,
+kontextbasierte Übungen ohne Skill-Fortschritt-Tracking.
+"""
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
 from agent.config import get_llm
@@ -5,7 +11,12 @@ from agent.config import get_llm
 
 @tool
 def exercise_tool(code: str, error_found: bool, suggestion: str) -> str:
-    """Generiert eine passende Übungsaufgabe basierend auf dem Code und gefundenen Fehlern."""
+    """Generiert eine passende Übungsaufgabe basierend auf dem Code und gefundenen Fehlern.
+
+    Wenn ein Fehler gefunden wurde: Übung übt genau dieses Konzept.
+    Wenn kein Fehler: Übung baut auf dem vorhandenen Code auf und führt ein neues Konzept ein.
+    Gibt formatierten deutschen Text zurück (nicht JSON).
+    """
     llm = get_llm()
     system = SystemMessage(content=(
         "Du bist ein kreativer Python-Tutor für Anfänger.\n"
@@ -18,12 +29,14 @@ def exercise_tool(code: str, error_found: bool, suggestion: str) -> str:
         "Sei kreativ — keine langweiligen Standard-Aufgaben!"
     ))
     if error_found:
+        # Fehler gefunden → Übung wiederholt das problematische Konzept
         context = (
             f"Der Schüler hat diesen Code geschrieben:\n```python\n{code}\n```\n\n"
             f"Problem gefunden: {suggestion}\n\n"
             "Erstelle eine Übung die genau dieses Konzept übt, damit der Schüler den Fehler versteht und nicht wiederholt."
         )
     else:
+        # Kein Fehler → leicht fortgeschrittenere Übung auf dem vorhandenen Code aufbauen
         context = (
             f"Der Schüler hat diesen korrekten Code geschrieben:\n```python\n{code}\n```\n\n"
             "Erstelle eine leicht fortgeschrittenere Übung die auf diesem Code aufbaut "

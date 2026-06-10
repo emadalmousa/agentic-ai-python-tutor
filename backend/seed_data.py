@@ -1,7 +1,18 @@
 """
-Seed script — fills the database with realistic test data.
-Run from the backend directory:
-    python seed_data.py
+Seed-Skript — befüllt die Datenbank mit realistischen Testdaten für Entwicklung/Demo.
+
+Wird automatisch beim Server-Start von main.py ausgeführt (subprocess-Aufruf).
+Überspringt sich selbst wenn bereits User in der DB vorhanden sind (Idempotenz).
+
+5 Test-User mit unterschiedlichem Lernfortschritt:
+  1. Emad Almousa  — Admin, Fortgeschritten, alle Beginner-Skills >= 80%
+  2. Anna Schmidt  — Anfänger, gerade bei Schleifen angekommen
+  3. Max Müller    — Fast-Profi, alle Beginner-Skills auf 100%
+  4. Lena Weber    — Kompletter Neuling, nur Variablen angefangen
+  5. Tom Becker    — Stockt bei Klassen, sonst gut
+
+Ausführung (manuell):
+    cd backend && python seed_data.py
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
@@ -15,37 +26,49 @@ from models.exercise import ExerciseCompletion
 from models.skill_test import SkillTestResult
 from models.session import LearningSession
 
+# Tabellen anlegen falls noch nicht vorhanden (idempotent)
 Base.metadata.create_all(bind=engine)
 
+
 # ---------------------------------------------------------------------------
-# Helpers
+# Hilfsfunktionen
 # ---------------------------------------------------------------------------
 
 def _add_skill_progress(db: Session, user_id: int, scores: dict[str, int]):
-    """Insert StudentSkillProgress rows. scores = {skill_key: score}"""
+    """Legt StudentSkillProgress-Einträge an. scores = {skill_key: score}
+
+    Skills mit score=0 werden übersprungen (kein Eintrag = nicht begonnen).
+    Status wird automatisch aus dem Score berechnet.
+    """
     for skill in SKILL_TREE:
         key = skill["key"]
         score = scores.get(key, 0)
         if score == 0:
-            continue
+            continue  # Kein Eintrag für Skills die der Student noch nicht berührt hat
         status = "understood" if score >= 75 else "partial" if score >= 40 else "not_understood"
         db.add(StudentSkillProgress(user_id=user_id, skill_key=key, score=score, status=status))
 
 
 def _add_exercise_completions(db: Session, user_id: int, completions: dict[str, int]):
-    """completions = {exercise_id: score_granted (0|10|20)}"""
+    """Legt ExerciseCompletion-Einträge an. completions = {exercise_id: score_granted (0|10|20)}
+
+    skill_key wird aus der exercise_id abgeleitet: "variables_1" → skill_key = "variables".
+    is_locked=True wenn score_granted=20 (vollständig gelöst).
+    """
     for exercise_id, score in completions.items():
+        # skill_key = alles vor dem letzten Unterstrich: "for_loop_1" → "for_loop"
         skill_key = exercise_id.rsplit("_", 1)[0]
         db.add(ExerciseCompletion(
             user_id=user_id,
             skill_key=skill_key,
             exercise_id=exercise_id,
             score_granted=score,
-            is_locked=(score == 20),
+            is_locked=(score == 20),  # vollständig gelöst wenn 20 Punkte
         ))
 
 
 def _add_events(db: Session, user_id: int, events: list[dict]):
+    """Legt LearningEvent-Einträge für die Aktivitäts-Timeline an."""
     for e in events:
         db.add(LearningEvent(
             user_id=user_id,
@@ -58,18 +81,18 @@ def _add_events(db: Session, user_id: int, events: list[dict]):
 
 
 # ---------------------------------------------------------------------------
-# Main seed
+# Haupt-Seed-Logik
 # ---------------------------------------------------------------------------
 
 with Session(engine) as db:
 
-    # Skip if already seeded
+    # Idempotenz: wenn schon User vorhanden → nichts tun
     if db.query(User).first():
-        print("✓ DB already seeded, skipping")
+        print("✓ DB bereits befüllt, überspringe Seed")
         raise SystemExit(0)
 
     # -----------------------------------------------------------------------
-    # 1. Admin — Emad Almousa (Fortgeschritten, alle Beginner-Skills ≥ 80%)
+    # 1. Admin — Emad Almousa (Fortgeschritten, alle Beginner-Skills >= 80%)
     # -----------------------------------------------------------------------
     emad = User(
         name="Emad Almousa",
@@ -80,7 +103,7 @@ with Session(engine) as db:
         role=Role.ADMIN,
     )
     db.add(emad)
-    db.flush()
+    db.flush()  # flush damit emad.id verfügbar ist
 
     _add_skill_progress(db, emad.id, {
         "variables":       100,
@@ -100,6 +123,7 @@ with Session(engine) as db:
         "error_handling":  60,
     })
 
+    # Übungsabschlüsse für die 4 vollständig gelösten Skills (alle 5 Übungen = 100%)
     _add_exercise_completions(db, emad.id, {
         "variables_1": 20, "variables_2": 20, "variables_3": 20, "variables_4": 20, "variables_5": 20,
         "datatypes_1": 20, "datatypes_2": 20, "datatypes_3": 20, "datatypes_4": 20, "datatypes_5": 20,
@@ -112,11 +136,12 @@ with Session(engine) as db:
         {"skill_key": "error_handling",     "score": 60, "feedback": "try/except wird verstanden, finally noch nicht sicher eingesetzt.", "mistakes": ["finally vergessen"]},
     ])
 
+    # Skill-Test-Ergebnisse für Fortschritts-Anzeige
     db.add(SkillTestResult(user_id=emad.id, skill_key="variables", score=90, passed=True, attempt_number=1))
     db.add(SkillTestResult(user_id=emad.id, skill_key="for_loop",  score=85, passed=True, attempt_number=1))
 
     # -----------------------------------------------------------------------
-    # 2. Anna Schmidt — Anfänger, gerade bei Schleifen angekommen
+    # 2. Anna Schmidt — Anfänger, gerade bei If/Else
     # -----------------------------------------------------------------------
     anna = User(
         name="Anna Schmidt",
@@ -141,7 +166,7 @@ with Session(engine) as db:
     _add_exercise_completions(db, anna.id, {
         "variables_1": 20, "variables_2": 20, "variables_3": 20, "variables_4": 20, "variables_5": 20,
         "datatypes_1": 20, "datatypes_2": 20, "datatypes_3": 20, "datatypes_4": 20, "datatypes_5": 20,
-        "if_else_1":   20, "if_else_2":   10,
+        "if_else_1":   20, "if_else_2":   10,  # teilweise gelöst
     })
 
     _add_events(db, anna.id, [
@@ -152,7 +177,7 @@ with Session(engine) as db:
     db.add(SkillTestResult(user_id=anna.id, skill_key="variables", score=95, passed=True, attempt_number=1))
 
     # -----------------------------------------------------------------------
-    # 3. Max Müller — Profi-Anwärter, fast alle Skills auf 100%
+    # 3. Max Müller — Fast-Profi, alle Beginner-Skills auf 100%
     # -----------------------------------------------------------------------
     max_user = User(
         name="Max Müller",
@@ -175,6 +200,7 @@ with Session(engine) as db:
         "classes_basic":   75,
     })
 
+    # Alle 13 Beginner-Skills vollständig gelöst (5 × 20 = 100 pro Skill)
     _add_exercise_completions(db, max_user.id, {
         f"{skill}_{i}": 20
         for skill in ["variables","datatypes","input_output","string_methods","type_conversion",
@@ -190,7 +216,7 @@ with Session(engine) as db:
         db.add(SkillTestResult(user_id=max_user.id, skill_key=skill, score=92, passed=True, attempt_number=1))
 
     # -----------------------------------------------------------------------
-    # 4. Lena Weber — Kompletter Neuling, nur Variables angefangen
+    # 4. Lena Weber — Neuling, nur Variablen angefangen
     # -----------------------------------------------------------------------
     lena = User(
         name="Lena Weber",
@@ -204,11 +230,11 @@ with Session(engine) as db:
     db.flush()
 
     _add_skill_progress(db, lena.id, {
-        "variables": 40,
+        "variables": 40,  # partial — Variablen teilweise verstanden
     })
 
     _add_exercise_completions(db, lena.id, {
-        "variables_1": 20, "variables_2": 10,
+        "variables_1": 20, "variables_2": 10,  # erste gelöst, zweite teilweise
     })
 
     _add_events(db, lena.id, [
@@ -216,7 +242,7 @@ with Session(engine) as db:
     ])
 
     # -----------------------------------------------------------------------
-    # 5. Tom Becker — Mittelstufe, stockt bei Klassen
+    # 5. Tom Becker — Stockt bei Klassen, sonst solide Grundlagen
     # -----------------------------------------------------------------------
     tom = User(
         name="Tom Becker",
@@ -236,7 +262,7 @@ with Session(engine) as db:
         "tuples":          80,  "sets":            80,  "dictionaries":    80,
         "functions":       90,
         "list_comprehension": 80, "error_handling": 75, "file_io": 60,
-        "classes_basic":   30,
+        "classes_basic":   30,  # not_understood — das Problem-Skill
     })
 
     _add_events(db, tom.id, [
@@ -247,6 +273,7 @@ with Session(engine) as db:
     for skill in ["variables","for_loop","if_else","functions"]:
         db.add(SkillTestResult(user_id=tom.id, skill_key=skill, score=88, passed=True, attempt_number=1))
 
+    # Zweiter Versuch bei classes_basic — nicht bestanden (score=45 < 60)
     db.add(SkillTestResult(user_id=tom.id, skill_key="classes_basic", score=45, passed=False, attempt_number=2))
 
     db.commit()

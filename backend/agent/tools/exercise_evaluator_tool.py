@@ -1,3 +1,10 @@
+"""LangChain-Tool: bewertet Schüler-Code für eine Übungsaufgabe per LLM.
+
+Drei Bewertungs-Szenarien (in Prioritätsreihenfolge):
+1. stdout leer     → "falsch"  (kein LLM-Entscheid nötig — Code hat nicht ausgegeben)
+2. stdout = erwartet → "richtig" oder "teilweise" (LLM prüft ob Konzept korrekt verwendet)
+3. stdout ≠ erwartet → "teilweise" oder "falsch"  (LLM beurteilt Konzept-Verständnis)
+"""
 import json
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -19,7 +26,7 @@ def evaluate_exercise(
     """
     llm = get_llm()
 
-    # Priority 1: stdout is empty — must be falsch before calling LLM
+    # Szenario 1: stdout leer — Code hat nichts ausgegeben (Laufzeitfehler oder unvollständig)
     if not stdout.strip():
         system = SystemMessage(content=(
             "Du bist ein ermutigender Python-Tutor für Anfänger.\n"
@@ -45,6 +52,7 @@ def evaluate_exercise(
         try:
             return json.dumps(_parse_json(str(response.content)), ensure_ascii=False)
         except (json.JSONDecodeError, ValueError):
+            # LLM-Parse fehlgeschlagen → sicherer Fallback
             return json.dumps({
                 "result": "falsch",
                 "what_was_good": "Der Ansatz ist erkennbar.",
@@ -52,7 +60,8 @@ def evaluate_exercise(
                 "hint": "Prüfe ob dein Code eine print()-Anweisung enthält.",
             }, ensure_ascii=False)
 
-    # Priority 2: exact stdout match — verify concept correctness via LLM
+    # Szenario 2: stdout stimmt exakt überein — LLM prüft ob Konzept korrekt verwendet wurde
+    # (verhindert Hardcoding: print('5') statt einer echten Berechnung)
     if stdout.strip() == expected_output.strip():
         system = SystemMessage(content=(
             "Du bist ein ermutigender Python-Tutor für Anfänger.\n"
@@ -81,12 +90,12 @@ def evaluate_exercise(
         response = llm.invoke([system, human])
         try:
             result = _parse_json(str(response.content))
-            # Normalise the result field — LLM may return the literal placeholder
+            # LLM gibt manchmal den Platzhalter "richtig_oder_teilweise" zurück — normalisieren
             if result.get("result") == "richtig_oder_teilweise":
                 result["result"] = "richtig"
             if result.get("result") not in ("richtig", "teilweise", "falsch"):
                 result["result"] = "richtig"
-            # Ensure required fields are never empty
+            # Pflichtfelder nie leer lassen
             if not result.get("what_was_good"):
                 result["what_was_good"] = "Gute Arbeit — die Ausgabe ist korrekt!"
             if not result.get("hint"):
@@ -100,7 +109,7 @@ def evaluate_exercise(
                 "hint": "Weiter so! Probiere die nächste Aufgabe.",
             }, ensure_ascii=False)
 
-    # Priority 3: stdout does not match but is non-empty — LLM determines teilweise vs falsch
+    # Szenario 3: stdout nicht leer, aber nicht korrekt — LLM beurteilt teilweise vs falsch
     system = SystemMessage(content=(
         "Du bist ein ermutigender Python-Tutor für Anfänger.\n"
         "Der Code des Schülers hat eine Ausgabe produziert, die NICHT mit der erwarteten übereinstimmt.\n\n"
