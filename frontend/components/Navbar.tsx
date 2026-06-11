@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
@@ -13,6 +14,23 @@ export default function Navbar() {
   const { t } = useLang()
   const router = useRouter()
   const pathname = usePathname()
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  useEffect(() => {
+    function onFsChange() {
+      setIsFullscreen(document.fullscreenElement !== null)
+    }
+    document.addEventListener("fullscreenchange", onFsChange)
+    return () => document.removeEventListener("fullscreenchange", onFsChange)
+  }, [])
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen()
+    } else {
+      document.exitFullscreen()
+    }
+  }
   const onTutor    = pathname === "/tutor"
   const onProfile  = pathname === "/profile"
   const onProgress = pathname === "/progress"
@@ -150,6 +168,28 @@ export default function Navbar() {
         )}
 
         <div className={`ml-2 w-px h-5 ${dark ? "bg-[#1e2f45]" : "bg-gray-200"}`} />
+
+        <button
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Vollbild beenden" : "Vollbild"}
+          className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all ${
+            dark
+              ? "text-gray-400 hover:bg-[#1e2f45] hover:text-gray-200"
+              : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          }`}
+        >
+          {isFullscreen ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+              <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+            </svg>
+          )}
+        </button>
 
         <LanguageSwitcher />
 

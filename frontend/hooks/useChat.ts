@@ -62,7 +62,7 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
   const [history, setHistory] = useState<ChatMessage[]>(() => {
     if (hasRedirect) return pendingMsg ? [] : initialHistory
     try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem(_HISTORY_KEY) : null
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem(_HISTORY_KEY) : null
       return raw ? (JSON.parse(raw) as ChatMessage[]) : []
     } catch { return [] }
   })
@@ -72,7 +72,7 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
   const [uploading, setUploading] = useState(false)
   const [materialName, setMaterialName] = useState<string | null>(() => {
     try {
-      return typeof window !== "undefined" ? localStorage.getItem(_MATERIAL_KEY) : null
+      return typeof window !== "undefined" ? sessionStorage.getItem(_MATERIAL_KEY) : null
     } catch { return null }
   })
   // true = blob is available (can open PDF), false = no blob (e.g. after hard reload)
@@ -83,7 +83,7 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
 
   function persistHistory(next: ChatMessage[]) {
     setHistory(next)
-    try { localStorage.setItem(_HISTORY_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+    try { sessionStorage.setItem(_HISTORY_KEY, JSON.stringify(next)) } catch { /* ignore */ }
   }
 
   function persistMaterialName(name: string | null, blob: Blob | null = null) {
@@ -91,8 +91,8 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     setHasPdf(blob !== null)
     _pdfBlob = blob
     try {
-      if (name) localStorage.setItem(_MATERIAL_KEY, name)
-      else localStorage.removeItem(_MATERIAL_KEY)
+      if (name) sessionStorage.setItem(_MATERIAL_KEY, name)
+      else sessionStorage.removeItem(_MATERIAL_KEY)
     } catch { /* ignore */ }
   }
 

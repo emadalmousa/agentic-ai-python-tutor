@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/context/ThemeContext"
 import { useAuth } from "@/context/AuthContext"
@@ -8,6 +8,145 @@ import { getExercises, submitExercise, getExerciseHint } from "@/lib/api"
 import type { SkillProgress, Exercise, SubmitExerciseResponse } from "@/types/tutor"
 import MarkdownMessage from "@/components/tutor/MarkdownMessage"
 import CodeEditor from "@/components/tutor/CodeEditor"
+
+function ResultPopup({
+  result,
+  onClose,
+  onGoToTutor,
+  dark,
+}: {
+  result: SubmitExerciseResponse
+  onClose: () => void
+  onGoToTutor: () => void
+  dark: boolean
+}) {
+  const isRichtig = result.result === "richtig"
+  const isTeilweise = result.result === "teilweise"
+  const isFalsch = result.result === "falsch"
+
+  const cardBg = dark ? "bg-[#0d1929]" : "bg-white"
+  const textBase = dark ? "text-gray-300" : "text-gray-700"
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className={`${cardBg} max-w-md w-full mx-4 rounded-2xl shadow-2xl overflow-hidden`}>
+
+        {/* Coloured top band */}
+        {isRichtig && (
+          <div className="bg-emerald-500/15 px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-emerald-500/20">
+            <span className="text-8xl leading-none select-none">🎉</span>
+            <h2 className="text-2xl font-bold text-emerald-400">Richtig! 🎉</h2>
+            {result.score_change > 0 && (
+              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-sm font-semibold">
+                +{result.score_change / 10} Punkte
+              </span>
+            )}
+          </div>
+        )}
+
+        {isTeilweise && (
+          <div className="bg-amber-500/15 px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-amber-500/20">
+            <span className="text-8xl leading-none select-none">⚡</span>
+            <h2 className="text-2xl font-bold text-amber-400">Fast! Noch ein Versuch ⚡</h2>
+            {result.score_change > 0 && (
+              <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-semibold">
+                +{result.score_change / 10} Punkte
+              </span>
+            )}
+          </div>
+        )}
+
+        {isFalsch && (
+          <div className="bg-red-500/15 px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-red-500/20">
+            <span className="text-8xl leading-none select-none">💡</span>
+            <h2 className="text-2xl font-bold text-red-400">Noch nicht ganz...</h2>
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+          {/* what_was_good */}
+          {result.what_was_good && (
+            <div className={`text-sm ${isRichtig ? (dark ? "text-emerald-300" : "text-emerald-800") : isTeilweise ? (dark ? "text-amber-200" : "text-amber-900") : textBase}`}>
+              <MarkdownMessage content={result.what_was_good} dark={dark} />
+            </div>
+          )}
+
+          {/* what_went_wrong — shown for teilweise and falsch */}
+          {(isTeilweise || isFalsch) && result.what_went_wrong && (
+            <div className={`text-sm rounded-xl p-3 ${dark ? "bg-white/5" : "bg-gray-50"} ${textBase}`}>
+              <MarkdownMessage content={result.what_went_wrong} dark={dark} />
+            </div>
+          )}
+
+          {/* hint — shown for teilweise if present */}
+          {isTeilweise && result.hint && (
+            <div className={`rounded-xl p-3 border-l-4 ${dark ? "bg-blue-500/5 border-l-blue-500/50" : "bg-blue-50 border-l-blue-400"}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${dark ? "text-blue-400" : "text-blue-600"}`}>Hinweis</p>
+              <div className={`text-sm ${textBase}`}>
+                <MarkdownMessage content={result.hint} dark={dark} />
+              </div>
+            </div>
+          )}
+
+          {/* stdout / stderr — shown for falsch */}
+          {isFalsch && (result.stdout || result.stderr) && (
+            <pre className={`text-xs font-mono rounded-xl p-3 whitespace-pre-wrap ${dark ? "bg-black/30 text-gray-400" : "bg-gray-100 text-gray-600"}`}>
+              {result.stdout}
+              {result.stderr && <span className="text-red-400">{result.stderr}</span>}
+            </pre>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-3 pt-1">
+            {isFalsch && result.redirect_to_tutor ? (
+              <>
+                <button
+                  onClick={onGoToTutor}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors"
+                >
+                  Zum Tutor →
+                </button>
+                <button
+                  onClick={onClose}
+                  className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                    dark ? "border-[#1e2f45] text-gray-300 hover:bg-[#1e2f45]" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  Hier bleiben
+                </button>
+              </>
+            ) : isRichtig ? (
+              <button
+                onClick={onClose}
+                className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors"
+              >
+                Weiter →
+              </button>
+            ) : isTeilweise ? (
+              <button
+                onClick={onClose}
+                className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+              >
+                Nochmal versuchen
+              </button>
+            ) : (
+              <button
+                onClick={onClose}
+                className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors"
+              >
+                Nochmal versuchen
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 interface ExercisePanelProps {
   skill: SkillProgress
@@ -31,17 +170,16 @@ function ExerciseCard({
   onScoreUpdate: (newScore: number) => void
 }) {
   const router = useRouter()
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [code, setCode] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<SubmitExerciseResponse | null>(null)
+  const [showPopup, setShowPopup] = useState(false)
+  const [pendingScore, setPendingScore] = useState<number | null>(null)
   const [hintLevel, setHintLevel] = useState(1)
   const [hint, setHint] = useState<string | null>(null)
   const [hintLoading, setHintLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   async function handleSubmit() {
     if (!code.trim() || submitting) return
@@ -51,18 +189,30 @@ function ExerciseCard({
     try {
       const res = await submitExercise({ skill_key: skillKey, exercise_id: exercise.id, code }, token)
       setResult(res)
-      onScoreUpdate(res.new_skill_score)
+      setPendingScore(res.new_skill_score)
+      setShowPopup(true)
       if (res.result === "falsch" && res.redirect_to_tutor) {
         localStorage.setItem("ki_tutor_exercise_redirect", JSON.stringify({
           code, analysis: res.analysis, exercise_title: exercise.title,
         }))
-        timerRef.current = setTimeout(() => router.push("/tutor"), 1200)
       }
     } catch {
       setErr("Abgabe fehlgeschlagen.")
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleClosePopup() {
+    setShowPopup(false)
+    if (pendingScore !== null) {
+      onScoreUpdate(pendingScore)
+      setPendingScore(null)
+    }
+  }
+
+  function handleGoToTutor() {
+    router.push("/tutor")
   }
 
   async function handleHint() {
@@ -137,40 +287,13 @@ function ExerciseCard({
               <p className="text-xs text-red-400">{err}</p>
             )}
 
-            {/* Result */}
-            {result && (
-              <div className={`rounded-xl p-4 border-l-4 text-sm space-y-1 ${
-                result.result === "richtig"
-                  ? dark ? "bg-emerald-500/10 border-l-emerald-500 text-emerald-300" : "bg-emerald-50 border-l-emerald-500 text-emerald-800"
-                  : result.result === "teilweise"
-                    ? dark ? "bg-amber-500/10 border-l-amber-500 text-amber-300" : "bg-amber-50 border-l-amber-500 text-amber-800"
-                    : dark ? "bg-red-500/10 border-l-red-500 text-red-300" : "bg-red-50 border-l-red-500 text-red-800"
-              }`}>
-                <p className="font-semibold text-sm mb-2">
-                  {result.result === "richtig" && `✓ Richtig! +${result.score_change / 10} Punkte`}
-                  {result.result === "teilweise" && `◐ Teilweise! +${result.score_change / 10} Punkte`}
-                  {result.result === "falsch" && "✗ Falsch"}
-                </p>
-                {result.what_was_good && (
-                  <MarkdownMessage content={result.what_was_good} dark={dark} />
-                )}
-                {result.what_went_wrong && (
-                  <div className="mt-1 opacity-90">
-                    <MarkdownMessage content={result.what_went_wrong} dark={dark} />
-                  </div>
-                )}
-                {result.result === "falsch" && result.redirect_to_tutor && (
-                  <p className="text-xs opacity-60">Weiterleitung zum Tutor...</p>
-                )}
-                {result.result === "falsch" && !result.redirect_to_tutor && (
-                  <p className="text-xs opacity-60">Versuche es nochmal!</p>
-                )}
-                {(result.stdout || result.stderr) && (
-                  <pre className={`mt-2 text-xs font-mono rounded-lg p-2 ${dark ? "bg-black/30" : "bg-white/60"} whitespace-pre-wrap`}>
-                    {result.stdout}{result.stderr && <span className="text-red-400">{result.stderr}</span>}
-                  </pre>
-                )}
-              </div>
+            {showPopup && result && (
+              <ResultPopup
+                result={result}
+                onClose={handleClosePopup}
+                onGoToTutor={handleGoToTutor}
+                dark={dark}
+              />
             )}
 
             {/* Buttons */}
