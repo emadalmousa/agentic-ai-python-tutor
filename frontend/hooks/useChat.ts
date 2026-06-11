@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { sendChatMessage, analyzeCode, uploadMaterial, analyzeSkill } from "@/lib/api"
+import { sendChatMessage, analyzeCode, uploadMaterial } from "@/lib/api"
 import type { ChatMessage, TutorResponse } from "@/types/tutor"
 import { useAuth } from "@/context/AuthContext"
 import type { TranslationKey } from "@/i18n"
@@ -144,11 +144,6 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
           errors: [],
           chat_messages: lastTwo.map((m) => ({ role: m.role, content: m.content })),
         })
-        // Skill-Analyse im Hintergrund — kein await, blockiert nicht den Chat
-        const token = getToken()
-        if (token) {
-          analyzeSkill({ code, question: msg }, token).catch(() => {})
-        }
       }
     } catch {
       setError(t("tutor.backendError"))

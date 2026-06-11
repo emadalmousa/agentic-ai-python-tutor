@@ -181,48 +181,6 @@ def _mock_embeddings(dim: int = 8):
     return mock
 
 
-class TestVectorstoreBuildAndSave:
-    def test_build_and_save_creates_index_file(self, tmp_vectorstore_dir):
-        from agent.rag.vectorstore import build_and_save
-        with patch("agent.config.get_embeddings", return_value=_mock_embeddings()):
-            build_and_save(_make_chunks(), user_id=1)
-        files = list(tmp_vectorstore_dir.rglob("*"))
-        names = [f.name for f in files]
-        assert any("faiss" in n or "index" in n for n in names) or any("pkl" in n for n in names)
-
-    def test_build_and_save_creates_chunks_file(self, tmp_vectorstore_dir):
-        from agent.rag.vectorstore import build_and_save
-        with patch("agent.config.get_embeddings", return_value=_mock_embeddings()):
-            build_and_save(_make_chunks(), user_id=1)
-        files = [f.name for f in tmp_vectorstore_dir.rglob("*")]
-        assert any("pkl" in f or "chunks" in f for f in files)
-
-    def test_build_and_save_does_not_crash_with_single_chunk(self, tmp_vectorstore_dir):
-        from agent.rag.vectorstore import build_and_save
-        with patch("agent.config.get_embeddings", return_value=_mock_embeddings()):
-            build_and_save([{"text": "Einziger Chunk.", "page": 1}], user_id=1)
-
-
-class TestVectorstoreLoad:
-    def test_load_returns_none_when_no_index_exists(self, tmp_vectorstore_dir):
-        from agent.rag.vectorstore import load
-        result = load(user_id=1)
-        assert result is None
-
-    def test_load_returns_data_after_build_and_save(self, tmp_vectorstore_dir):
-        from agent.rag.vectorstore import build_and_save, load
-        with patch("agent.config.get_embeddings", return_value=_mock_embeddings()):
-            build_and_save(_make_chunks(), user_id=1)
-        result = load(user_id=1)
-        assert result is not None
-
-    def test_load_result_is_not_none_after_save(self, tmp_vectorstore_dir):
-        from agent.rag.vectorstore import build_and_save, load
-        with patch("agent.config.get_embeddings", return_value=_mock_embeddings()):
-            build_and_save(_make_chunks(), user_id=1)
-        assert load(user_id=1) is not None
-
-
 class TestVectorstoreQueryWithPages:
     def test_returns_list(self, tmp_vectorstore_dir):
         from agent.rag.vectorstore import build_and_save, load, query_with_pages

@@ -7,8 +7,6 @@ from core.database import get_db
 from models.skill_progress import StudentSkillProgress, LearningEvent, FIXED_SKILLS, SKILL_TREE
 from models.user import User
 from routers.auth import get_current_user
-from services.progress_service import get_or_create_skill_progress
-from services.skill_analyzer import analyze_skill
 
 router = APIRouter(prefix="/learning-progress", tags=["learning-progress"])
 
@@ -40,21 +38,6 @@ class ProgressResponse(BaseModel):
     recent_events: list[dict]   # letzte 5 Analyse-Ereignisse
     user_status:   str          # Anfänger | Fortgeschritten | Profi
 
-
-class AnalyzeRequest(BaseModel):
-    code:     str = ""
-    question: str = ""
-
-
-class AnalyzeResponse(BaseModel):
-    detected_skills:         list[str]
-    main_skill:              str
-    score:                   int
-    status:                  str
-    mistakes:                list[str]
-    feedback:                str
-    recommended_next_exercise: str
-    updated_progress:        ProgressResponse
 
 
 # ---------------------------------------------------------------------------
@@ -176,67 +159,3 @@ def get_progress(
         student_id = current_user.id
     return _build_progress_response(student_id, db)
 
-
-@router.post("/analyze", response_model=AnalyzeResponse)
-def analyze_and_save(
-    data: AnalyzeRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Analysiert Code/Frage, erkennt Skill, berechnet Score und speichert das Ergebnis.
-
-    Score-Aktualisierung: 70/30 gleitender Durchschnitt — neuer Wert hat 30 % Gewicht.
-    Das verhindert starke Schwankungen durch einzelne schlechte Submissions.
-    """
-    result = analyze_skill(data.code, data.question)
-
-    # Skill-Fortschritt mit gleitendem Durchschnitt aktualisieren
-    skill_key = result["main_skill"]
-    row = get_or_create_skill_progress(current_user.id, skill_key, db)
-    # 70 % alter Score + 30 % neuer Score (sanfte Aktualisierung)
-    # Wenn score=0 (neuer Skill): direkt den neuen Wert nehmen
-    row.score  = round(row.score * 0.7 + result["score"] * 0.3) if row.score else result["score"]
-    row.status = result["status"]
-    # Timestamp manuell setzen — server_default greift nur beim ersten INSERT, nicht bei UPDATE
-    from datetime import datetime, timezone
-    row.updated_at = datetime.now(timezone.utc)
-
-    # Lern-Ereignis für Timeline speichern
-    event = LearningEvent(
-        user_id             = current_user.id,
-        skill_key           = skill_key,
-        score               = result["score"],  # Roh-Score (nicht geglättet) für Timeline
-        mistakes            = result["mistakes"],
-        feedback            = result["feedback"],
-        recommended_exercise= result["recommended_next_exercise"],
-    )
-    db.add(event)
-    db.commit()
-
-    updated = _build_progress_response(current_user.id, db)
-
-    return AnalyzeResponse(
-        detected_skills          = result["detected_skills"],
-        main_skill               = result["main_skill"],
-        score                    = result["score"],
-        status                   = result["status"],
-        mistakes                 = result["mistakes"],
-        feedback                 = result["feedback"],
-        recommended_next_exercise= result["recommended_next_exercise"],
-        updated_progress         = updated,
-    )
-
-
-@router.delete("/events")
-def delete_events(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Löscht alle Lern-Ereignisse des aktuellen Nutzers."""
-    deleted_count = (
-        db.query(LearningEvent)
-        .filter_by(user_id=current_user.id)
-        .delete()
-    )
-    db.commit()
-    return {"deleted_count": deleted_count}

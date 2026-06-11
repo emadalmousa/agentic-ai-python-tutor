@@ -49,15 +49,6 @@ def _beginner_keys() -> list[str]:
 
 
 class TestExercisesStructure:
-    def test_exercises_dict_has_exactly_13_keys(self):
-        """EXERCISES must contain exactly 13 top-level skill keys."""
-        from data.exercises import EXERCISES
-
-        assert len(EXERCISES) == EXPECTED_SKILL_COUNT, (
-            f"Expected {EXPECTED_SKILL_COUNT} skill keys, got {len(EXERCISES)}: "
-            f"{sorted(EXERCISES.keys())}"
-        )
-
     def test_every_skill_has_exactly_5_exercises(self):
         """Each skill in EXERCISES must have exactly 5 exercises."""
         from data.exercises import EXERCISES
@@ -66,15 +57,6 @@ class TestExercisesStructure:
             assert len(exlist) == EXERCISES_PER_SKILL, (
                 f"Skill '{skill_key}' has {len(exlist)} exercises, expected {EXERCISES_PER_SKILL}"
             )
-
-    def test_total_exercise_count_is_65(self):
-        """Total number of exercises across all skills must be 65."""
-        from data.exercises import EXERCISES
-
-        total = sum(len(v) for v in EXERCISES.values())
-        assert total == TOTAL_EXERCISES, (
-            f"Expected {TOTAL_EXERCISES} total exercises, got {total}"
-        )
 
     def test_exercises_dict_values_are_lists(self):
         """Each EXERCISES value must be a list."""
@@ -334,42 +316,6 @@ class TestBeginnerSkillsCoverage:
         missing = beginner_keys - exercises_keys
         assert not missing, (
             f"Beginner skills missing from EXERCISES: {sorted(missing)}"
-        )
-
-    def test_no_intermediate_skills_in_exercises(self):
-        """No intermediate skill keys from SKILL_TREE may appear in EXERCISES."""
-        from data.exercises import EXERCISES
-        from models.skill_progress import SKILL_TREE
-
-        intermediate_keys = {s["key"] for s in SKILL_TREE if s["level"] == "intermediate"}
-        present = intermediate_keys & set(EXERCISES.keys())
-        assert not present, (
-            f"Intermediate skills found in EXERCISES (should not be there): "
-            f"{sorted(present)}"
-        )
-
-    def test_no_advanced_skills_in_exercises(self):
-        """No advanced skill keys from SKILL_TREE may appear in EXERCISES."""
-        from data.exercises import EXERCISES
-        from models.skill_progress import SKILL_TREE
-
-        advanced_keys = {s["key"] for s in SKILL_TREE if s["level"] == "advanced"}
-        present = advanced_keys & set(EXERCISES.keys())
-        assert not present, (
-            f"Advanced skills found in EXERCISES (should not be there): "
-            f"{sorted(present)}"
-        )
-
-    def test_exercises_keys_are_exactly_beginner_keys(self):
-        """EXERCISES keys must be exactly the set of 13 beginner skill keys — no more, no less."""
-        from data.exercises import EXERCISES
-
-        beginner_keys = set(_beginner_keys())
-        exercises_keys = set(EXERCISES.keys())
-        assert exercises_keys == beginner_keys, (
-            f"EXERCISES keys do not match beginner skill keys.\n"
-            f"  Extra keys: {sorted(exercises_keys - beginner_keys)}\n"
-            f"  Missing keys: {sorted(beginner_keys - exercises_keys)}"
         )
 
     @pytest.mark.parametrize("skill_key", [

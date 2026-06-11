@@ -24,7 +24,7 @@ POST /exercises/hint
 
 ### Schritt 1 — Code ausführen
 
-**Zeile 169** `stdout, stderr = run_user_code(data.code)`
+**Zeile 191** `stdout, stderr = run_user_code(data.code)`
 
 > Kein LLM — reines `subprocess.run()` mit Timeout 10s.
 > Liefert `stdout` und `stderr` für den nächsten Schritt.
@@ -34,7 +34,7 @@ POST /exercises/hint
 ### Schritt 2 — LLM bewerten
 
 **Datei:** `backend/agent/tools/exercise_evaluator_tool.py`
-**Zeile 172** `raw_result = evaluate_exercise.invoke({...})`
+**Zeile 194** `raw_result = evaluate_exercise.invoke({...})`
 
 > **`🟡 LangChain`** — `@tool` Dekorator, `llm.invoke()`
 > **`⚡ LLM-Aufruf`** — 1 Aufruf, direkt, kein Agent
@@ -51,7 +51,7 @@ LLM bekommt: "Code hat keine Ausgabe produziert"
 result = "falsch"   ← LLM muss das bestätigen
 ```
 
-> **Zeile 23** `if not stdout.strip():`
+> **Zeile 30** `if not stdout.strip():`
 > LLM gibt zurück: `what_was_good`, `what_went_wrong`, `hint`
 
 #### Szenario 2 — stdout == expected_output (exakter Treffer)
@@ -66,7 +66,7 @@ result = "richtig"    ← Konzept korrekt
 result = "teilweise"  ← print("Hello World") statt Schleife
 ```
 
-> **Zeile 56** `if stdout.strip() == expected_output.strip():`
+> **Zeile 65** `if stdout.strip() == expected_output.strip():`
 > Schützt vor `print("5")` statt echter Berechnung.
 
 #### Szenario 3 — stdout vorhanden aber falsch
@@ -79,14 +79,14 @@ LLM entscheidet: teilweise (richtiges Konzept, kleiner Fehler)
                  falsch     (falsches Konzept)
 ```
 
-> **Zeile 103** — dritter `llm.invoke()` Aufruf
+> **Zeile 113** — dritter `llm.invoke()` Aufruf (Szenario 3)
 > LLM gibt `teilweise` oder `falsch` zurück.
 
 ---
 
 ### Schritt 3 — Score berechnen und speichern
 
-**Zeile 186** — Score-Logik (reines Python, kein LLM):
+**Zeile 208** — Score-Logik (reines Python, kein LLM):
 
 | Ergebnis | Score-Änderung | is_locked |
 |---|---|---|
@@ -94,11 +94,11 @@ LLM entscheidet: teilweise (richtiges Konzept, kleiner Fehler)
 | `teilweise` | +10 (max) | `False` |
 | `falsch` | 0 | `False` |
 
-**Zeile 220** `total_exercise_score = sum(c.score_granted for c in all_completions)`
+**Zeile 242** `total_exercise_score = sum(c.score_granted for c in all_completions)`
 
 > Skill-Score = Summe aller Aufgaben des Skills (max 100 = 5 × 20)
 
-**Zeile 226** Status-Update:
+**Zeile 248** Status-Update:
 - `score >= 80` → `understood`
 - `score >= 40` → `partial`
 - `score < 40`  → `not_understood`
@@ -128,10 +128,10 @@ Response: result, score_change, new_skill_score, what_was_good, hint, stdout
 
 ## POST /exercises/hint
 
-**Datei:** `backend/routers/exercises.py` Zeile 257
+**Datei:** `backend/routers/exercises.py` Zeile 279
 **Tool:** `backend/agent/tools/hint_tool.py`
 
-**Zeile 272** `hint_text = get_hint.invoke({...})`
+**Zeile 300** `hint_text = get_hint.invoke({...})`
 
 > **`🟡 LangChain`** — `@tool` Dekorator, `llm.invoke()`
 > **`⚡ LLM-Aufruf`** — 1 Aufruf, kein Agent
@@ -154,9 +154,6 @@ get_hint.invoke()                   ← ⚡ LLM-Aufruf 1
 Response: hint (Klartext, kein JSON)
 ```
 
-> **Zeile 36** `level = max(1, min(3, int(hint_level)))` — Absicherung gegen ungültige Werte
-> LLM gibt immer Klartext zurück (kein JSON wie bei evaluate_exercise)
-
 **LLM-Aufrufe gesamt: 1**
 
 ---
@@ -177,11 +174,11 @@ Response: hint (Klartext, kein JSON)
 
 | Code | Typ | Datei / Zeile |
 |---|---|---|
-| `evaluate_exercise.invoke()` | **🟡 LangChain** | `exercises.py:172` |
-| `get_hint.invoke()` | **🟡 LangChain** | `exercises.py:272` |
-| `@tool` Dekorator | **🟡 LangChain** | `exercise_evaluator_tool.py:8`, `hint_tool.py:28` |
-| `llm.invoke([system, human])` | **🟡 LangChain** | `exercise_evaluator_tool.py:44,81,126` |
+| `evaluate_exercise.invoke()` | **🟡 LangChain** | `exercises.py:194` |
+| `get_hint.invoke()` | **🟡 LangChain** | `exercises.py:300` |
+| `@tool` Dekorator | **🟡 LangChain** | `exercise_evaluator_tool.py:15`, `hint_tool.py` |
+| `llm.invoke([system, human])` | **🟡 LangChain** | `exercise_evaluator_tool.py:51,90,135` |
 | `SystemMessage`, `HumanMessage` | **🟡 LangChain** | beide Tool-Dateien |
-| `run_user_code()` | normaler Code (subprocess) | `exercises.py:169` |
-| `db.query(ExerciseCompletion)` | normaler Code | `exercises.py:158` |
-| Score-Berechnung | normaler Code | `exercises.py:186` |
+| `run_user_code()` | normaler Code (subprocess) | `exercises.py:191` |
+| `db.query(ExerciseCompletion)` | normaler Code | `exercises.py:179` |
+| Score-Berechnung | normaler Code | `exercises.py:208` |

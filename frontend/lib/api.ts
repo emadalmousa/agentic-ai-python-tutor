@@ -1,7 +1,7 @@
 import type {
   CodeRequest, TutorResponse, ChatRequest, ChatResponse,
   RunRequest, RunResponse, UploadResponse,
-  ProgressResponse, SkillAnalyzeRequest, SkillAnalyzeResponse, SkillInfo,
+  ProgressResponse, SkillInfo,
   ExercisesResponse, SubmitExerciseRequest, SubmitExerciseResponse,
   HintRequest, HintResponse,
   SkillTestGenerateResponse, SkillTestSubmitRequest, SkillTestResult,
@@ -55,15 +55,6 @@ export async function getLearningProgress(studentId: number, token: string): Pro
   return res.json()
 }
 
-export async function analyzeSkill(payload: SkillAnalyzeRequest, token: string): Promise<SkillAnalyzeResponse> {
-  const res = await fetch(`${API_URL}/learning-progress/analyze`, {
-    method: "POST",
-    headers: authHeaders(token),
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
-  return res.json()
-}
 
 export async function getSkills(token: string): Promise<SkillInfo[]> {
   const res = await fetch(`${API_URL}/learning-progress/skills`, {
@@ -172,13 +163,3 @@ export async function getLevelTestStatus(level: LevelKey, token: string) {
   return res.json()
 }
 
-// --- Learning progress events ---
-
-export async function deleteAnalysisEvents(token: string): Promise<{ deleted_count: number }> {
-  const res = await fetch(`${API_URL}/learning-progress/events`, {
-    method: "DELETE",
-    headers: authHeaders(token),
-  })
-  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
-  return res.json()
-}

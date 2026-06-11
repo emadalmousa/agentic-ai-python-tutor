@@ -372,24 +372,24 @@
           <p class="feat-desc">/exercises · /skill-tests · /level-tests · /learning-progress · /auth — jeder Endpoint mit JWT-Schutz.</p>
         </div>
 
-        <!-- 2 PDF / RAG -->
-        <div class="feature-card" style="border-top:3px solid var(--warn);">
-          <div class="feat-icon amber">
-            <i class="fa-solid fa-file-pdf" style="color:var(--warn);"></i>
-          </div>
-          <span class="feat-label">02 — RAG</span>
-          <div class="feat-title">PDF Feature &amp; RAG Pipeline</div>
-          <p class="feat-desc">Upload → Chunks → LLM Embeddings → pgvector (PostgreSQL). Chat nutzt automatisch relevante Abschnitte als Kontext.</p>
-        </div>
-
-        <!-- 3 Agent Tools -->
+        <!-- 2 Agent Tools -->
         <div class="feature-card" style="border-top:3px solid var(--accent2);">
           <div class="feat-icon indigo">
             <i class="fa-solid fa-screwdriver-wrench" style="color:var(--accent2);"></i>
           </div>
-          <span class="feat-label">03 — Tools</span>
-          <div class="feat-title">5 neue Agent Tools</div>
-          <p class="feat-desc"><em style="color:var(--accent2);">evaluate_exercise</em> · <em style="color:#f87171;">generate_exercise</em> · <em style="color:var(--success);">get_hint</em> · <em style="color:var(--accent2);">generate_skill_test</em> · <em style="color:var(--warn);">evaluate_skill_test</em></p>
+          <span class="feat-label">02 — Tools</span>
+          <div class="feat-title">6 neue Agent Tools</div>
+          <p class="feat-desc"><em style="color:var(--accent2);">evaluate_exercise</em> · <em style="color:#f87171;">generate_exercise</em> · <em style="color:var(--success);">get_hint</em> · <em style="color:var(--accent2);">generate_skill_test</em> · <em style="color:var(--warn);">evaluate_skill_test</em> · <em style="color:var(--accent3);">rag_tool</em></p>
+        </div>
+
+        <!-- 3 PDF / RAG -->
+        <div class="feature-card" style="border-top:3px solid var(--warn);">
+          <div class="feat-icon amber">
+            <i class="fa-solid fa-file-pdf" style="color:var(--warn);"></i>
+          </div>
+          <span class="feat-label">03 — RAG</span>
+          <div class="feat-title">PDF Feature &amp; RAG Pipeline</div>
+          <p class="feat-desc">Upload → Chunks → LLM Embeddings → pgvector (PostgreSQL). Chat nutzt automatisch relevante Abschnitte als Kontext.</p>
         </div>
 
         <!-- 4 Lernfortschritt -->
@@ -577,6 +577,13 @@
             <div class="ep3-entry">
               <span class="ep3-method m-post">POST</span>
               <div class="ep3-entry-body">
+                <div class="ep3-entry-path">/level-tests/generate · /level-tests/submit</div>
+                <div class="ep3-entry-desc"><code>generate_skill_test.invoke()</code> · <code>evaluate_skill_test.invoke()</code> · gleiche Tools wie Skill-Test</div>
+              </div>
+            </div>
+            <div class="ep3-entry">
+              <span class="ep3-method m-post">POST</span>
+              <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/upload-material</div>
                 <div class="ep3-entry-desc">LangChain <code>PGVector</code> · <code>get_embeddings()</code> → pgvector · kein Chat-LLM</div>
               </div>
@@ -599,13 +606,6 @@
               <div class="ep3-entry-body">
                 <div class="ep3-entry-path">/tutor/chat <em style="color:var(--muted); font-style:normal;">(PDF hochgeladen)</em></div>
                 <div class="ep3-entry-desc"><code>run_chat_with_context()</code> · PDF-Chunks im Prompt · <code>llm.invoke()</code> direkt</div>
-              </div>
-            </div>
-            <div class="ep3-entry">
-              <span class="ep3-method m-post">POST</span>
-              <div class="ep3-entry-body">
-                <div class="ep3-entry-path">/learning-progress/analyze</div>
-                <div class="ep3-entry-desc"><code>analyze_skill()</code> · Skill + Score erkennen · <code>llm.invoke()</code> direkt</div>
               </div>
             </div>
             <div class="ep3-entry">
@@ -852,17 +852,11 @@
           </div>
         </div>
 
-        <!-- ── Info-Karten unten ── -->
-        <div class="rag-info-row">
-          <div class="rag-info-box" style="border-left:3px solid var(--warn);">
-            <h4><span style="color:var(--warn);">⚡</span> LLM wird 2× aufgerufen</h4>
-            <p><strong style="color:var(--text);">Upload:</strong> <code>PGVector.from_texts()</code> — Chunks vektorisieren &amp; in PostgreSQL speichern<br>
-              <strong style="color:var(--text);">Chat:</strong> <code>similarity_search()</code> + <code>invoke()</code> — suchen &amp; direkt antworten · Agent wird bypassed</p>
-          </div>
-          <div class="rag-info-box" style="border-left:3px solid var(--success);">
-            <h4><span style="color:var(--success);">🔧</span> LangChain Rolle</h4>
-            <p><code>get_embeddings()</code> abstrahiert das Modell — gleicher Code für OpenAI und Ollama. Kein Unterschied im Backend.</p>
-          </div>
+        <!-- ── Info-Karte unten ── -->
+        <div class="rag-info-box" style="border-left:3px solid var(--warn);">
+          <h4><span style="color:var(--warn);">⚡</span> LLM wird 2× aufgerufen</h4>
+          <p><strong style="color:var(--text);">Upload:</strong> <code>PGVector.from_texts()</code> — Chunks vektorisieren &amp; in PostgreSQL speichern<br>
+            <strong style="color:var(--text);">Chat:</strong> <code>similarity_search()</code> + <code>invoke()</code> — suchen &amp; direkt antworten · Agent wird bypassed</p>
         </div>
 
       </div>
@@ -878,23 +872,23 @@
 
       <div class="rag-diagram">
 
-        <!-- ── ZEILE 1: Analyse-Pipeline ── -->
+        <!-- ── ZEILE 1: Übungen ── -->
         <div>
-          <div class="rag-row-label">🔍 Analyse-Pipeline — bei jeder Code-Eingabe</div>
+          <div class="rag-row-label">📥 Übungen — Score durch Aufgaben</div>
           <div class="rag-row">
 
             <div class="rn rn-user">
-              <div class="ri">👨‍🎓</div>
-              <h4>Code + Frage</h4>
-              <p>POST /learning-<br>progress/analyze</p>
+              <div class="ri">✏️</div>
+              <h4>Übung lösen</h4>
+              <p>POST /exercises/<br>submit</p>
             </div>
 
             <div class="ra blue"><div class="ra-line"></div><div class="ra-head"></div></div>
 
-            <div class="rn rn-search">
+            <div class="rn rn-plain">
               <div class="ri">⚙️</div>
-              <h4>analyze_skill()</h4>
-              <p>skill_analyzer.py<br>versucht LLM →<br>Fallback: Keywords</p>
+              <h4>subprocess.run()</h4>
+              <p>Code ausführen<br>stdout + stderr<br>Timeout 10s</p>
             </div>
 
             <div class="ra amber"><div class="ra-line"></div><div class="ra-head"></div></div>
@@ -902,69 +896,56 @@
             <div class="rn-llm-wrap">
               <span class="llm-badge">⚡ LLM-AUFRUF</span>
               <div class="ri">🧠</div>
-              <h4>Skill erkennen</h4>
-              <p>JSON zurück:<br><code>main_skill,</code><br><code>score, mistakes</code></p>
+              <h4>evaluate_exercise</h4>
+              <p>@tool · richtig /<br>teilweise / falsch</p>
             </div>
 
             <div class="ra green"><div class="ra-line"></div><div class="ra-head"></div></div>
 
             <div class="rn rn-save">
               <div class="ri">💾</div>
-              <h4>Score gespeichert</h4>
-              <p>alter × 0.7 +<br>neu × 0.3<br><em style="color:var(--success);">gleitend</em></p>
-            </div>
-
-            <div class="ra teal"><div class="ra-line"></div><div class="ra-head"></div></div>
-
-            <div class="rn rn-plain">
-              <div class="ri">📝</div>
-              <h4>History Event</h4>
-              <p>learning_events<br>unveränderlich<br>gespeichert</p>
+              <h4>Score += Punkte</h4>
+              <p>richtig: +20<br>teilweise: +10<br>falsch: +0</p>
             </div>
 
           </div>
         </div>
 
-        <!-- ── Pfeil nach unten ── -->
-        <div style="display:flex; align-items:center; gap:8px; padding-left:clamp(20px,3vw,40px);">
-          <div class="rag-down"><div class="dl"></div><div class="dh"></div></div>
-          <span style="font-size:clamp(0.58rem,0.68vw,0.74rem); color:var(--muted); font-family:var(--font-heading);">Score ≥ 80 → nächster Skill freigeschaltet</span>
-        </div>
-
-        <!-- ── ZEILE 2: Skill-Baum + Status ── -->
+        <!-- ── ZEILE 2: Skill-Test ── -->
         <div>
-          <div class="rag-row-label">🌲 37 Skills — Unlock-System</div>
+          <div class="rag-row-label">🎯 Skill-Test — gezielter Abschlusstest</div>
           <div class="rag-row">
 
-            <div class="rn" style="background:rgba(56,189,248,0.08); border:1.5px solid rgba(56,189,248,0.3);">
-              <div class="ri">🌱</div>
-              <h4 style="color:var(--accent3);">Beginner</h4>
-              <p>13 Skills<br>Variablen → Funktionen</p>
-            </div>
-
-            <div class="ra teal"><div class="ra-line"></div><div class="ra-head"></div></div>
-
-            <div class="rn" style="background:rgba(167,139,250,0.08); border:1.5px solid rgba(167,139,250,0.3);">
-              <div class="ri">⚡</div>
-              <h4 style="color:var(--accent2);">Intermediate</h4>
-              <p>12 Skills<br>List Comp → Map/Filter</p>
+            <div class="rn rn-user">
+              <div class="ri">📝</div>
+              <h4>Test starten</h4>
+              <p>POST /skill-tests/<br>generate</p>
             </div>
 
             <div class="ra blue"><div class="ra-line"></div><div class="ra-head"></div></div>
 
-            <div class="rn" style="background:rgba(251,146,60,0.08); border:1.5px solid rgba(251,146,60,0.3);">
-              <div class="ri">🔥</div>
-              <h4 style="color:var(--warn);">Advanced</h4>
-              <p>12 Skills<br>Vererbung → Testen</p>
+            <div class="rn-llm-wrap">
+              <span class="llm-badge">⚡ LLM-AUFRUF</span>
+              <div class="ri">🧠</div>
+              <h4>generate_skill_test</h4>
+              <p>MC + Code-Lesen<br>+ Mini-Task<br>generieren</p>
             </div>
 
             <div class="ra amber"><div class="ra-line"></div><div class="ra-head"></div></div>
 
             <div class="rn-llm-wrap">
-              <span class="llm-badge" style="color:var(--accent2); border-color:var(--accent2);">Status</span>
-              <div class="ri">🏆</div>
-              <h4 style="color:var(--accent2);">user_status</h4>
-              <p>alle ≥ 100% → Profi<br>Beginner ≥ 80% →<br>Fortgeschritten</p>
+              <span class="llm-badge">⚡ LLM-AUFRUF</span>
+              <div class="ri">🧠</div>
+              <h4>evaluate_skill_test</h4>
+              <p>Antworten<br>bewerten</p>
+            </div>
+
+            <div class="ra green"><div class="ra-line"></div><div class="ra-head"></div></div>
+
+            <div class="rn rn-save">
+              <div class="ri">🏅</div>
+              <h4>Score gesetzt</h4>
+              <p>direkt überschrieben<br>kein gleitender<br>Durchschnitt</p>
             </div>
 
           </div>
@@ -980,10 +961,10 @@
               <strong style="color:#f87171;">0–39:</strong> <code>not_understood</code> — Grundprobleme
             </p>
           </div>
-          <div class="rag-info-box" style="border-left:3px solid var(--success);">
-            <h4><span style="color:var(--success);">🔧</span> Fallback ohne LLM</h4>
-            <p>Keyword-Matching: <code>"for " + "range("</code> → <code>for_loop</code><br>
-              Score: 60 wenn kein Syntaxfehler — System läuft auch ohne LLM.</p>
+          <div class="rag-info-box" style="border-left:3px solid var(--accent2);">
+            <h4><span style="color:var(--accent2);">💬</span> Chat ändert keinen Score</h4>
+            <p><strong style="color:var(--text);">Chat:</strong> nur Erklärungen — kein Score-Einfluss<br>
+              <strong style="color:var(--text);">Score:</strong> nur durch Übungen &amp; Skill-Tests — Student entscheidet bewusst</p>
           </div>
         </div>
 
@@ -1081,12 +1062,12 @@
 
         <!-- Problem 3 -->
         <div class="prob-card c-red feature-card">
-          <div class="prob-icon">📊</div>
-          <div class="prob-title">Notensystem: Punkte-Balance unklar</div>
-          <p class="prob-desc">Wie viele Punkte gibt eine Übung? Wie viele eine Chat-Frage? Wann wird der Score erhöht oder gesenkt — und um wie viel?</p>
+          <div class="prob-icon">📄</div>
+          <div class="prob-title">Speichergrenzen unklar</div>
+          <p class="prob-desc">Zwei offene Fragen zum Speicherverbrauch ohne definierte Obergrenzen.</p>
           <div class="prob-detail">
-            <strong style="color:var(--text);">Problem:</strong> Kein klares Regelwerk für <code>+</code> / <code>−</code> Punkte — Score fühlt sich zufällig an.<br><br>
-            <strong style="color:var(--text);">Offen:</strong> Soll eine Chat-Frage weniger zählen als eine gelöste Übung? Welche Gewichtung ist pädagogisch sinnvoll?
+            <strong style="color:var(--text);">1) Große PDFs:</strong> Kein Seitenlimit — 300-Seiten-PDF erzeugt hunderte Chunks in pgvector pro User. Maximale Seitenanzahl oder selektiver Upload nötig.<br><br>
+            <strong style="color:var(--text);">2) Chat-History:</strong> Wie viele Nachrichten sollen gespeichert werden? Unbegrenzte History wächst unkontrolliert in der DB.
           </div>
           <span class="prob-badge open">⚠ Offen</span>
         </div>

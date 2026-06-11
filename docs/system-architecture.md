@@ -47,8 +47,8 @@
          └─────────┬──────────┘
                    │
          ┌─────────▼──────────┐
-         │  SQLite-Datenbank  │
-         │  (tutor.db)        │
+         │  PostgreSQL-DB     │
+         │  (pgvector)        │
          │                    │
          │  users             │
          │  learning_sessions │
@@ -94,11 +94,9 @@ agent/rag/vectorstore.py → build_and_save(chunks, user_id)
          │       ├── OpenAI: text-embedding-ada-002  ← LLM-AUFRUF
          │       └── Ollama: embed_documents()        ← LLM-AUFRUF
          │
-         ├── FAISS.from_texts(texts, embeddings)
-         │
-         ├── store.save_local() → rag_stores/{user_id}/index.faiss
-         └── pickle.dump(chunks) → rag_stores/{user_id}/chunks.pkl
-         │   (chunks als list[dict]: {"text": ..., "page": ...})
+         └── PGVector.from_texts(texts, embeddings, metadatas)
+         │   → speichert Vektoren in PostgreSQL, collection: "user_{id}"
+         │   (kein Filesystem, kein Datenverlust bei Redeploy)
          │
          ▼
 Response: { status: "ok", chunks: 42 }
@@ -112,12 +110,12 @@ POST /tutor/chat
          ▼
 _get_rag_context(message, current_user.id)   [tutor.py]
          │
-         ├── load(user_id)                   # lädt rag_stores/{user_id}/index.faiss
+         ├── load(user_id)                   # lädt pgvector-Collection aus PostgreSQL
          │       → None wenn kein PDF hochgeladen
          │
          ├── Regex: Seitenzahl in Nachricht? → get_page(index_data, page_num)
          │
-         └── FAISS semantische Suche: query_with_pages(index_data, message, top_k=3)
+         └── pgvector semantische Suche: query_with_pages(index_data, message, top_k=3)
          │
          ▼
 wenn rag_context vorhanden:
@@ -136,8 +134,8 @@ wenn kein rag_context:
 |---|---|
 | `backend/agent/rag/loader.py` | PDF → Seiten-Text |
 | `backend/agent/rag/splitter.py` | Text → Chunks |
-| `backend/agent/rag/vectorstore.py` | FAISS-Index bauen/laden/abfragen |
-| `backend/agent/config.py:58` | `get_embeddings()` — OpenAI oder Ollama |
+| `backend/agent/rag/vectorstore.py` | pgvector-Index bauen/laden/abfragen |
+| `backend/agent/config.py` | `get_embeddings()` — OpenAI oder Ollama |
 | `backend/agent/tools/rag_tool.py` | LangChain-Tool, das der Agent aufrufen kann |
 
 ---
@@ -169,10 +167,10 @@ LearningProgressView (Mount)            [LearningProgressView.tsx:260]
          │        GET /learning-progress/{student_id}
          │
          ▼
-Backend: learning_progress.py → get_progress()    [learning_progress.py:160]
+Backend: learning_progress.py → get_progress()    [learning_progress.py:167]
          │
          ▼
-_build_progress_response(user_id, db)             [learning_progress.py:72]
+_build_progress_response(user_id, db)             [learning_progress.py:71]
          │
          ├── Lädt alle StudentSkillProgress-Rows für diesen User aus DB
          │       SELECT * FROM student_skill_progress WHERE user_id = ?
@@ -217,7 +215,7 @@ Nutzer schreibt Code im Tutor → Klick "Analysieren"
          │        POST /learning-progress/analyze
          │
          ▼
-Backend: analyze_and_save()                          [learning_progress.py:173]
+Backend: analyze_and_save()                          [learning_progress.py:180]
          │
          ▼
 services/skill_analyzer.py → analyze_skill(code, question)
@@ -293,7 +291,7 @@ Nutzer schreibt Code → Klick "Lösung einreichen"
          │        POST /exercises/submit
          │
          ▼
-Backend: exercises.py → submit_exercise()          [exercises.py:141]
+Backend: exercises.py → submit_exercise()          [exercises.py:153]
          │
          ├── 1. Übung aus EXERCISES[skill_key] laden
          │       exercise = { id, title, description, expected_output, hint }
@@ -421,9 +419,9 @@ Nutzer klickt "Skill-Test starten"
          │        POST /skill-tests/generate
          │
          ▼
-Backend: skill_tests.py → generate_test()         [skill_tests.py:58]
+Backend: skill_tests.py → generate_test()         [skill_tests.py:62]
          │
-         ├── generate_skill_test.invoke({          ← LLM-AUFRUF
+         ├── generate_skill_test.invoke({          ← LLM-AUFRUF (skill_tests.py:84)
          │     skill_key, skill_label, user_level
          │   })
          │
@@ -473,7 +471,7 @@ Backend: skill_tests.py → submit_test()
          ├── Mini-Task-Code ausführen:
          │       run_user_code(mini_task_code) → (stdout, stderr)
          │
-         └── evaluate_skill_test.invoke({            ← LLM-AUFRUF (2x)
+         └── evaluate_skill_test.invoke({            ← LLM-AUFRUF 2x (skill_tests.py:168)
                mc_answers, mc_correct,
                code_reading_answer, code_reading_correct,
                mini_task_code, mini_task_expected, mini_task_actual_output

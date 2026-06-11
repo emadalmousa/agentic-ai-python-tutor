@@ -20,12 +20,12 @@ POST /tutor/chat
 
 ### Schritt 1 — Off-Topic-Check
 
-**Zeile 122** `_is_python_related(message, code)`
+**Zeile 122** `def _is_python_related(message, code)`
 **Zeile 128** `llm = get_classifier_llm()`
 **Zeile 131** `response = llm.invoke([_CLASSIFY_SYSTEM, HumanMessage(...)])`
 
 > **`🟡 LangChain`** — `llm.invoke()` ist ein LangChain-Aufruf
-> **`⚡ LLM-Aufruf`** — `gpt-4o-mini` entscheidet: Python-relevant ja/nein
+> **`⚡ LLM-Aufruf`** — Classifier entscheidet: Python-relevant ja/nein
 
 ```python
 # System-Prompt sagt dem LLM: antworte nur "ja" oder "nein"
@@ -48,13 +48,13 @@ POST /tutor/chat
 
 **Zeile 135** `def _get_rag_context(message, user_id)`
 **Zeile 147** `index_data = load(user_id)` → `backend/agent/rag/vectorstore.py`
-**Zeile 167** `query_with_pages(index_data, message, top_k=3)`
+**Zeile 167** `query_with_pages(index_data, message, top_k=top_k)`
 
 > **`🟡 LangChain`** — `PGVector.similarity_search()` intern
 > Kein LLM-Aufruf — nur Vektor-Vergleich in PostgreSQL.
 
 Wenn Seitenzahl erkannt (`"Seite 5"`):
-**Zeile 155** `_extract_page_number(message)` → Regex-Match
+**Zeile 117** `def _extract_page_number(message)` → Regex-Match
 **Zeile 157** `get_page(index_data, page_num)` → direkte Chunk-Abfrage nach `cmetadata.page`
 
 ---
@@ -64,7 +64,7 @@ Wenn Seitenzahl erkannt (`"Seite 5"`):
 ```
 Schüler: "Was ist das Wetter heute?"
         ↓
-_is_python_related() → "nein"   ← ⚡ LLM-Aufruf (gpt-4o-mini)
+_is_python_related() → "nein"   ← ⚡ LLM-Aufruf (Classifier)
         ↓
 return OFF_TOPIC_REPLY           ← kein weiterer LLM-Aufruf
 ```
@@ -78,13 +78,13 @@ return OFF_TOPIC_REPLY           ← kein weiterer LLM-Aufruf
 ```
 Schüler: "Was ist eine Schleife?"  (PDF hochgeladen)
         ↓
-_is_python_related() → "ja"        ← ⚡ LLM-Aufruf 1 (gpt-4o-mini)
+_is_python_related() → "ja"        ← ⚡ LLM-Aufruf 1 (Classifier)
         ↓
 _get_rag_context()
   PGVector.similarity_search()      ← 🟡 LangChain, kein LLM
   → 3 Chunks gefunden
         ↓
-run_chat_with_context()             ← ⚡ LLM-Aufruf 2 (gpt-4o)
+run_chat_with_context()             ← ⚡ LLM-Aufruf 2
   llm.invoke([system, human])
   PDF-Chunks direkt im Prompt
   LLM antwortet auf Basis Lernmaterial
@@ -107,7 +107,7 @@ run_chat_with_context()             ← ⚡ LLM-Aufruf 2 (gpt-4o)
 ```
 Schüler: "Erkläre Seite 5"   (PDF hochgeladen)
         ↓
-_is_python_related() → "ja"        ← ⚡ LLM-Aufruf 1 (gpt-4o-mini)
+_is_python_related() → "ja"        ← ⚡ LLM-Aufruf 1 (Classifier)
         ↓
 _get_rag_context()
   _extract_page_number() → 5       ← Regex, kein LLM
@@ -115,7 +115,7 @@ _get_rag_context()
   + query_with_pages() semantisch  ← 🟡 LangChain PGVector, kein LLM
   → alle Chunks von Seite 5 + semantische Treffer
         ↓
-run_chat_with_context()             ← ⚡ LLM-Aufruf 2 (gpt-4o)
+run_chat_with_context()             ← ⚡ LLM-Aufruf 2
 ```
 
 **LLM-Aufrufe gesamt: 2**
@@ -127,16 +127,16 @@ run_chat_with_context()             ← ⚡ LLM-Aufruf 2 (gpt-4o)
 ```
 Schüler: "Warum funktioniert mein Code nicht?"  (kein PDF)
         ↓
-_is_python_related() → "ja"        ← ⚡ LLM-Aufruf 1 (gpt-4o-mini)
+_is_python_related() → "ja"        ← ⚡ LLM-Aufruf 1 (Classifier)
         ↓
 _get_rag_context() → leer          ← kein LLM
         ↓
 run_chat()                          ← ReAct-Agent startet
   _build_chat_tools()               ← kein LLM, nur Tool-Objekte bauen
   _build_chat_system_prompt()       ← kein LLM, nur String
-  agent.invoke()                    ← ⚡ LLM-Aufruf 2 (gpt-4o) — entscheidet Tool
+  agent.invoke()                    ← ⚡ LLM-Aufruf 2 — entscheidet Tool
   → Tool ausführen                  ← z.B. debug_code_tool
-  → LLM formuliert Antwort          ← ⚡ LLM-Aufruf 3 (gpt-4o)
+  → LLM formuliert Antwort          ← ⚡ LLM-Aufruf 3
 ```
 
 **Datei:** `backend/agent/tutor_agent.py`
@@ -163,7 +163,7 @@ _is_python_related() → "ja"        ← ⚡ LLM-Aufruf 1
         ↓
 run_chat() → ReAct-Agent
   agent.invoke()                    ← ⚡ LLM-Aufruf 2 — wählt suggest_personalized_exercise
-  suggest_personalized_exercise()   ← 🟡 LangChain @tool
+  suggest_personalized_exercise()   ← 🟡 LangChain @tool (Zeile 95)
     generate_exercise.invoke()      ← ⚡ LLM-Aufruf 3 — generiert Aufgabe
   LLM formuliert Antwort            ← ⚡ LLM-Aufruf 4
 ```
@@ -197,12 +197,12 @@ run_chat() → ReAct-Agent
 |---|---|---|
 | `llm.invoke()` | **🟡 LangChain** | `tutor_agent.py:227` |
 | `agent.invoke()` | **🟡 LangChain** | `tutor_agent.py:184` |
-| `PGVector.similarity_search()` | **🟡 LangChain** | `vectorstore.py` |
-| `PGVector.from_texts()` | **🟡 LangChain** | `vectorstore.py` |
+| `PGVector.similarity_search()` | **🟡 LangChain** | `vectorstore.py:77` |
+| `PGVector.from_texts()` | **🟡 LangChain** | `vectorstore.py:40` |
 | `@tool` Dekorator | **🟡 LangChain** | `tutor_agent.py:91` |
 | `SystemMessage`, `HumanMessage` | **🟡 LangChain** | `tutor_agent.py:212` |
 | `create_agent()` | **🟡 LangChain** | `tutor_agent.py:174` |
-| `get_llm()`, `get_embeddings()` | **🟡 LangChain** abstrahiert | `config.py:75` |
+| `get_llm()`, `get_embeddings()` | **🟡 LangChain** abstrahiert | `config.py` |
 | `db.query(StudentSkillProgress)` | normaler Code | `tutor.py:208` |
 | `_extract_page_number()` | normaler Code (Regex) | `tutor.py:117` |
 | `subprocess.run()` | normaler Code | `tutor.py:80` |

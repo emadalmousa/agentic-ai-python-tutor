@@ -72,21 +72,6 @@ export interface ProgressResponse {
   user_status: "Anfänger" | "Fortgeschritten" | "Profi"
 }
 
-export interface SkillAnalyzeRequest {
-  code?: string
-  question?: string
-}
-
-export interface SkillAnalyzeResponse {
-  detected_skills: string[]
-  main_skill: string
-  score: number
-  status: "understood" | "partial" | "not_understood"
-  mistakes: string[]
-  feedback: string
-  recommended_next_exercise: string
-  updated_progress: ProgressResponse
-}
 
 // --- Exercise types ---
 

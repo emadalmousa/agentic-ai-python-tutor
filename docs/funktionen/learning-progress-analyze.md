@@ -15,7 +15,7 @@ Schüler chattet → Frontend ruft im Hintergrund an → Skill erkannt → Score
 
 ## Wer ruft den Endpoint auf?
 
-**Datei:** `frontend/hooks/useChat.ts`, Zeile 139–146
+**Datei:** `frontend/hooks/useChat.ts`
 
 ```typescript
 // nach jeder Chat-Antwort — im Hintergrund, kein await
@@ -40,11 +40,11 @@ Schüler schickt Chat-Nachricht
         │  POST /tutor/chat → Antwort zurück (Schüler sieht sofort)
         │
         ▼ (parallel, kein await)
-[Frontend] analyzeSkill({ code, question })   ← api.ts Zeile 58
+[Frontend] analyzeSkill({ code, question })
         │  POST /learning-progress/analyze + Bearer-Token
         │
         ▼
-[Backend] analyze_and_save()                  ← learning_progress.py Zeile 181
+[Backend] analyze_and_save()                  ← learning_progress.py Zeile 180
         │  JWT-Check: eingeloggter User?
         │
         ▼
@@ -77,7 +77,7 @@ Schüler schickt Chat-Nachricht
 
 ## Szenario A — LLM verfügbar
 
-**Datei:** `backend/services/skill_analyzer.py`, Zeile 220–233
+**Datei:** `backend/services/skill_analyzer.py`, Zeile 220–229
 
 > **`⚡ LLM-Aufruf`** — `llm.invoke()` mit strukturiertem JSON-Output
 > **`🟡 LangChain`** — `llm.invoke()`, `SystemMessage`, `HumanMessage`
@@ -102,7 +102,7 @@ llm.invoke([
 }
 ```
 
-Danach: `_parse_llm_json()` validiert die Skill-Keys gegen die Whitelist (37 erlaubte Skills) und begrenzt Score auf 0–100.
+Danach: `_parse_llm_json()` (Zeile 171) validiert die Skill-Keys gegen die Whitelist (37 erlaubte Skills) und begrenzt Score auf 0–100.
 
 **LLM-Aufrufe gesamt: 1**
 
@@ -182,11 +182,10 @@ Der geglättete Score zeigt den **aktuellen Stand**, die Events zeigen die **Ler
 |---|---|---|
 | `llm.invoke([system, human])` | **🟡 LangChain** | `skill_analyzer.py:225` |
 | `SystemMessage`, `HumanMessage` | **🟡 LangChain** | `skill_analyzer.py:222` |
-| `get_llm()` | **🟡 LangChain** abstrahiert | `config.py:75` |
+| `get_llm()` | **🟡 LangChain** abstrahiert | `config.py` |
 | `_rule_based_analysis()` | normaler Code (Keyword-Matching) | `skill_analyzer.py:99` |
 | `_parse_llm_json()` | normaler Code (JSON-Parsing) | `skill_analyzer.py:171` |
 | `db.query(...)`, `db.add(...)` | normaler Code (SQLAlchemy) | `learning_progress.py` |
-| `analyzeSkill()` im Frontend | normaler Code (fetch) | `api.ts:58` |
 
 ---
 
@@ -196,13 +195,3 @@ Der geglättete Score zeigt den **aktuellen Stand**, die Events zeigen die **Ler
 |---|---|---|
 | LLM verfügbar | 1 | `llm.invoke()` in `analyze_skill()` |
 | LLM nicht verfügbar | 0 | Keyword-Fallback |
-
----
-
-## Konfiguration
-
-| Variable | Standard | Bedeutung |
-|---|---|---|
-| `OPENAI_API_KEY` | — | OpenAI für LLM-Analyse (Ollama-Fallback wenn nicht gesetzt) |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama-Server |
-| `OLLAMA_MODEL` | `llama3.2` | Modell für Skill-Analyse |

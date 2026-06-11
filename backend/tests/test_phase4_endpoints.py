@@ -6,8 +6,7 @@ Covers:
 2. GET /exercises/{skill_key} — auth, 404, unlock logic
 3. POST /exercises/submit — scoring branches (richtig/teilweise/falsch),
    already-locked guard, redirect_to_tutor flag, skill score accumulation
-4. DELETE /learning-progress/events — auth, user isolation, deleted_count
-5. GET /learning-progress/{student_id} — user_status computation
+4. GET /learning-progress/{student_id} — user_status computation
 6. Skill unlock chain in progress response
 
 The evaluate_exercise LangChain tool is mocked via patch.object to avoid
@@ -442,94 +441,7 @@ class TestSubmitExercise:
 
 
 # ---------------------------------------------------------------------------
-# 4. DELETE /learning-progress/events
-# ---------------------------------------------------------------------------
-
-class TestDeleteLearningEvents:
-    """Tests for DELETE /learning-progress/events."""
-
-    def _create_event(self, client, headers):
-        """Create a learning event by calling POST /learning-progress/analyze."""
-        import services.skill_analyzer as analyzer_mod
-
-        fake_result = {
-            "detected_skills": ["variables"],
-            "main_skill": "variables",
-            "score": 50,
-            "status": "partial",
-            "mistakes": [],
-            "feedback": "Good attempt.",
-            "recommended_next_exercise": "Try exercise 2.",
-        }
-        with patch.object(analyzer_mod, "analyze_skill", return_value=fake_result):
-            resp = client.post("/learning-progress/analyze", headers=headers, json={
-                "code": "x = 1",
-                "question": "",
-            })
-        return resp
-
-    def test_returns_401_without_auth(self, client):
-        """DELETE /learning-progress/events without auth → HTTP 401."""
-        resp = client.delete("/learning-progress/events")
-
-        assert resp.status_code == 401
-
-    def test_returns_deleted_count_in_response(self, client, auth_headers):
-        """Response contains 'deleted_count' key with integer value."""
-        resp = client.delete("/learning-progress/events", headers=auth_headers)
-
-        assert resp.status_code == 200
-        body = resp.json()
-        assert "deleted_count" in body
-        assert isinstance(body["deleted_count"], int)
-
-    def test_deletes_events_for_current_user_only(self, client, auth_headers, another_auth_headers):
-        """Deleting events only removes the current user's events, not another user's."""
-        # Create an event for 'another' user
-        self._create_event(client, another_auth_headers)
-
-        # Delete events for the first user (shouldn't touch the second user's events)
-        del_resp = client.delete("/learning-progress/events", headers=auth_headers)
-        assert del_resp.status_code == 200
-
-        # Get student_id for another user via /auth/me
-        me_resp = client.get("/auth/me", headers=another_auth_headers)
-        assert me_resp.status_code == 200
-        other_id = me_resp.json()["id"]
-
-        # The other user's progress endpoint should still show recent_events
-        # (we just verify the delete did not cascade to them by re-creating and confirming)
-        progress_resp = client.get(f"/learning-progress/{other_id}", headers=another_auth_headers)
-        assert progress_resp.status_code == 200
-        # We don't assert events count here — just confirm the endpoint is healthy
-
-    def test_deleted_count_matches_event_count(self, client, auth_headers):
-        """deleted_count equals the number of events previously created for the user."""
-        import services.skill_analyzer as analyzer_mod
-
-        fake_result = {
-            "detected_skills": ["variables"],
-            "main_skill": "variables",
-            "score": 60,
-            "status": "partial",
-            "mistakes": [],
-            "feedback": "OK.",
-            "recommended_next_exercise": "Next.",
-        }
-        # First clear any existing events
-        client.delete("/learning-progress/events", headers=auth_headers)
-
-        # Create 2 events
-        with patch.object(analyzer_mod, "analyze_skill", return_value=fake_result):
-            client.post("/learning-progress/analyze", headers=auth_headers, json={"code": "x=1", "question": ""})
-            client.post("/learning-progress/analyze", headers=auth_headers, json={"code": "y=2", "question": ""})
-
-        del_resp = client.delete("/learning-progress/events", headers=auth_headers)
-        assert del_resp.json()["deleted_count"] == 2
-
-
-# ---------------------------------------------------------------------------
-# 5. GET /learning-progress/{student_id} — user_status
+# 4. GET /learning-progress/{student_id} — user_status
 # ---------------------------------------------------------------------------
 
 class TestUserStatus:

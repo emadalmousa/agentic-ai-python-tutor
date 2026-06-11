@@ -21,9 +21,7 @@ Szenario B: Student schreibt im Chat
 
 ## Szenario A — Button "Skill testen"
 
-**Auslöser:** Student hat `score >= 100` bei einem Skill → Button erscheint neben dem Skill-Titel in `ExercisePanel`.
-
-**Datei:** `frontend/components/ExercisePanel.tsx:249`
+**Auslöser:** Student hat `score >= 100` bei einem Skill → Button erscheint neben dem Skill-Titel.
 
 ```
 Button klick (score >= 100)
@@ -45,7 +43,7 @@ POST /skill-tests/submit        ← ⚡ LLM-Aufruf 2 (+ ⚡ LLM-Aufruf 3)
 
 **Auslöser:** Student schreibt z.B. "Ich will mich für die Klausur testen".
 
-**Datei:** `backend/agent/tutor_agent.py:154`
+**Datei:** `backend/agent/tutor_agent.py`, Zeile 108–121
 
 ```
 Student: "Ich will mich für die Klausur testen"
@@ -64,19 +62,18 @@ Student beantwortet → POST /skill-tests/submit  ← ⚡ LLM-Aufruf 4+5
 ```
 
 > **Welchen Skill wählt der Agent?**
-> **Zeile 141–142** `tutor_agent.py` — `weak_info` listet alle Skills mit Status `partial` oder `not_understood`.
-> Der Agent entscheidet selbst — kein explizites "frage nach wenn unklar".
-> Wenn der Student keinen Skill nennt, wählt der Agent den schwächsten.
+> `tutor_agent.py` Zeile 141–142 — `weak_info` listet alle Skills mit Status `partial` oder `not_understood`.
+> Der Agent entscheidet selbst — wenn der Student keinen Skill nennt, wählt der Agent den schwächsten.
 
 ---
 
 ## POST /skill-tests/generate
 
-**Datei:** `backend/routers/skill_tests.py:58`
+**Datei:** `backend/routers/skill_tests.py`, Zeile 62
 
 ### Schritt 1 — LLM generiert Test
 
-**Zeile 69** `raw_result = generate_skill_test.invoke({...})`
+**Zeile 84** `raw_result = generate_skill_test.invoke({...})`
 
 > **`🟡 LangChain`** — `@tool` Dekorator, `llm.invoke()`
 > **`⚡ LLM-Aufruf`** — 1 Aufruf, generiert kompletten Test
@@ -92,23 +89,10 @@ Das LLM erstellt einen Test mit **3 Teilen** in einem einzigen Aufruf:
 
 ### Schritt 2 — Test in DB speichern
 
-**Zeile 77–94** `SkillTestResult` wird angelegt mit `score=0, passed=False, generated_test=test_data`.
+**Zeile 100–109** — `SkillTestResult` wird angelegt mit `score=0, passed=False, generated_test=test_data`.
 
 > Kein LLM — reines DB-Insert.
 > **Warum in der DB?** Richtige Antworten bleiben server-seitig — Client kann sie nicht manipulieren.
-
-### Response
-
-```json
-{
-  "test_session_id": 42,
-  "test_data": {
-    "multiple_choice": [...],
-    "code_reading": {...},
-    "mini_task": {...}
-  }
-}
-```
 
 **LLM-Aufrufe gesamt: 1**
 
@@ -116,17 +100,17 @@ Das LLM erstellt einen Test mit **3 Teilen** in einem einzigen Aufruf:
 
 ## POST /skill-tests/submit
 
-**Datei:** `backend/routers/skill_tests.py:103`
+**Datei:** `backend/routers/skill_tests.py`, Zeile 119
 
 ### Schritt 1 — Mini-Task Code ausführen
 
-**Zeile 126** `mini_stdout, _ = run_user_code(data.mini_task_code)`
+**Zeile 150** `mini_stdout, _mini_stderr = run_user_code(data.mini_task_code)`
 
 > Kein LLM — `subprocess.run()` mit Timeout 10s.
 
 ### Schritt 2 — MC auswerten (kein LLM)
 
-**Zeile 129–137** — reiner Python-Stringvergleich.
+**Datei:** `skill_test_evaluator_tool.py`, Zeile 56–57 — reiner Python-Stringvergleich.
 
 ```
 answers[i] == corrects[i]   → 10 Punkte pro richtiger Antwort
@@ -136,7 +120,7 @@ answers[i] == corrects[i]   → 10 Punkte pro richtiger Antwort
 
 ### Schritt 3 — Code-Lesen bewerten (LLM)
 
-**Zeile 65–96** `evaluate_skill_test.py`
+**Datei:** `skill_test_evaluator_tool.py`, Zeile 76–107
 
 > **`⚡ LLM-Aufruf`** — LLM prüft semantisch ob die Antwort korrekt ist.
 > Kleine Formulierungsunterschiede werden toleriert.
@@ -151,21 +135,21 @@ LLM: semantisch korrekt → 30 Punkte
 
 ### Schritt 4 — Mini-Task bewerten (LLM)
 
-**Zeile 109–140** `evaluate_skill_test.py`
+**Datei:** `skill_test_evaluator_tool.py`, Zeile 120–152
 
 > **`⚡ LLM-Aufruf`** — LLM prüft ob Code die erwartete Ausgabe produziert.
 > Hat `mini_task_actual_output` → LLM bekommt auch die echte Ausgabe von subprocess.
 
 ### Schritt 5 — Score berechnen und speichern
 
-**Zeile 148–159** `evaluate_skill_test.py`
+**Datei:** `skill_test_evaluator_tool.py`, Zeile 161–162
 
 ```
 total_score = mc_score + code_reading_score + mini_task_score
 passed = total_score >= 60
 ```
 
-**Zeile 157–158** `skill_tests.py` — `session_row.score` und `session_row.passed` werden aktualisiert.
+**Datei:** `skill_tests.py`, Zeile 182–183 — `session_row.score` und `session_row.passed` werden aktualisiert.
 
 **LLM-Aufrufe gesamt: 2** (Code-Lesen + Mini-Task)
 
@@ -224,7 +208,7 @@ Student beantwortet → /skill-tests/submit
 | | Szenario A (Button) | Szenario B (Chat) |
 |---|---|---|
 | Auslöser | score >= 100, Button klick | Freitext im Chat |
-| Welcher Skill | vom Student gewählt (aktiver Skill) | Agent entscheidet (schwächster Skill) |
+| Welcher Skill | vom Student gewählt | Agent entscheidet (schwächster Skill) |
 | Agent beteiligt | nein | ja |
 | LLM-Aufrufe generate | 1 | 3 (Classifier + Agent + Tool) |
 | LLM-Aufrufe submit | 2 | 2 |
@@ -236,12 +220,12 @@ Student beantwortet → /skill-tests/submit
 
 | Code | Typ | Datei / Zeile |
 |---|---|---|
-| `generate_skill_test.invoke()` | **🟡 LangChain** | `skill_tests.py:69` |
-| `evaluate_skill_test.invoke()` | **🟡 LangChain** | `skill_tests.py:143` |
-| `@tool` Dekorator | **🟡 LangChain** | `skill_test_generator_tool.py:8`, `skill_test_evaluator_tool.py:8` |
-| `llm.invoke([system, human])` | **🟡 LangChain** | `skill_test_generator_tool.py:53`, `skill_test_evaluator_tool.py:81,131` |
+| `generate_skill_test.invoke()` | **🟡 LangChain** | `skill_tests.py:84` |
+| `evaluate_skill_test.invoke()` | **🟡 LangChain** | `skill_tests.py:168` |
+| `@tool` Dekorator | **🟡 LangChain** | `skill_test_generator_tool.py:19`, `skill_test_evaluator_tool.py:19` |
+| `llm.invoke([system, human])` | **🟡 LangChain** | `skill_test_evaluator_tool.py:92,143` |
 | `SystemMessage`, `HumanMessage` | **🟡 LangChain** | beide Tool-Dateien |
-| `run_user_code()` | normaler Code (subprocess) | `skill_tests.py:126` |
-| MC-Auswertung `answers[i] == corrects[i]` | normaler Code | `skill_test_evaluator_tool.py:46` |
-| `db.query(SkillTestResult)` | normaler Code | `skill_tests.py:77,115` |
-| Score-Berechnung | normaler Code | `skill_test_evaluator_tool.py:148` |
+| `run_user_code()` | normaler Code (subprocess) | `skill_tests.py:150` |
+| MC-Auswertung `answers[i] == corrects[i]` | normaler Code | `skill_test_evaluator_tool.py:57` |
+| `db.query(SkillTestResult)` | normaler Code | `skill_tests.py:93,139` |
+| Score-Berechnung | normaler Code | `skill_test_evaluator_tool.py:161` |

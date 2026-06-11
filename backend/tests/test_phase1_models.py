@@ -9,8 +9,6 @@ Validates:
 - FIXED_SKILLS backward-compatibility alias works correctly
 - ExerciseCompletion model has all required columns with correct defaults
 - SkillTestResult model has all required columns with correct defaults
-- skill_analyzer.VALID_SKILLS contains all 37 SKILL_TREE keys
-
 No DB connection required — all tests inspect model structure and module-level data.
 """
 
@@ -410,61 +408,3 @@ class TestStudentSkillProgressConstraint:
         constrained_cols = {col.key for col in uc.columns}
         assert constrained_cols == {"user_id", "skill_key"}
 
-
-# ---------------------------------------------------------------------------
-# skill_analyzer.VALID_SKILLS coverage
-# ---------------------------------------------------------------------------
-
-
-class TestValidSkillsCoverage:
-    def test_valid_skills_has_exactly_37_items(self):
-        """VALID_SKILLS must contain exactly 37 entries."""
-        from services.skill_analyzer import VALID_SKILLS
-
-        assert len(VALID_SKILLS) == 37
-
-    def test_all_skill_tree_keys_in_valid_skills(self):
-        """Every key from SKILL_TREE must appear in VALID_SKILLS."""
-        from models.skill_progress import SKILL_TREE
-        from services.skill_analyzer import VALID_SKILLS
-
-        skill_tree_keys = {s["key"] for s in SKILL_TREE}
-        missing = skill_tree_keys - VALID_SKILLS
-        assert not missing, f"Keys in SKILL_TREE but missing from VALID_SKILLS: {missing}"
-
-    def test_valid_skills_contains_no_extra_keys(self):
-        """VALID_SKILLS must not contain any key that is not in SKILL_TREE."""
-        from models.skill_progress import SKILL_TREE
-        from services.skill_analyzer import VALID_SKILLS
-
-        skill_tree_keys = {s["key"] for s in SKILL_TREE}
-        extra = VALID_SKILLS - skill_tree_keys
-        assert not extra, f"Keys in VALID_SKILLS but not in SKILL_TREE: {extra}"
-
-    def test_valid_skills_is_a_set(self):
-        """VALID_SKILLS must be a set for O(1) membership checks."""
-        from services.skill_analyzer import VALID_SKILLS
-
-        assert isinstance(VALID_SKILLS, set)
-
-    @pytest.mark.parametrize("skill_key", [
-        # Beginner
-        "variables", "datatypes", "input_output", "string_methods", "type_conversion",
-        "if_else", "for_loop", "while_loop", "lists", "tuples", "sets",
-        "dictionaries", "functions",
-        # Intermediate
-        "list_comprehension", "error_handling", "file_io", "classes_basic",
-        "instance_methods", "instance_variables", "static_methods", "class_methods",
-        "magic_methods", "modules_imports", "lambda_functions", "map_filter_reduce",
-        # Advanced
-        "inheritance", "polymorphism", "abstract_classes", "interfaces", "decorators",
-        "generators", "context_managers", "recursion", "algorithms", "design_patterns",
-        "async_await", "testing",
-    ])
-    def test_each_expected_key_in_valid_skills(self, skill_key: str):
-        """Each of the 37 expected skill keys must be individually present in VALID_SKILLS."""
-        from services.skill_analyzer import VALID_SKILLS
-
-        assert skill_key in VALID_SKILLS, (
-            f"Expected skill key '{skill_key}' not found in VALID_SKILLS"
-        )
