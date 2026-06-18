@@ -135,16 +135,26 @@ def _build_chat_tools(user_level: str, skill_progress: list[dict]) -> list:
     return tools
 
 
-def _build_chat_system_prompt(user_level: str, skill_progress: list[dict], code: str) -> str:
+def _build_chat_system_prompt(
+    user_level: str,
+    skill_progress: list[dict],
+    code: str,
+    memory_summary: str | None = None,
+) -> str:
     """Erstellt den System-Prompt für den Chat-Agenten mit personalisierten Schüler-Infos."""
-    # Schwache Bereiche helfen dem Agenten, die richtigen Tools zu priorisieren
     partial_skills = [s["skill_label"] for s in skill_progress if s["status"] in ("partial", "not_understood")]
     weak_info = ", ".join(partial_skills) if partial_skills else "keine bekannten Schwächen"
+
+    memory_block = (
+        f"\nGedächtnis (frühere Sessions):\n{memory_summary}\n"
+        if memory_summary else ""
+    )
 
     return (
         "Du bist ein freundlicher Python-Tutor. Antworte auf Deutsch, kurz und verständlich.\n\n"
         f"Student-Level: {user_level}\n"
         f"Schwache Bereiche: {weak_info}\n"
+        f"{memory_block}"
         f"Aktueller Code des Schülers:\n```python\n{code}\n```\n\n"
         "Wähle das passende Tool:\n"
         "- explain_code_tool: Bei Verständnisfragen zum Code\n"
@@ -162,6 +172,7 @@ def run_chat(
     history: list,
     user_level: str,
     skill_progress: list[dict],
+    memory_summary: str | None = None,
 ) -> str:
     """ReAct-Agent beantwortet Chat-Nachrichten mit dynamischer Tool-Selektion.
 
@@ -170,7 +181,7 @@ def run_chat(
     """
     llm = get_llm()
     tools = _build_chat_tools(user_level, skill_progress)
-    system_prompt = _build_chat_system_prompt(user_level, skill_progress, code)
+    system_prompt = _build_chat_system_prompt(user_level, skill_progress, code, memory_summary)
     agent = create_agent(llm, tools, system_prompt=system_prompt)
 
     # History-Objekte können Pydantic-Modelle (mit .role) oder Dicts sein → beide behandeln

@@ -4,6 +4,7 @@ from models.skill_progress import StudentSkillProgress, LearningEvent
 from models.exercise import ExerciseCompletion
 from models.skill_test import SkillTestResult
 from models.level_test import LevelTestResult
+from models.agent_memory import AgentMemory
 
 __all__ = [
     "User",
@@ -13,4 +14,5 @@ __all__ = [
     "ExerciseCompletion",
     "SkillTestResult",
     "LevelTestResult",
+    "AgentMemory",
 ]

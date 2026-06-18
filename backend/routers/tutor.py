@@ -11,6 +11,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from models.schemas import CodeRequest, TutorResponse, ChatRequest, ChatResponse, ChatMessage, RunRequest, RunResponse, UploadResponse
 from agent.tutor_agent import run_analysis, run_chat, run_chat_with_context
+from services.memory_service import load_memory, update_memory
 from agent.config import get_classifier_llm
 from langchain_core.messages import SystemMessage, HumanMessage
 from core.database import get_db
@@ -219,6 +220,9 @@ def chat(
         if row.skill_key in skill_map  # nur bekannte Skills übergeben
     ]
 
+    # Gedächtnis laden — gibt None zurück wenn noch keine Sessions existieren
+    memory_summary = load_memory(current_user.id, db)
+
     # RAG hat Vorrang: wenn PDF-Kontext gefunden → direktes LLM-Gespräch (kein Agent)
     rag_context = _get_rag_context(request.message, current_user.id)
 
@@ -231,14 +235,18 @@ def chat(
             rag_context=rag_context,
         )
     else:
-        # Kein RAG → ReAct-Agent mit dynamischen personalisierten Tools
+        # Kein RAG → ReAct-Agent mit Memory + dynamischen personalisierten Tools
         reply = run_chat(
             message=request.message,
             code=request.code,
             history=request.history,
             user_level=current_user.level,
             skill_progress=skill_progress,
+            memory_summary=memory_summary,
         )
+
+    # Gedächtnis nach Antwort asynchron aktualisieren (non-blocking für Response)
+    update_memory(current_user.id, db, request.message, reply)
 
     # Neue Nachricht ans Ende der History hängen — Frontend nutzt dies für Anzeige
     new_history = list(request.history) + [
