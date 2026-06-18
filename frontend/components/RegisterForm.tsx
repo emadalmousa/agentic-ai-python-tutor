@@ -35,7 +35,7 @@ export default function RegisterForm() {
   const router = useRouter()
 
   useEffect(() => {
-    if (user) router.push("/tutor")
+    if (user) router.push("/dashboard")
   }, [user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,7 +70,7 @@ export default function RegisterForm() {
   return (
     <div className="flex-1 bg-[#060e1c] flex items-center justify-center px-4 py-12">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-blue-600/4 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-160 h-160 bg-blue-600/4 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative">

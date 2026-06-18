@@ -17,11 +17,11 @@ export default function LoginForm() {
 
   const handleGuest = useCallback(() => {
     continueAsGuest()
-    router.push("/tutor")
+    router.push("/dashboard")
   }, [continueAsGuest, router])
 
   useEffect(() => {
-    if (user) router.push("/tutor")
+    if (user) router.push("/dashboard")
   }, [user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +37,7 @@ export default function LoginForm() {
 
     const success = await login(email, password)
     if (success) {
-      router.push("/tutor")
+      router.push("/dashboard")
     } else {
       setError(t("auth.login.errorInvalid"))
     }
@@ -49,7 +49,7 @@ export default function LoginForm() {
   return (
     <div className="flex-1 bg-[#060e1c] flex items-center justify-center px-4">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-160 h-160 bg-blue-600/5 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative">
