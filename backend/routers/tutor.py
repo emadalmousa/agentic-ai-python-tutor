@@ -11,6 +11,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from models.schemas import CodeRequest, TutorResponse, ChatRequest, ChatResponse, ChatMessage, RunRequest, RunResponse, UploadResponse
 from agent.tutor_agent import run_analysis, run_chat, run_chat_with_context
+from agent.tools.code_review_chain import run_code_review
 from services.memory_service import load_memory, update_memory
 from agent.config import get_classifier_llm
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -182,6 +183,17 @@ def _get_rag_context(message: str, user_id: int) -> str:
         return "\n\n---\n\n".join(parts)
     except Exception:
         return ""  # Fehler im RAG → normalen Chat fortsetzen
+
+
+@router.post("/review", response_model=dict)
+def review_code(
+    request: CodeRequest,
+    _: User = Depends(get_current_user),
+) -> dict:
+    """3-stufige Code-Review-Chain: Syntax → Stil/PEP8 → Best Practices."""
+    if not request.code.strip():
+        raise HTTPException(status_code=400, detail="Code darf nicht leer sein.")
+    return run_code_review(request.code)
 
 
 @router.post("/chat", response_model=ChatResponse)

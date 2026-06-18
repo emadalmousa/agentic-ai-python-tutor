@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import { useLang } from "@/context/LangContext"
-import { getLearningProgress, getWeaknessNudge } from "@/lib/api"
-import type { ProgressResponse, SkillProgress, WeaknessNudgeResponse } from "@/types/tutor"
+import { getLearningProgress, getWeaknessNudge, getLearningPlan } from "@/lib/api"
+import type { ProgressResponse, SkillProgress, WeaknessNudgeResponse, LearningPlanResponse } from "@/types/tutor"
 import ExercisePanel from "@/components/ExercisePanel"
 import SkillTestModal from "@/components/SkillTestModal"
 import LevelTestModal from "@/components/LevelTestModal"
 import WeaknessNudgeModal from "@/components/WeaknessNudgeModal"
+import LearningPlanModal from "@/components/LearningPlanModal"
 import type { LevelKey } from "@/types/tutor"
 import type { TranslationKey } from "@/i18n"
 
@@ -275,6 +276,8 @@ export default function LearningProgressView() {
   const [refreshTick, setRefreshTick]     = useState(0)
   const [activeLevel, setActiveLevel]     = useState<LevelKey>("beginner")
   const [nudge, setNudge]                 = useState<WeaknessNudgeResponse | null>(null)
+  const [plan, setPlan]                   = useState<LearningPlanResponse | null>(null)
+  const [planLoading, setPlanLoading]     = useState(false)
 
   const refreshProgress = useCallback(() => setRefreshTick((t) => t + 1), [])
 
@@ -314,6 +317,25 @@ export default function LearningProgressView() {
   function handleTestPassed(_skillKey: string) {
     setSkillTestSkill(null)
     refreshProgress()
+  }
+
+  function handleGeneratePlan() {
+    if (planLoading) return
+    setPlanLoading(true)
+    getLearningPlan(token)
+      .then(setPlan)
+      .catch(() => {/* ignore — non-critical */})
+      .finally(() => setPlanLoading(false))
+  }
+
+  function handlePlanStartSkill(skillKey: string) {
+    if (!progress) return
+    const skill = progress.skills.find((s) => s.skill_key === skillKey)
+    if (skill) {
+      setActiveLevel(skill.level as LevelKey)
+      setSelectedSkill(skill)
+    }
+    setPlan(null)
   }
 
   function dismissNudge() {
@@ -364,11 +386,27 @@ export default function LearningProgressView() {
           )}
         </div>
         {progress && (
-          <div className="flex items-center gap-2">
-            <Ring score={progress.overall_score} size={44} dark={dark} />
-            <div>
-              <p className={`text-xs ${dark ? "text-gray-500" : "text-gray-400"}`}>{t("progress.total")}</p>
-              <p className={`text-sm font-bold ${dark ? "text-white" : "text-gray-900"}`}>{progress.overall_score}%</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleGeneratePlan}
+              disabled={planLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all active:scale-95"
+            >
+              {planLoading ? (
+                <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+              ) : (
+                <span>📅</span>
+              )}
+              {planLoading ? "Generiert…" : "Lernplan"}
+            </button>
+            <div className="flex items-center gap-2">
+              <Ring score={progress.overall_score} size={44} dark={dark} />
+              <div>
+                <p className={`text-xs ${dark ? "text-gray-500" : "text-gray-400"}`}>{t("progress.total")}</p>
+                <p className={`text-sm font-bold ${dark ? "text-white" : "text-gray-900"}`}>{progress.overall_score}%</p>
+              </div>
             </div>
           </div>
         )}
@@ -470,6 +508,15 @@ export default function LearningProgressView() {
         </div>
 
       </div>
+
+      {/* Learning Plan Modal */}
+      {plan && (
+        <LearningPlanModal
+          plan={plan}
+          onClose={() => setPlan(null)}
+          onStartSkill={handlePlanStartSkill}
+        />
+      )}
 
       {/* Weakness Nudge Popup — einmal pro Tab */}
       {nudge?.has_weakness && nudge.skill_key && nudge.skill_label && nudge.score !== null && nudge.nudge_text && (

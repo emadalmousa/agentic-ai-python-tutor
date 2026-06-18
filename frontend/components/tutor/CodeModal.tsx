@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useCallback } from "react"
 import CodeEditor from "./CodeEditor"
-import type { RunResponse } from "@/types/tutor"
+import CodeReviewPanel from "./CodeReviewPanel"
+import type { RunResponse, CodeReviewResult } from "@/types/tutor"
 import { useLang } from "@/context/LangContext"
 
 interface Props {
@@ -11,17 +12,22 @@ interface Props {
   dark: boolean
   running: boolean
   analyzing: boolean
+  reviewing: boolean
   output: RunResponse | null
+  reviewResult: CodeReviewResult | null
   onRun: () => void
   onAnalyze: () => void
+  onReview: () => void
+  onClearReview: () => void
   onClose: () => void
 }
 
 export default function CodeModal({
-  code, onChange, dark, running, analyzing, output, onRun, onAnalyze, onClose,
+  code, onChange, dark, running, analyzing, reviewing, output, reviewResult,
+  onRun, onAnalyze, onReview, onClearReview, onClose,
 }: Props) {
   const { t } = useLang()
-  const busy = running || analyzing
+  const busy = running || analyzing || reviewing
   const overlayRef = useRef<HTMLDivElement>(null)
 
   // Close on Escape
@@ -107,6 +113,15 @@ export default function CodeModal({
           </div>
         )}
 
+        {/* Code Review Panel */}
+        {reviewResult && (
+          <CodeReviewPanel
+            result={reviewResult}
+            dark={dark}
+            onClose={onClearReview}
+          />
+        )}
+
         {/* Action bar */}
         <div className={`flex gap-2 px-4 py-3 border-t ${border} ${dark ? "bg-[#080f1e]" : "bg-gray-50"}`}>
           <button
@@ -129,7 +144,7 @@ export default function CodeModal({
           <button
             onClick={onAnalyze}
             disabled={busy || !code.trim()}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-indigo-600 hover:bg-indigo-500 text-white"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-indigo-600 hover:bg-indigo-500 text-white"
           >
             {analyzing ? (
               <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -141,6 +156,23 @@ export default function CodeModal({
               </svg>
             )}
             {analyzing ? t("tutor.analyzeRunning") : t("tutor.analyze")}
+          </button>
+
+          <button
+            onClick={onReview}
+            disabled={busy || !code.trim()}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-violet-600 hover:bg-violet-500 text-white"
+          >
+            {reviewing ? (
+              <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+            )}
+            {reviewing ? "Prüfe..." : "Code Review"}
           </button>
 
           <button

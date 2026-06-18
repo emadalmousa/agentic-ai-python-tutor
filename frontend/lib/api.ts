@@ -6,7 +6,7 @@ import type {
   HintRequest, HintResponse,
   SkillTestGenerateResponse, SkillTestSubmitRequest, SkillTestResult,
   LevelTestGenerateResponse, LevelTestSubmitRequest, LevelTestResult, LevelKey,
-  WeaknessNudgeResponse,
+  WeaknessNudgeResponse, LearningPlanResponse, CodeReviewResult,
   ChatHistoryItem, LoadChatResponse,
 } from "@/types/tutor"
 
@@ -159,6 +159,25 @@ export async function submitLevelTest(payload: LevelTestSubmitRequest, token: st
 
 export async function getLevelTestStatus(level: LevelKey, token: string) {
   const res = await fetch(`${API_URL}/level-tests/status/${level}`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+export async function reviewCode(code: string, token: string): Promise<CodeReviewResult> {
+  const res = await fetch(`${API_URL}/tutor/review`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ code }),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+export async function getLearningPlan(token: string): Promise<LearningPlanResponse> {
+  const res = await fetch(`${API_URL}/learning-progress/learning-plan`, {
+    method: "POST",
     headers: authHeaders(token),
   })
   if (!res.ok) throw new Error(`Backend error: ${res.status}`)

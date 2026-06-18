@@ -232,6 +232,41 @@ export interface WeaknessNudgeResponse {
   nudge_text:   string | null
 }
 
+export interface CodeReviewIssue {
+  line: number
+  severity: "error" | "warning" | "info"
+  message: string
+}
+
+export interface CodeReviewSection {
+  issues: CodeReviewIssue[]
+  summary: string
+}
+
+export interface CodeReviewResult {
+  syntax: CodeReviewSection
+  style: CodeReviewSection
+  best_practices: CodeReviewSection
+  total_issues: number
+}
+
+export interface LearningPlanSkill {
+  skill_key: string
+  skill_label: string
+  score: number
+  hours: number
+}
+
+export interface LearningPlanWeek {
+  week: number
+  skills: LearningPlanSkill[]
+}
+
+export interface LearningPlanResponse {
+  weeks: LearningPlanWeek[]
+  tip: string
+}
+
 export interface ChatHistoryItem {
   id: number
   title: string

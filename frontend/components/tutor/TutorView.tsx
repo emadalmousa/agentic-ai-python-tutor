@@ -10,8 +10,8 @@ import { useCodeRunner } from "@/hooks/useCodeRunner"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import { useLang } from "@/context/LangContext"
-import { listChatHistory, loadChat } from "@/lib/api"
-import type { ChatHistoryItem } from "@/types/tutor"
+import { listChatHistory, loadChat, reviewCode } from "@/lib/api"
+import type { ChatHistoryItem, CodeReviewResult } from "@/types/tutor"
 
 const LEVEL_COMPLEXITY: Record<string, string> = {
   beginner:     "Erkläre alles sehr einfach für absolute Anfänger. Verwende kurze, klare Sätze. Zeige einfache Beispiele mit print() und einfachen Werten.",
@@ -61,6 +61,8 @@ export default function TutorView() {
   const [{ code: initialCode, history: initialHistory }] = useState(readExerciseRedirect)
   const [code, setCode] = useState(initialCode)
   const [showCode, setShowCode] = useState(false)
+  const [reviewing, setReviewing] = useState(false)
+  const [reviewResult, setReviewResult] = useState<CodeReviewResult | null>(null)
 
   // Sidebar state
   const [sidebarItems, setSidebarItems] = useState<ChatHistoryItem[]>([])
@@ -93,6 +95,29 @@ export default function TutorView() {
     if (!isAuthenticated) router.replace("/login")
   }, [isAuthenticated, router])
 
+  function refreshSidebar() {
+    if (!token) return
+    listChatHistory(token).then(setSidebarItems).catch(() => {})
+  }
+
+  // Wrap analyze: save chat to DB after analyze completes (sidebar updates)
+  const handleAnalyze = useCallback(async () => {
+    await analyze()
+    if (token) refreshSidebar()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analyze, token])
+
+  const handleReview = useCallback(async () => {
+    if (!token || !code.trim() || reviewing) return
+    setReviewing(true)
+    setReviewResult(null)
+    try {
+      const result = await reviewCode(code, token)
+      setReviewResult(result)
+    } catch {/* show nothing on error */}
+    finally { setReviewing(false) }
+  }, [code, token, reviewing])
+
   if (!isAuthenticated) return null
 
   async function switchToChat(item: ChatHistoryItem) {
@@ -108,17 +133,6 @@ export default function TutorView() {
     setCode(DEFAULT_CODE)
     refreshSidebar()
   }
-
-  function refreshSidebar() {
-    if (!token) return
-    listChatHistory(token).then(setSidebarItems).catch(() => {})
-  }
-
-  // Wrap analyze: save chat to DB after analyze completes (sidebar updates)
-  const handleAnalyze = useCallback(async () => {
-    await analyze()
-    if (token) refreshSidebar()
-  }, [analyze, token])
 
   const bg = dark ? "bg-[#060e1c] text-white" : "bg-gray-100 text-gray-900"
 
@@ -167,9 +181,13 @@ export default function TutorView() {
           dark={dark}
           running={running}
           analyzing={analyzing}
+          reviewing={reviewing}
           output={output}
+          reviewResult={reviewResult}
           onRun={() => run(code)}
           onAnalyze={handleAnalyze}
+          onReview={handleReview}
+          onClearReview={() => setReviewResult(null)}
           onClose={() => setShowCode(false)}
         />
       )}

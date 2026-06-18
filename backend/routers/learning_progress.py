@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from agent.tools.nudge_tool import generate_nudge_text
+from agent.tools.learning_plan_tool import generate_learning_plan
 from core.database import get_db
 from models.skill_progress import StudentSkillProgress, LearningEvent, FIXED_SKILLS, SKILL_TREE
 from models.user import User
@@ -242,6 +243,26 @@ def get_weakness_nudge(
         score=score,
         nudge_text=nudge_text,
     )
+
+
+class LearningPlanResponse(BaseModel):
+    weeks: list[dict]
+    tip: str
+
+
+@router.post("/learning-plan", response_model=LearningPlanResponse)
+def get_learning_plan(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generiert einen personalisierten Wochenlernplan via LLM."""
+    progress = _build_progress_response(current_user.id, db)
+    skills_input = [
+        {"skill_key": s.skill_key, "skill_label": s.skill_label, "score": s.score, "level": s.level}
+        for s in progress.skills
+    ]
+    plan = generate_learning_plan(skills_input, goal=current_user.goal or "Python lernen")
+    return LearningPlanResponse(weeks=plan.get("weeks", []), tip=plan.get("tip", ""))
 
 
 @router.get("/skills", response_model=list[SkillInfo])
