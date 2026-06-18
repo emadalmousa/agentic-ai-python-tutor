@@ -32,6 +32,25 @@ class SessionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ChatHistoryItem(BaseModel):
+    id: int
+    title: str          # Erste User-Nachricht als Titel (max 60 Zeichen)
+    created_at: str
+    message_count: int
+
+
+class SaveChatRequest(BaseModel):
+    messages: list[dict]   # [{role, content}, ...]
+    code: str = ""
+
+
+class LoadChatResponse(BaseModel):
+    id: int
+    messages: list[dict]
+    code: str | None
+    created_at: str
+
+
 class ProgressSummary(BaseModel):
     analyzed_count: int
     topics: list[str]
@@ -112,4 +131,87 @@ def get_summary(
         topics=list(dict.fromkeys(all_topics)),  # dict.fromkeys() dedupliziert ohne Reihenfolge zu ändern
         frequent_errors=frequent_errors,
         recent_sessions=recent_sessions,
+    )
+
+
+@router.post("/chat", response_model=ChatHistoryItem, status_code=201)
+def save_chat(
+    data: SaveChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Speichert einen vollständigen Chat als neue Session."""
+    if not data.messages:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="messages darf nicht leer sein")
+
+    session = LearningSession(
+        user_id=current_user.id,
+        code_snippet=data.code or None,
+        topics=[],
+        errors=[],
+        chat_messages=data.messages,
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+
+    first_user = next((m["content"] for m in data.messages if m.get("role") == "user"), "Chat")
+    title = first_user[:60] + ("…" if len(first_user) > 60 else "")
+    return ChatHistoryItem(
+        id=session.id,
+        title=title,
+        created_at=session.created_at.isoformat(),
+        message_count=len(data.messages),
+    )
+
+
+@router.get("/chats", response_model=list[ChatHistoryItem])
+def list_chats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Listet alle gespeicherten Chats des Nutzers (neueste zuerst)."""
+    sessions = (
+        db.query(LearningSession)
+        .filter(
+            LearningSession.user_id == current_user.id,
+            LearningSession.chat_messages.isnot(None),
+        )
+        .order_by(LearningSession.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    result = []
+    for s in sessions:
+        msgs = s.chat_messages or []
+        if not msgs:
+            continue
+        first_user = next((m["content"] for m in msgs if m.get("role") == "user"), "Chat")
+        title = first_user[:60] + ("…" if len(first_user) > 60 else "")
+        result.append(ChatHistoryItem(
+            id=s.id,
+            title=title,
+            created_at=s.created_at.isoformat(),
+            message_count=len(msgs),
+        ))
+    return result
+
+
+@router.get("/chat/{session_id}", response_model=LoadChatResponse)
+def load_chat(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lädt einen einzelnen Chat anhand der Session-ID."""
+    from fastapi import HTTPException
+    session = db.query(LearningSession).filter_by(id=session_id, user_id=current_user.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden")
+    return LoadChatResponse(
+        id=session.id,
+        messages=session.chat_messages or [],
+        code=session.code_snippet,
+        created_at=session.created_at.isoformat(),
     )

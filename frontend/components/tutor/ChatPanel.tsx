@@ -67,13 +67,14 @@ interface Props {
   onOpenFilePicker: () => void
   onFileInput: (e: React.ChangeEvent<HTMLInputElement>) => void
   onInsertCode?: (code: string) => void
+  onOpenCode?: () => void
   dark: boolean
 }
 
 export default function ChatPanel({
   history, input, loading, analyzing, uploading, materialName, hasPdf, onOpenPdf,
   error, bottomRef, fileInputRef,
-  onInput, onSend, onReset, onOpenFilePicker, onFileInput, onInsertCode, dark,
+  onInput, onSend, onReset, onOpenFilePicker, onFileInput, onInsertCode, onOpenCode, dark,
 }: Props) {
   const { t } = useLang()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -119,14 +120,25 @@ export default function ChatPanel({
             </button>
           )}
         </div>
-        {history.length > 0 && (
-          <button
-            onClick={onReset}
-            className={`text-xs ${subCol} hover:text-red-400 transition-colors`}
-          >
-            {t("tutor.newConversation")}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Code-Editor öffnen */}
+          {onOpenCode && (
+            <button
+              onClick={onOpenCode}
+              title="Code-Editor öffnen"
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                dark
+                  ? "border-[#2d3f55] text-gray-400 hover:text-emerald-400 hover:border-emerald-500/40 hover:bg-emerald-500/10"
+                  : "border-gray-200 text-gray-500 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50"
+              }`}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+              </svg>
+              Python
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Message history */}

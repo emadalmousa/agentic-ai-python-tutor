@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { useAuth, Level } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import { useLang } from "@/context/LangContext"
+import { getLearningProgress } from "@/lib/api"
+import type { SkillProgress } from "@/types/tutor"
 import type { TranslationKey } from "@/i18n"
 
 const LEVELS: { value: Level; labelKey: TranslationKey }[] = [
@@ -21,11 +23,6 @@ const GOALS: { value: string; labelKey: TranslationKey }[] = [
   { value: "Datenstrukturen", labelKey: "auth.register.goalDataStructures" },
 ]
 
-const LEARNED_TOPICS = ["Variablen", "Schleifen", "Bedingungen"]
-const WEAKNESSES = ["Syntaxfehler", "Einrückung"]
-const NEXT_GOAL = "Funktionen"
-const PROGRESS_PERCENT = 45
-
 export default function ProfileView() {
   const { user, updateUser } = useAuth()
   const { dark } = useTheme()
@@ -37,11 +34,40 @@ export default function ProfileView() {
   const [editLevel, setEditLevel] = useState<Level>("Anfänger")
   const [editGoal, setEditGoal] = useState("")
 
+  const [skills, setSkills] = useState<SkillProgress[]>([])
+  const [overallScore, setOverallScore] = useState<number | null>(null)
+
   useEffect(() => {
     if (!user) router.push("/login")
   }, [user, router])
 
+  useEffect(() => {
+    if (!user) return
+    const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
+    if (!token) return
+    getLearningProgress(Number(user.id), token)
+      .then((data) => {
+        setSkills(data.skills)
+        setOverallScore(data.overall_score)
+      })
+      .catch(() => {/* ignore — show no data */})
+  }, [user])
+
   if (!user) return null
+
+  const learnedTopics = skills
+    .filter((s) => s.score >= 80)
+    .map((s) => s.skill_label)
+
+  const weaknesses = skills
+    .filter((s) => s.is_unlocked && s.score < 40)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 5)
+    .map((s) => s.skill_label)
+
+  const nextGoal = skills.find((s) => s.is_unlocked && s.score < 80)?.skill_label ?? null
+
+  const progressPercent = overallScore ?? 0
 
   const levelColor = {
     "Anfänger": "bg-green-900/30 text-green-400 border-green-800/40",
@@ -153,12 +179,12 @@ export default function ProfileView() {
           <div className="bg-[#0d1b2e] border border-[#1e2f45] rounded-xl p-5">
             <div className="text-xs text-gray-500 mb-2">{t("profile.progressLabel")}</div>
             <div className="flex items-end gap-2">
-              <span className="text-3xl font-bold text-white">{PROGRESS_PERCENT}%</span>
+              <span className="text-3xl font-bold text-white">{progressPercent}%</span>
             </div>
             <div className="mt-2 h-2 bg-[#0a1628] rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-700"
-                style={{ width: `${PROGRESS_PERCENT}%` }}
+                style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
@@ -174,11 +200,14 @@ export default function ProfileView() {
               <h3 className="text-sm font-medium text-gray-300">{t("profile.learnedTopics")}</h3>
             </div>
             <div className="flex flex-wrap gap-2">
-              {LEARNED_TOPICS.map((topic) => (
-                <span key={topic} className="px-3 py-1 text-xs rounded-full bg-green-900/20 text-green-400 border border-green-800/30">
-                  {topic}
-                </span>
-              ))}
+              {learnedTopics.length > 0
+                ? learnedTopics.map((topic) => (
+                    <span key={topic} className="px-3 py-1 text-xs rounded-full bg-green-900/20 text-green-400 border border-green-800/30">
+                      {topic}
+                    </span>
+                  ))
+                : <span className="text-xs text-gray-500">—</span>
+              }
             </div>
           </div>
 
@@ -192,11 +221,14 @@ export default function ProfileView() {
               <h3 className="text-sm font-medium text-gray-300">{t("profile.weaknesses")}</h3>
             </div>
             <div className="flex flex-wrap gap-2">
-              {WEAKNESSES.map((w) => (
-                <span key={w} className="px-3 py-1 text-xs rounded-full bg-amber-900/20 text-amber-400 border border-amber-800/30">
-                  {w}
-                </span>
-              ))}
+              {weaknesses.length > 0
+                ? weaknesses.map((w) => (
+                    <span key={w} className="px-3 py-1 text-xs rounded-full bg-amber-900/20 text-amber-400 border border-amber-800/30">
+                      {w}
+                    </span>
+                  ))
+                : <span className="text-xs text-gray-500">—</span>
+              }
             </div>
           </div>
 
@@ -209,10 +241,15 @@ export default function ProfileView() {
               <h3 className="text-sm font-medium text-gray-300">{t("profile.nextGoal")}</h3>
             </div>
             <div className="flex items-center gap-3">
-              <span className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600/15 text-blue-300 border border-blue-500/30">
-                {NEXT_GOAL}
-              </span>
-              <span className="text-xs text-gray-500">{t("profile.recommended")}</span>
+              {nextGoal
+                ? <>
+                    <span className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600/15 text-blue-300 border border-blue-500/30">
+                      {nextGoal}
+                    </span>
+                    <span className="text-xs text-gray-500">{t("profile.recommended")}</span>
+                  </>
+                : <span className="text-xs text-gray-500">—</span>
+              }
             </div>
           </div>
         </div>

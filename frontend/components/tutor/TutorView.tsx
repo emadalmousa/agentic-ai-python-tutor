@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import CodeEditor from "@/components/tutor/CodeEditor"
-import EditorFooter from "@/components/tutor/EditorFooter"
+import CodeModal from "@/components/tutor/CodeModal"
 import ChatPanel from "@/components/tutor/ChatPanel"
+import ChatSidebar from "@/components/tutor/ChatSidebar"
 import { useChat } from "@/hooks/useChat"
 import { useCodeRunner } from "@/hooks/useCodeRunner"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import { useLang } from "@/context/LangContext"
+import { listChatHistory, loadChat } from "@/lib/api"
+import type { ChatHistoryItem } from "@/types/tutor"
 
 const LEVEL_COMPLEXITY: Record<string, string> = {
   beginner:     "Erkläre alles sehr einfach für absolute Anfänger. Verwende kurze, klare Sätze. Zeige einfache Beispiele mit print() und einfachen Werten.",
@@ -17,10 +19,9 @@ const LEVEL_COMPLEXITY: Record<string, string> = {
   advanced:     "Erkläre tiefgehend mit komplexen Beispielen, Best Practices und typischen Fehlerquellen.",
 }
 
-function readExerciseRedirect(): { code: string; history: import("@/types/tutor").ChatMessage[] } {
-  const DEFAULT_CODE = "# Schreibe hier deinen Python-Code..."
+const DEFAULT_CODE = "# Schreibe hier deinen Python-Code..."
 
-  // Check for topic explanation request
+function readExerciseRedirect(): { code: string; history: import("@/types/tutor").ChatMessage[] } {
   try {
     const topicRaw = localStorage.getItem("ki_tutor_explain_topic")
     if (topicRaw) {
@@ -28,23 +29,16 @@ function readExerciseRedirect(): { code: string; history: import("@/types/tutor"
       localStorage.removeItem("ki_tutor_explain_topic")
       const complexity = LEVEL_COMPLEXITY[level] ?? LEVEL_COMPLEXITY.beginner
       const prompt = `Erkläre mir das Thema **${skill_label}** in Python vollständig.\n\n${complexity}\n\nStruktur deiner Erklärung:\n1. Was ist ${skill_label}? (kurze Definition)\n2. Warum braucht man das?\n3. Syntax / Grundstruktur\n4. Mindestens 3 Beispiele mit steigendem Schwierigkeitsgrad\n5. Häufige Fehler und wie man sie vermeidet\n6. Kurze Zusammenfassung`
-      return {
-        code: DEFAULT_CODE,
-        history: [{ role: "user", content: prompt }],
-      }
+      return { code: DEFAULT_CODE, history: [{ role: "user", content: prompt }] }
     }
   } catch {
     localStorage.removeItem("ki_tutor_explain_topic")
   }
-
-  // Check for exercise redirect
   try {
     const raw = localStorage.getItem("ki_tutor_exercise_redirect")
     if (!raw) return { code: DEFAULT_CODE, history: [] }
     const { code, analysis, exercise_title } = JSON.parse(raw) as {
-      code: string
-      analysis: string
-      exercise_title: string
+      code: string; analysis: string; exercise_title: string
     }
     localStorage.removeItem("ki_tutor_exercise_redirect")
     return {
@@ -60,121 +54,135 @@ function readExerciseRedirect(): { code: string; history: import("@/types/tutor"
 export default function TutorView() {
   const { dark } = useTheme()
   const { t } = useLang()
+  const { isAuthenticated } = useAuth()
+  const token = typeof window !== "undefined" ? localStorage.getItem("ki_tutor_token") ?? "" : ""
+  const router = useRouter()
+
   const [{ code: initialCode, history: initialHistory }] = useState(readExerciseRedirect)
   const [code, setCode] = useState(initialCode)
-  const { isAuthenticated } = useAuth()
-  const router = useRouter()
+  const [showCode, setShowCode] = useState(false)
+  const [activeChatId, setActiveChatId] = useState<number | null>(null)
+
+  // Sidebar state
+  const [sidebarItems, setSidebarItems] = useState<ChatHistoryItem[]>([])
+  const [sidebarLoading, setSidebarLoading] = useState(false)
+
   const {
     history, input, setInput,
     loading, analyzing, uploading, materialName, hasPdf, openPdf,
     error,
     send, analyze, reset,
+    saveCurrentChat, loadHistoryIntoChat,
     openFilePicker, handleFileInput, fileInputRef,
     bottomRef,
   } = useChat(code, t, initialHistory)
+
   const { output, loading: running, run } = useCodeRunner(t)
 
-  const [leftWidth, setLeftWidth] = useState(480)
-  const [outputHeight, setOutputHeight] = useState(160)
-  const draggingH = useRef(false)
-  const draggingV = useRef<"left" | "output" | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const leftPanelRef = useRef<HTMLDivElement>(null)
-
-  const onMouseDownH = useCallback(() => { draggingV.current = "left" }, [])
-  const onMouseDownOutput = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    draggingV.current = "output"
-  }, [])
-
+  // Load sidebar on mount
   useEffect(() => {
-    function onMouseMove(e: MouseEvent) {
-      if (!draggingV.current) return
-      if (draggingV.current === "left" && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
-        const newWidth = Math.min(Math.max(e.clientX - rect.left, 240), rect.width - 280)
-        setLeftWidth(newWidth)
-      }
-      if (draggingV.current === "output" && leftPanelRef.current) {
-        const rect = leftPanelRef.current.getBoundingClientRect()
-        const fromBottom = rect.bottom - e.clientY
-        setOutputHeight(Math.min(Math.max(fromBottom, 80), rect.height - 120))
-      }
-    }
-    function onMouseUp() { draggingV.current = null }
-    window.addEventListener("mousemove", onMouseMove)
-    window.addEventListener("mouseup", onMouseUp)
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove)
-      window.removeEventListener("mouseup", onMouseUp)
-    }
-  }, [])
+    if (!token) return
+    setSidebarLoading(true)
+    listChatHistory(token)
+      .then(setSidebarItems)
+      .catch(() => {/* sidebar is non-critical */})
+      .finally(() => setSidebarLoading(false))
+  }, [token])
 
   useEffect(() => {
     if (!isAuthenticated) router.replace("/login")
   }, [isAuthenticated, router])
 
-
   if (!isAuthenticated) return null
 
+  // Save current chat before switching + refresh sidebar
+  async function switchToChat(item: ChatHistoryItem) {
+    if (history.length > 0 && activeChatId === null) {
+      await saveCurrentChat(code)
+      refreshSidebar()
+    }
+    try {
+      const data = await loadChat(item.id, token)
+      const restoredCode = loadHistoryIntoChat(data.messages, data.code)
+      if (restoredCode) setCode(restoredCode)
+      setActiveChatId(item.id)
+    } catch {/* ignore */}
+  }
+
+  function handleNewChat() {
+    if (history.length > 0) {
+      saveCurrentChat(code).then(refreshSidebar)
+    }
+    reset()
+    setCode(DEFAULT_CODE)
+    setActiveChatId(null)
+  }
+
+  function refreshSidebar() {
+    if (!token) return
+    listChatHistory(token).then(setSidebarItems).catch(() => {})
+  }
+
+  // Wrap analyze: save chat to DB after analyze completes (sidebar updates)
+  const handleAnalyze = useCallback(async () => {
+    await analyze()
+    if (token) refreshSidebar()
+  }, [analyze, token])
+
   const bg = dark ? "bg-[#060e1c] text-white" : "bg-gray-100 text-gray-900"
-  const border = dark ? "border-[#1e2f45]" : "border-gray-200"
-  const labelCls = dark
-    ? "block text-xs font-medium text-gray-400 mb-1.5"
-    : "block text-xs font-medium text-gray-500 mb-1.5"
 
   return (
-    <div className={`${bg} flex-1 flex flex-col overflow-hidden`}>
-      <div ref={containerRef} className="flex flex-1 min-h-0">
+    <div className={`${bg} flex-1 flex overflow-hidden`}>
 
-        <div ref={leftPanelRef} className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: leftWidth }}>
-          <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 min-h-0">
-            <label className={labelCls}>{t("tutor.pythonCode")}</label>
-            <CodeEditor code={code} onChange={setCode} dark={dark} />
-          </div>
-          <EditorFooter
-            dark={dark}
-            code={code}
-            running={running}
-            analyzing={analyzing}
-            output={output}
-            onRun={() => run(code)}
-            onAnalyze={analyze}
-            outputHeight={outputHeight}
-            onOutputDragStart={onMouseDownOutput}
-          />
-        </div>
+      {/* LEFT: Chat history sidebar */}
+      <ChatSidebar
+        items={sidebarItems}
+        activeId={activeChatId}
+        onNewChat={handleNewChat}
+        onSelect={switchToChat}
+        loading={sidebarLoading}
+      />
 
-        {/* Draggable divider */}
-        <div
-          onMouseDown={onMouseDownH}
-          className={`w-1 flex-shrink-0 cursor-col-resize hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors ${dark ? "bg-[#1e2f45]" : "bg-gray-200"}`}
+      {/* CENTER: Chat only */}
+      <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+        <ChatPanel
+          history={history}
+          input={input}
+          loading={loading}
+          analyzing={analyzing}
+          uploading={uploading}
+          materialName={materialName}
+          hasPdf={hasPdf}
+          onOpenPdf={openPdf}
+          error={error}
+          bottomRef={bottomRef}
+          fileInputRef={fileInputRef}
+          onInput={setInput}
+          onSend={send}
+          onReset={handleNewChat}
+          onOpenFilePicker={openFilePicker}
+          onFileInput={handleFileInput}
+          onInsertCode={setCode}
+          onOpenCode={() => setShowCode(true)}
+          dark={dark}
         />
-
-        <div className="flex-1 min-w-0 overflow-y-auto">
-          <ChatPanel
-            history={history}
-            input={input}
-            loading={loading}
-            analyzing={analyzing}
-            uploading={uploading}
-            materialName={materialName}
-            hasPdf={hasPdf}
-            onOpenPdf={openPdf}
-            error={error}
-            bottomRef={bottomRef}
-            fileInputRef={fileInputRef}
-            onInput={setInput}
-            onSend={send}
-            onReset={reset}
-            onOpenFilePicker={openFilePicker}
-            onFileInput={handleFileInput}
-            onInsertCode={setCode}
-            dark={dark}
-          />
-        </div>
-
       </div>
+
+      {/* Code Editor Modal */}
+      {showCode && (
+        <CodeModal
+          code={code}
+          onChange={setCode}
+          dark={dark}
+          running={running}
+          analyzing={analyzing}
+          output={output}
+          onRun={() => run(code)}
+          onAnalyze={handleAnalyze}
+          onClose={() => setShowCode(false)}
+        />
+      )}
+
     </div>
   )
 }

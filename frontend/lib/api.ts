@@ -6,6 +6,8 @@ import type {
   HintRequest, HintResponse,
   SkillTestGenerateResponse, SkillTestSubmitRequest, SkillTestResult,
   LevelTestGenerateResponse, LevelTestSubmitRequest, LevelTestResult, LevelKey,
+  WeaknessNudgeResponse,
+  ChatHistoryItem, LoadChatResponse,
 } from "@/types/tutor"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"
@@ -157,6 +159,42 @@ export async function submitLevelTest(payload: LevelTestSubmitRequest, token: st
 
 export async function getLevelTestStatus(level: LevelKey, token: string) {
   const res = await fetch(`${API_URL}/level-tests/status/${level}`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+export async function getWeaknessNudge(token: string): Promise<WeaknessNudgeResponse> {
+  const res = await fetch(`${API_URL}/learning-progress/weakness-nudge`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+// --- Chat history ---
+
+export async function saveChatHistory(messages: { role: string; content: string }[], code: string, token: string): Promise<ChatHistoryItem> {
+  const res = await fetch(`${API_URL}/progress/chat`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ messages, code }),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+export async function listChatHistory(token: string): Promise<ChatHistoryItem[]> {
+  const res = await fetch(`${API_URL}/progress/chats`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
+export async function loadChat(sessionId: number, token: string): Promise<LoadChatResponse> {
+  const res = await fetch(`${API_URL}/progress/chat/${sessionId}`, {
     headers: authHeaders(token),
   })
   if (!res.ok) throw new Error(`Backend error: ${res.status}`)

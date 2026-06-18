@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { sendChatMessage, analyzeCode, uploadMaterial } from "@/lib/api"
+import { sendChatMessage, analyzeCode, uploadMaterial, saveChatHistory } from "@/lib/api"
 import type { ChatMessage, TutorResponse } from "@/types/tutor"
 import { useAuth } from "@/context/AuthContext"
 import type { TranslationKey } from "@/i18n"
@@ -225,11 +225,35 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     persistMaterialName(null)
   }
 
+  async function saveCurrentChat(currentCode: string): Promise<number | null> {
+    if (!history.length) return null
+    const token = getToken()
+    if (!token) return null
+    try {
+      const item = await saveChatHistory(
+        history.map((m) => ({ role: m.role, content: m.content })),
+        currentCode,
+        token,
+      )
+      return item.id
+    } catch {
+      return null
+    }
+  }
+
+  function loadHistoryIntoChat(messages: ChatMessage[], currentCode?: string | null) {
+    persistHistory(messages)
+    setInput("")
+    setError(null)
+    return currentCode ?? null
+  }
+
   return {
     history, input, setInput,
     loading, analyzing, uploading, materialName, hasPdf, openPdf,
     error,
     send, analyze, reset,
+    saveCurrentChat, loadHistoryIntoChat,
     openFilePicker, handleFileInput, fileInputRef,
     bottomRef,
   }

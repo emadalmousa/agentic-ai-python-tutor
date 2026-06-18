@@ -1,8 +1,10 @@
 """Lernfortschritt-API — Skill-basierte Fortschrittsverfolgung."""
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from agent.tools.nudge_tool import generate_nudge_text
 from core.database import get_db
 from models.skill_progress import StudentSkillProgress, LearningEvent, FIXED_SKILLS, SKILL_TREE
 from models.user import User
@@ -18,6 +20,14 @@ router = APIRouter(prefix="/learning-progress", tags=["learning-progress"])
 class SkillInfo(BaseModel):
     key:   str
     label: str
+
+
+class WeaknessNudgeResponse(BaseModel):
+    has_weakness: bool
+    skill_key:    str | None = None
+    skill_label:  str | None = None
+    score:        int | None = None
+    nudge_text:   str | None = None
 
 
 class SkillProgressOut(BaseModel):
@@ -140,6 +150,99 @@ def _build_progress_response(user_id: int, db: Session) -> ProgressResponse:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+def _pick_weakness(user_id: int, db: Session) -> tuple[str, str, int] | None:
+    """Wählt die dringendste Schwäche nach Priorität. Gibt (skill_key, skill_label, score) zurück."""
+    rows = {
+        r.skill_key: r
+        for r in db.query(StudentSkillProgress).filter_by(user_id=user_id).all()
+    }
+    if not rows:
+        return None
+
+    now = datetime.now(timezone.utc)
+
+    # Fundament-Skills (unlocks_after=None) — höchste Priorität wenn not_understood
+    foundation_keys = {s["key"] for s in SKILL_TREE if s.get("unlocks_after") is None}
+
+    # Letzte Event-Zeitstempel pro Skill (für "lange nicht geübt"-Check)
+    last_events: dict[str, datetime] = {}
+    for e in db.query(LearningEvent).filter_by(user_id=user_id).all():
+        ts = e.created_at
+        if ts and ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if ts and (e.skill_key not in last_events or ts > last_events[e.skill_key]):
+            last_events[e.skill_key] = ts
+
+    candidates: list[tuple[int, str]] = []  # (priority, skill_key)
+
+    for key, row in rows.items():
+        score = row.score
+        if score >= 80:
+            continue  # Kein Problem
+
+        days_since = (now - last_events[key]).days if key in last_events else 999
+
+        if score < 40 and key in foundation_keys:
+            candidates.append((1, key))
+        elif score < 40 and days_since > 7:
+            candidates.append((2, key))
+        elif 40 <= score < 80:
+            candidates.append((3, key))
+        else:
+            candidates.append((4, key))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: x[0])
+    best_key = candidates[0][1]
+    best_row = rows[best_key]
+    label = _SKILL_LABEL.get(best_key, best_key)
+    return best_key, label, best_row.score
+
+
+@router.get("/weakness-nudge", response_model=WeaknessNudgeResponse)
+def get_weakness_nudge(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Gibt die dringendste Schwäche + LLM-generierten Motivationstext zurück.
+
+    Priorität: Fundament-Skills not_understood > lange nicht geübt > partial > allgemein.
+    LLM wird nur aufgerufen wenn LearningEvents für den Skill existieren.
+    """
+    result = _pick_weakness(current_user.id, db)
+    if result is None:
+        return WeaknessNudgeResponse(has_weakness=False)
+
+    skill_key, skill_label, score = result
+
+    # Letztes Event für diesen Skill holen (für personalisierter Text)
+    last_event = (
+        db.query(LearningEvent)
+        .filter_by(user_id=current_user.id, skill_key=skill_key)
+        .order_by(LearningEvent.created_at.desc())
+        .first()
+    )
+
+    if last_event:
+        nudge_text = generate_nudge_text(
+            skill_label=skill_label,
+            mistakes=last_event.mistakes or [],
+            feedback=last_event.feedback,
+        )
+    else:
+        nudge_text = f"Du hast '{skill_label}' noch nicht geübt. Fang jetzt an?"
+
+    return WeaknessNudgeResponse(
+        has_weakness=True,
+        skill_key=skill_key,
+        skill_label=skill_label,
+        score=score,
+        nudge_text=nudge_text,
+    )
+
 
 @router.get("/skills", response_model=list[SkillInfo])
 def get_skills():

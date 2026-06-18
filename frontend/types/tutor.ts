@@ -223,3 +223,25 @@ export interface LevelTestResult {
   }>
   attempt_number: number
 }
+
+export interface WeaknessNudgeResponse {
+  has_weakness: boolean
+  skill_key:    string | null
+  skill_label:  string | null
+  score:        number | null
+  nudge_text:   string | null
+}
+
+export interface ChatHistoryItem {
+  id: number
+  title: string
+  created_at: string
+  message_count: number
+}
+
+export interface LoadChatResponse {
+  id: number
+  messages: ChatMessage[]
+  code: string | null
+  created_at: string
+}

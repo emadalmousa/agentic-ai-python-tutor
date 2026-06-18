@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import { useLang } from "@/context/LangContext"
-import { getLearningProgress } from "@/lib/api"
-import type { ProgressResponse, SkillProgress } from "@/types/tutor"
+import { getLearningProgress, getWeaknessNudge } from "@/lib/api"
+import type { ProgressResponse, SkillProgress, WeaknessNudgeResponse } from "@/types/tutor"
 import ExercisePanel from "@/components/ExercisePanel"
 import SkillTestModal from "@/components/SkillTestModal"
 import LevelTestModal from "@/components/LevelTestModal"
+import WeaknessNudgeModal from "@/components/WeaknessNudgeModal"
 import type { LevelKey } from "@/types/tutor"
 import type { TranslationKey } from "@/i18n"
 
@@ -273,6 +274,7 @@ export default function LearningProgressView() {
   const [showLevelTest, setShowLevelTest] = useState<LevelKey | null>(null)
   const [refreshTick, setRefreshTick]     = useState(0)
   const [activeLevel, setActiveLevel]     = useState<LevelKey>("beginner")
+  const [nudge, setNudge]                 = useState<WeaknessNudgeResponse | null>(null)
 
   const refreshProgress = useCallback(() => setRefreshTick((t) => t + 1), [])
 
@@ -289,6 +291,18 @@ export default function LearningProgressView() {
     return () => { cancelled = true }
   }, [user, refreshTick])
 
+  // Nudge: einmal pro Browser-Tab anzeigen (sessionStorage verhindert Wiederholung)
+  useEffect(() => {
+    if (!user || !token) return
+    const shown = sessionStorage.getItem("weakness_nudge_shown")
+    if (shown) return
+    getWeaknessNudge(token)
+      .then((data) => {
+        if (data.has_weakness) setNudge(data)
+      })
+      .catch(() => { /* Stilles Scheitern — Nudge ist optional */ })
+  }, [user])
+
   function handleSkillScoreUpdate(skillKey: string, newScore: number) {
     setProgress((prev) => {
       if (!prev) return prev
@@ -300,6 +314,22 @@ export default function LearningProgressView() {
   function handleTestPassed(_skillKey: string) {
     setSkillTestSkill(null)
     refreshProgress()
+  }
+
+  function dismissNudge() {
+    sessionStorage.setItem("weakness_nudge_shown", "1")
+    setNudge(null)
+  }
+
+  function handleNudgePractice() {
+    if (nudge?.skill_key && progress) {
+      const skill = progress.skills.find((s) => s.skill_key === nudge.skill_key)
+      if (skill) {
+        setActiveLevel(skill.level as LevelKey)
+        setSelectedSkill(skill)
+      }
+    }
+    dismissNudge()
   }
 
   const bg   = dark ? "bg-[#060e1c] text-white" : "bg-gray-50 text-gray-900"
@@ -440,6 +470,17 @@ export default function LearningProgressView() {
         </div>
 
       </div>
+
+      {/* Weakness Nudge Popup — einmal pro Tab */}
+      {nudge?.has_weakness && nudge.skill_key && nudge.skill_label && nudge.score !== null && nudge.nudge_text && (
+        <WeaknessNudgeModal
+          skillLabel={nudge.skill_label}
+          score={nudge.score}
+          nudgeText={nudge.nudge_text}
+          onPractice={handleNudgePractice}
+          onDismiss={dismissNudge}
+        />
+      )}
     </div>
   )
 }
