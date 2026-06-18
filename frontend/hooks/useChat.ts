@@ -3,10 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { sendChatMessage, analyzeCode, uploadMaterial, saveChatHistory, updateChatHistory } from "@/lib/api"
 import type { ChatMessage, TutorResponse } from "@/types/tutor"
-import { useAuth } from "@/context/AuthContext"
 import type { TranslationKey } from "@/i18n"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 function formatAnalysis(r: TutorResponse): string {
   const status = r.error_found ? `🔴 **${r.error_type}**` : "🟢 **Kein Fehler gefunden**"
@@ -22,28 +19,6 @@ function formatAnalysis(r: TutorResponse): string {
   return md
 }
 
-async function saveSession(payload: {
-  code: string
-  topics: string[]
-  errors: string[]
-  chat_messages: { role: string; content: string }[]
-}) {
-  const token = localStorage.getItem("ki_tutor_token")
-  if (!token) return
-  try {
-    await fetch(`${API_URL}/progress/session`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    })
-  } catch {
-    // network error — ignore silently, session tracking is non-critical
-  }
-}
-
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string
 
 const _HISTORY_KEY = "ki_tutor_chat_history"
@@ -53,7 +28,6 @@ const _MATERIAL_KEY = "ki_tutor_material_name"
 let _pdfBlob: Blob | null = null
 
 export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []) {
-  const { user } = useAuth()
   // If initialHistory starts with a user message, treat it as a pending auto-send
   const pendingMsg = initialHistory.length === 1 && initialHistory[0].role === "user"
     ? initialHistory[0].content : null
@@ -155,16 +129,6 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
       const data = await sendChatMessage({ code, message: msg, history }, getToken())
       persistHistory(data.history)
       await persistToDb(data.history, code)
-
-      if (user) {
-        const lastTwo = data.history.slice(-2)
-        await saveSession({
-          code,
-          topics: [],
-          errors: [],
-          chat_messages: lastTwo.map((m) => ({ role: m.role, content: m.content })),
-        })
-      }
     } catch {
       setError(t("tutor.backendError"))
       persistHistory(history)
@@ -185,19 +149,6 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
       const next: ChatMessage[] = [...history, trigger, { role: "assistant", content: formatted }]
       persistHistory(next)
       await persistToDb(next, code)
-
-      if (user) {
-        const errors = data.error_found && data.error_type ? [data.error_type] : []
-        await saveSession({
-          code,
-          topics: [],
-          errors,
-          chat_messages: [
-            { role: "user", content: `🔍 ${t("tutor.analyzeAction")}` },
-            { role: "assistant", content: formatted },
-          ],
-        })
-      }
     } catch {
       setError(t("tutor.analyzeError"))
       persistHistory(history)
