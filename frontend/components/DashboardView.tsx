@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
+import CourseTransition from "@/components/CourseTransition"
 
 const LEVEL_LABEL: Record<string, string> = {
   "Anfänger":        "Anfänger",
@@ -16,17 +17,6 @@ const LEVEL_COLOR: Record<string, string> = {
   "Anfänger":        "text-emerald-400",
   "Mittel":          "text-blue-400",
   "Fortgeschritten": "text-violet-400",
-}
-
-interface Card {
-  href: string
-  icon: React.ReactNode
-  title: string
-  description: string
-  cta: string
-  accent: string
-  border: string
-  glow: string
 }
 
 function ArrowRight() {
@@ -45,10 +35,12 @@ function TutorIcon() {
   )
 }
 
-function ProgressIcon() {
+function CourseIcon() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
     </svg>
   )
 }
@@ -57,12 +49,17 @@ export default function DashboardView() {
   const { user, isAuthenticated } = useAuth()
   const { dark } = useTheme()
   const router = useRouter()
+  const [showTransition, setShowTransition] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated) router.replace("/login")
   }, [isAuthenticated, router])
 
   if (!isAuthenticated) return null
+
+  if (showTransition) {
+    return <CourseTransition onDone={() => setShowTransition(false)} />
+  }
 
   const firstName = user?.name?.split(" ")[0] ?? "Gast"
   const levelLabel = LEVEL_LABEL[user?.level ?? "Anfänger"] ?? user?.level
@@ -73,29 +70,6 @@ export default function DashboardView() {
   const textPri = dark ? "text-white"        : "text-gray-900"
   const textSub = dark ? "text-gray-400"     : "text-gray-500"
   const divider = dark ? "border-[#1e2f45]" : "border-gray-200"
-
-  const cards: Card[] = [
-    {
-      href:        "/tutor",
-      icon:        <TutorIcon />,
-      title:       "KI Tutor",
-      description: "Dein persönlicher KI-Begleiter für Python — stelle Fragen, lass Code erklären und lerne im Gespräch genau das, was du gerade brauchst.",
-      cta:         "Mit dem Tutor lernen",
-      accent:      dark ? "text-blue-400" : "text-blue-600",
-      border:      dark ? "border-[#1e2f45] hover:border-blue-500/40" : "border-gray-200 hover:border-blue-400/60",
-      glow:        dark ? "hover:shadow-blue-900/30" : "hover:shadow-blue-100",
-    },
-    {
-      href:        "/progress",
-      icon:        <ProgressIcon />,
-      title:       "Python Kurs",
-      description: "Lerne Python Schritt für Schritt — von den Grundlagen bis zu fortgeschrittenen Konzepten, mit Übungen die dich wirklich weiterbringen.",
-      cta:         "Kurs starten",
-      accent:      dark ? "text-violet-400" : "text-violet-600",
-      border:      dark ? "border-[#1e2f45] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-400/60",
-      glow:        dark ? "hover:shadow-violet-900/30" : "hover:shadow-violet-100",
-    },
-  ]
 
   return (
     <div className={`${bg} flex-1 flex flex-col items-center justify-center px-6 py-16`}>
@@ -128,32 +102,63 @@ export default function DashboardView() {
 
         {/* Cards */}
         <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {cards.map((card) => (
-            <Link
-              key={card.href}
-              href={card.href}
-              className={`${cardBg} border ${card.border} rounded-2xl p-6 flex flex-col gap-4 shadow-lg ${card.glow} transition-all duration-200 group`}
-            >
-              {/* Icon */}
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                dark ? "bg-[#0a1628]" : "bg-gray-50"
-              } border ${divider} ${card.accent} group-hover:scale-105 transition-transform`}>
-                {card.icon}
-              </div>
 
-              {/* Text */}
-              <div className="flex-1 space-y-1.5">
-                <h2 className={`text-base font-bold ${textPri}`}>{card.title}</h2>
-                <p className={`text-sm leading-relaxed ${textSub}`}>{card.description}</p>
-              </div>
+          {/* KI Tutor — normal Link */}
+          <Link
+            href="/tutor"
+            className={`${cardBg} border ${
+              dark ? "border-[#1e2f45] hover:border-blue-500/40" : "border-gray-200 hover:border-blue-400/60"
+            } rounded-2xl p-6 flex flex-col gap-4 shadow-lg ${
+              dark ? "hover:shadow-blue-900/30" : "hover:shadow-blue-100"
+            } transition-all duration-200 group`}
+          >
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+              dark ? "bg-[#0a1628]" : "bg-gray-50"
+            } border ${divider} ${dark ? "text-blue-400" : "text-blue-600"} group-hover:scale-105 transition-transform`}>
+              <TutorIcon />
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <h2 className={`text-base font-bold ${textPri}`}>KI Tutor</h2>
+              <p className={`text-sm leading-relaxed ${textSub}`}>
+                Dein persönlicher KI-Begleiter für Python — stelle Fragen, lass Code erklären und lerne im Gespräch genau das, was du gerade brauchst.
+              </p>
+            </div>
+            <div className={`flex items-center gap-1.5 text-sm font-semibold ${
+              dark ? "text-blue-400" : "text-blue-600"
+            } group-hover:gap-2.5 transition-all`}>
+              Mit dem Tutor lernen
+              <ArrowRight />
+            </div>
+          </Link>
 
-              {/* CTA */}
-              <div className={`flex items-center gap-1.5 text-sm font-semibold ${card.accent} group-hover:gap-2.5 transition-all`}>
-                {card.cta}
-                <ArrowRight />
-              </div>
-            </Link>
-          ))}
+          {/* Python Kurs — triggers rocket animation */}
+          <button
+            onClick={() => setShowTransition(true)}
+            className={`${cardBg} border ${
+              dark ? "border-[#1e2f45] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-400/60"
+            } rounded-2xl p-6 flex flex-col gap-4 shadow-lg ${
+              dark ? "hover:shadow-violet-900/30" : "hover:shadow-violet-100"
+            } transition-all duration-200 group text-left`}
+          >
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+              dark ? "bg-[#0a1628]" : "bg-gray-50"
+            } border ${divider} ${dark ? "text-violet-400" : "text-violet-600"} group-hover:scale-105 transition-transform`}>
+              <CourseIcon />
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <h2 className={`text-base font-bold ${textPri}`}>Python Kurs</h2>
+              <p className={`text-sm leading-relaxed ${textSub}`}>
+                Lerne Python Schritt für Schritt — von den Grundlagen bis zu fortgeschrittenen Konzepten, mit Übungen die dich wirklich weiterbringen.
+              </p>
+            </div>
+            <div className={`flex items-center gap-1.5 text-sm font-semibold ${
+              dark ? "text-violet-400" : "text-violet-600"
+            } group-hover:gap-2.5 transition-all`}>
+              Kurs starten
+              <ArrowRight />
+            </div>
+          </button>
+
         </div>
 
         {/* Quick link to profile */}

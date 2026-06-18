@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@types/react-syntax-highlighter": "^15.5.13",
+    "framer-motion": "^12.40.0",
     "next": "16.2.6",
     "prismjs": "^1.30.0",
     "react": "19.2.4",
