@@ -61,7 +61,6 @@ export default function TutorView() {
   const [{ code: initialCode, history: initialHistory }] = useState(readExerciseRedirect)
   const [code, setCode] = useState(initialCode)
   const [showCode, setShowCode] = useState(false)
-  const [activeChatId, setActiveChatId] = useState<number | null>(null)
 
   // Sidebar state
   const [sidebarItems, setSidebarItems] = useState<ChatHistoryItem[]>([])
@@ -71,6 +70,7 @@ export default function TutorView() {
     history, input, setInput,
     loading, analyzing, uploading, materialName, hasPdf, openPdf,
     error,
+    activeChatId,
     send, analyze, reset,
     saveCurrentChat, loadHistoryIntoChat,
     openFilePicker, handleFileInput, fileInputRef,
@@ -95,27 +95,18 @@ export default function TutorView() {
 
   if (!isAuthenticated) return null
 
-  // Save current chat before switching + refresh sidebar
   async function switchToChat(item: ChatHistoryItem) {
-    if (history.length > 0 && activeChatId === null) {
-      await saveCurrentChat(code)
-      refreshSidebar()
-    }
     try {
       const data = await loadChat(item.id, token)
-      const restoredCode = loadHistoryIntoChat(data.messages, data.code)
+      const restoredCode = loadHistoryIntoChat(data.messages, data.code, item.id)
       if (restoredCode) setCode(restoredCode)
-      setActiveChatId(item.id)
     } catch {/* ignore */}
   }
 
   function handleNewChat() {
-    if (history.length > 0) {
-      saveCurrentChat(code).then(refreshSidebar)
-    }
     reset()
     setCode(DEFAULT_CODE)
-    setActiveChatId(null)
+    refreshSidebar()
   }
 
   function refreshSidebar() {

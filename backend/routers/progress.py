@@ -198,6 +198,33 @@ def list_chats(
     return result
 
 
+@router.put("/chat/{session_id}", response_model=ChatHistoryItem)
+def update_chat(
+    session_id: int,
+    data: SaveChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Aktualisiert Nachrichten und Code einer bestehenden Chat-Session."""
+    from fastapi import HTTPException
+    session = db.query(LearningSession).filter_by(id=session_id, user_id=current_user.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden")
+    session.chat_messages = data.messages
+    if data.code:
+        session.code_snippet = data.code
+    db.commit()
+    db.refresh(session)
+    first_user = next((m["content"] for m in data.messages if m.get("role") == "user"), "Chat")
+    title = first_user[:60] + ("…" if len(first_user) > 60 else "")
+    return ChatHistoryItem(
+        id=session.id,
+        title=title,
+        created_at=session.created_at.isoformat(),
+        message_count=len(data.messages),
+    )
+
+
 @router.get("/chat/{session_id}", response_model=LoadChatResponse)
 def load_chat(
     session_id: int,

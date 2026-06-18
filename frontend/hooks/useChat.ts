@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { sendChatMessage, analyzeCode, uploadMaterial, saveChatHistory } from "@/lib/api"
+import { sendChatMessage, analyzeCode, uploadMaterial, saveChatHistory, updateChatHistory } from "@/lib/api"
 import type { ChatMessage, TutorResponse } from "@/types/tutor"
 import { useAuth } from "@/context/AuthContext"
 import type { TranslationKey } from "@/i18n"
@@ -78,8 +78,27 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
   // true = blob is available (can open PDF), false = no blob (e.g. after hard reload)
   const [hasPdf, setHasPdf] = useState<boolean>(() => _pdfBlob !== null)
   const [error, setError] = useState<string | null>(null)
+  const [activeChatId, setActiveChatId] = useState<number | null>(null)
+  const activeChatIdRef = useRef<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function persistToDb(msgs: ChatMessage[], currentCode: string) {
+    const token = getToken()
+    if (!token || !msgs.length) return
+    try {
+      const payload = msgs.map((m) => ({ role: m.role, content: m.content }))
+      if (activeChatIdRef.current !== null) {
+        await updateChatHistory(activeChatIdRef.current, payload, currentCode, token)
+      } else {
+        const item = await saveChatHistory(payload, currentCode, token)
+        activeChatIdRef.current = item.id
+        setActiveChatId(item.id)
+      }
+    } catch {
+      // non-critical — history is still in sessionStorage
+    }
+  }
 
   function persistHistory(next: ChatMessage[]) {
     setHistory(next)
@@ -135,6 +154,7 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     try {
       const data = await sendChatMessage({ code, message: msg, history }, getToken())
       persistHistory(data.history)
+      await persistToDb(data.history, code)
 
       if (user) {
         const lastTwo = data.history.slice(-2)
@@ -162,7 +182,9 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     try {
       const data = await analyzeCode({ code })
       const formatted = formatAnalysis(data)
-      persistHistory([...history, trigger, { role: "assistant", content: formatted }])
+      const next: ChatMessage[] = [...history, trigger, { role: "assistant", content: formatted }]
+      persistHistory(next)
+      await persistToDb(next, code)
 
       if (user) {
         const errors = data.error_found && data.error_type ? [data.error_type] : []
@@ -223,6 +245,8 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     setInput("")
     setError(null)
     persistMaterialName(null)
+    activeChatIdRef.current = null
+    setActiveChatId(null)
   }
 
   async function saveCurrentChat(currentCode: string): Promise<number | null> {
@@ -241,10 +265,12 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     }
   }
 
-  function loadHistoryIntoChat(messages: ChatMessage[], currentCode?: string | null) {
+  function loadHistoryIntoChat(messages: ChatMessage[], currentCode?: string | null, chatId?: number | null) {
     persistHistory(messages)
     setInput("")
     setError(null)
+    activeChatIdRef.current = chatId ?? null
+    setActiveChatId(chatId ?? null)
     return currentCode ?? null
   }
 
@@ -252,6 +278,7 @@ export function useChat(code: string, t: TFn, initialHistory: ChatMessage[] = []
     history, input, setInput,
     loading, analyzing, uploading, materialName, hasPdf, openPdf,
     error,
+    activeChatId,
     send, analyze, reset,
     saveCurrentChat, loadHistoryIntoChat,
     openFilePicker, handleFileInput, fileInputRef,

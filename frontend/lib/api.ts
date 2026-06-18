@@ -193,6 +193,16 @@ export async function listChatHistory(token: string): Promise<ChatHistoryItem[]>
   return res.json()
 }
 
+export async function updateChatHistory(sessionId: number, messages: { role: string; content: string }[], code: string, token: string): Promise<ChatHistoryItem> {
+  const res = await fetch(`${API_URL}/progress/chat/${sessionId}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify({ messages, code }),
+  })
+  if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+  return res.json()
+}
+
 export async function loadChat(sessionId: number, token: string): Promise<LoadChatResponse> {
   const res = await fetch(`${API_URL}/progress/chat/${sessionId}`, {
     headers: authHeaders(token),
