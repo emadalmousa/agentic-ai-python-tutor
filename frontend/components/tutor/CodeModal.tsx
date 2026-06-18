@@ -47,8 +47,8 @@ export default function CodeModal({
       onClick={handleOverlayClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
     >
-      <div className={`${bg} rounded-2xl border ${border} shadow-2xl w-full max-w-2xl flex flex-col`}
-        style={{ maxHeight: "85vh" }}>
+      <div className={`${bg} rounded-2xl border ${border} shadow-2xl w-full max-w-5xl flex flex-col`}
+        style={{ height: "90vh" }}>
 
         {/* Header */}
         <div className={`flex items-center justify-between px-5 py-3.5 border-b ${border}`}>
