@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Providers from "./providers";
 import Navbar from "@/components/Navbar";
+import PageFadeIn from "@/components/PageFadeIn";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,9 +34,9 @@ export default function RootLayout({
       <body className="h-full flex flex-col overflow-hidden">
         <Providers>
           <Navbar />
-          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <PageFadeIn>
             {children}
-          </div>
+          </PageFadeIn>
         </Providers>
       </body>
     </html>

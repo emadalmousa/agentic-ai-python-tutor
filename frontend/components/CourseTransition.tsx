@@ -54,10 +54,10 @@ export default function CourseTransition({ onDone }: Props) {
     const particles: Particle[] = Array.from({ length: NUM_PARTICLES }, makeParticle)
 
     // --- Rocket ---
-    // Phases (ms): 0-600 idle glow-in, 600-2200 fly across, 2200-2800 fade out + navigate
-    const PHASE_IDLE = 600
-    const PHASE_FLY_END = 2200
-    const PHASE_TOTAL = 2700
+    // Phases (ms): 0-600 idle glow-in, 600-3200 fly across, navigate immediately after
+    const PHASE_IDLE = 800
+    const PHASE_FLY_END = 5500
+    const PHASE_TOTAL = 5700
 
     function easeInOutCubic(t: number) {
       return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -155,10 +155,10 @@ export default function CourseTransition({ onDone }: Props) {
     function drawTrail(ctx: CanvasRenderingContext2D, now: number) {
       for (let i = trail.length - 1; i >= 0; i--) {
         const age = now - trail[i].t
-        const maxAge = 600
+        const maxAge = 400
         if (age > maxAge) { trail.splice(0, i + 1); break }
-        const a = (1 - age / maxAge) * 0.25
-        const r = (1 - age / maxAge) * 3
+        const a = (1 - age / maxAge) * 0.55
+        const r = (1 - age / maxAge) * 10
         ctx.beginPath()
         ctx.arc(trail[i].x, trail[i].y, r, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(139,92,246,${a})`
@@ -223,9 +223,9 @@ export default function CourseTransition({ onDone }: Props) {
         const cy = startY + (endY - startY) * easedFly
         const angle = Math.atan2(endY - startY, endX - startX)
 
-        // Scale: grow from 0.6 to 1.4 then shrink as it leaves
-        const scaleIn = flyProgress < 0.1 ? easeInOutCubic(flyProgress / 0.1) * 0.8 + 0.6 : 1.4
-        const scaleOut = flyProgress > 0.85 ? 1.4 - easeInOutCubic((flyProgress - 0.85) / 0.15) * 0.8 : 1.4
+        // Scale: grow from 1.2 to 2.8 then shrink as it leaves
+        const scaleIn = flyProgress < 0.1 ? easeInOutCubic(flyProgress / 0.1) * 1.6 + 1.2 : 2.8
+        const scaleOut = flyProgress > 0.85 ? 2.8 - easeInOutCubic((flyProgress - 0.85) / 0.15) * 1.6 : 2.8
         const scale = Math.min(scaleIn, scaleOut)
 
         // Alpha: fade in + fade out
@@ -240,9 +240,9 @@ export default function CourseTransition({ onDone }: Props) {
         drawTrail(ctx, elapsed)
 
         // Glow around rocket
-        const glowR = 80 * scale
+        const glowR = 160 * scale
         const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR)
-        glow.addColorStop(0, `rgba(99,102,241,${0.18 * rocketAlpha})`)
+        glow.addColorStop(0, `rgba(99,102,241,${0.35 * rocketAlpha})`)
         glow.addColorStop(1, "transparent")
         ctx.fillStyle = glow
         ctx.globalAlpha = 1
@@ -251,13 +251,16 @@ export default function CourseTransition({ onDone }: Props) {
         drawFlame(ctx, cx, cy, scale, rocketAlpha, angle, elapsed)
         drawRocket(ctx, cx, cy, scale, rocketAlpha, angle)
 
-        // Navigate when rocket exits screen
-        if (flyProgress >= 1 && !navigated) {
-          navigated = true
-          setTimeout(() => {
-            onDone()
+        // Rocket exits: fade canvas to black then switch
+        if (flyProgress >= 1) {
+          if (!navigated) {
+            navigated = true
             router.push("/progress")
-          }, 120)
+          }
+          const fadeT = Math.min((elapsed - PHASE_FLY_END) / 400, 1)
+          ctx.fillStyle = `rgba(6,14,28,${fadeT})`
+          ctx.fillRect(0, 0, W, H)
+          if (fadeT >= 1) { onDone(); return }
         }
       }
 
@@ -271,12 +274,12 @@ export default function CourseTransition({ onDone }: Props) {
       ctx.globalAlpha = textAlpha
       ctx.textAlign = "center"
 
-      ctx.font = "bold 26px system-ui, -apple-system, sans-serif"
+      ctx.font = "bold 40px system-ui, -apple-system, sans-serif"
       ctx.fillStyle = "#e0e7ff"
-      ctx.fillText("Python Kurs", W / 2, H / 2 - 16)
+      ctx.fillText("Python Kurs", W / 2, H / 2 - 22)
 
-      ctx.font = "14px system-ui, -apple-system, sans-serif"
-      ctx.fillStyle = "#6366f1"
+      ctx.font = "16px system-ui, -apple-system, sans-serif"
+      ctx.fillStyle = "#818cf8"
       ctx.fillText("Bereit zum Abheben …", W / 2, H / 2 + 14)
 
       ctx.globalAlpha = 1
