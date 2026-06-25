@@ -165,6 +165,15 @@ export async function getLevelTestStatus(level: LevelKey, token: string) {
   return res.json()
 }
 
+export async function getMemorySummary(token: string): Promise<string | null> {
+  const res = await fetch(`${API_URL}/tutor/memory`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.summary ?? null
+}
+
 export async function reviewCode(code: string, token: string): Promise<CodeReviewResult> {
   const res = await fetch(`${API_URL}/tutor/review`, {
     method: "POST",

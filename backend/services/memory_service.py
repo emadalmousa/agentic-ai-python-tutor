@@ -8,11 +8,9 @@ from models.agent_memory import AgentMemory
 _SUMMARIZE_SYSTEM = SystemMessage(content=(
     "Du bist ein Gedächtnis-System für einen Python-Tutor. "
     "Du erhältst die bisherige Zusammenfassung (kann leer sein) und den neuesten Chat-Austausch. "
-    "Erstelle eine aktualisierte, kompakte Zusammenfassung (max. 150 Wörter) auf Deutsch mit:\n"
-    "- Welche Python-Themen wurden besprochen?\n"
-    "- Welche Fehler oder Missverständnisse gab es?\n"
-    "- Was hat der Student gut verstanden?\n"
-    "Kein JSON, nur Fließtext. Nur die aktualisierte Zusammenfassung, nichts anderes."
+    "Erstelle eine aktualisierte Zusammenfassung auf Deutsch — maximal 2 kurze Sätze, max. 40 Wörter. "
+    "Nur die wichtigsten Themen als Schlüsselwörter nennen (z.B. 'Loops, Listen, Fehlerbehandlung'). "
+    "Kein JSON, kein Fließtext, keine Erklärungen. Nur die kompakte Zusammenfassung, nichts anderes."
 ))
 
 

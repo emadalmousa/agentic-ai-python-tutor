@@ -10,7 +10,7 @@ import { useCodeRunner } from "@/hooks/useCodeRunner"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import { useLang } from "@/context/LangContext"
-import { listChatHistory, loadChat, reviewCode } from "@/lib/api"
+import { listChatHistory, loadChat, reviewCode, getMemorySummary } from "@/lib/api"
 import type { ChatHistoryItem, CodeReviewResult } from "@/types/tutor"
 
 const LEVEL_COMPLEXITY: Record<string, string> = {
@@ -63,6 +63,7 @@ export default function TutorView() {
   const [showCode, setShowCode] = useState(false)
   const [reviewing, setReviewing] = useState(false)
   const [reviewResult, setReviewResult] = useState<CodeReviewResult | null>(null)
+  const [memorySummary, setMemorySummary] = useState<string | null>(null)
 
   // Sidebar state
   const [sidebarItems, setSidebarItems] = useState<ChatHistoryItem[]>([])
@@ -81,7 +82,7 @@ export default function TutorView() {
 
   const { output, loading: running, run } = useCodeRunner(t)
 
-  // Load sidebar on mount
+  // Load sidebar and memory on mount
   useEffect(() => {
     if (!token) return
     setSidebarLoading(true)
@@ -89,6 +90,9 @@ export default function TutorView() {
       .then(setSidebarItems)
       .catch(() => {/* sidebar is non-critical */})
       .finally(() => setSidebarLoading(false))
+    getMemorySummary(token)
+      .then(setMemorySummary)
+      .catch(() => {/* memory is non-critical */})
   }, [token])
 
   useEffect(() => {
@@ -170,6 +174,7 @@ export default function TutorView() {
           onInsertCode={setCode}
           onOpenCode={() => setShowCode(true)}
           dark={dark}
+          memorySummary={memorySummary}
         />
       </div>
 

@@ -172,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsGuest(false)
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(GUEST_KEY)
+    sessionStorage.removeItem("ki_tutor_chat_history")
+    sessionStorage.removeItem("ki_tutor_material_name")
   }
 
   if (!mounted) {

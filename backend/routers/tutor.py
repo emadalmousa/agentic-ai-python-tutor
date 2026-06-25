@@ -98,6 +98,11 @@ def run_code(request: RunRequest) -> RunResponse:
 
 import re as _re
 
+_GREETING_PATTERN = _re.compile(
+    r"^\s*(hi|hallo|hey|guten\s*(morgen|tag|abend)|servus|moin|grüß\s*(gott|dich)|was\s+geht|wie\s+geht'?s?)\W*\s*$",
+    _re.IGNORECASE,
+)
+
 _CLASSIFY_SYSTEM = SystemMessage(content=(
     "Du klassifizierst Nachrichten im Kontext eines Python-Tutors. "
     "Der Schüler hat Python-Code im Editor und kann ein Lernmaterial (PDF) hochgeladen haben. "
@@ -185,6 +190,16 @@ def _get_rag_context(message: str, user_id: int) -> str:
         return ""  # Fehler im RAG → normalen Chat fortsetzen
 
 
+@router.get("/memory")
+def get_memory(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Gibt den aktuellen Memory-Summary des Users zurück."""
+    summary = load_memory(current_user.id, db)
+    return {"summary": summary}
+
+
 @router.post("/review", response_model=dict)
 def review_code(
     request: CodeRequest,
@@ -209,6 +224,14 @@ def chat(
     2. RAG-Kontext laden: wenn PDF-Index vorhanden → direktes LLM-Gespräch mit Kontext
     3. Kein RAG → ReAct-Agent mit personalisierten Tools (basierend auf Skill-Fortschritt)
     """
+    if _GREETING_PATTERN.match(request.message):
+        greeting_reply = f"Hallo {current_user.name}! 👋 Schön, dass du wieder da bist! Hast du Lust, heute weiter Python zu lernen? 🐍"
+        new_history = list(request.history) + [
+            ChatMessage(role="user", content=request.message),
+            ChatMessage(role="assistant", content=greeting_reply),
+        ]
+        return ChatResponse(reply=greeting_reply, history=new_history)
+
     if not _is_python_related(request.message, request.code):
         # Off-Topic: History trotzdem aktualisieren damit Frontend konsistent bleibt
         new_history = list(request.history) + [

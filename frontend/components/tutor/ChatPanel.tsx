@@ -69,12 +69,14 @@ interface Props {
   onInsertCode?: (code: string) => void
   onOpenCode?: () => void
   dark: boolean
+  memorySummary?: string | null
 }
 
 export default function ChatPanel({
   history, input, loading, analyzing, uploading, materialName, hasPdf, onOpenPdf,
   error, bottomRef, fileInputRef,
   onInput, onSend, onReset, onOpenFilePicker, onFileInput, onInsertCode, onOpenCode, dark,
+  memorySummary,
 }: Props) {
   const { t } = useLang()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -103,7 +105,7 @@ export default function ChatPanel({
   const subCol  = dark ? "text-gray-500"    : "text-gray-400"
 
   return (
-    <div className={`flex flex-col min-h-full ${bg} border-l ${border}`}>
+    <div className={`flex flex-col h-full ${bg} border-l ${border}`}>
 
       {/* Header */}
       <div className={`sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b ${border} ${bg}`}>
@@ -142,7 +144,26 @@ export default function ChatPanel({
       </div>
 
       {/* Message history */}
-      <div className="flex-1 px-4 py-4 flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+
+        {/* Memory-Karte */}
+        {memorySummary && (
+          <div className={`px-4 py-3.5 rounded-xl border ${
+            dark
+              ? "bg-purple-950/40 border-purple-700/40 text-purple-200"
+              : "bg-purple-50 border-purple-200 text-purple-800"
+          }`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">🧠</span>
+              <span className={`font-bold text-sm uppercase tracking-wide ${dark ? "text-purple-400" : "text-purple-600"}`}>
+                Ich erinnere mich
+              </span>
+              <span className="text-xl">👋</span>
+            </div>
+            <span className="text-base leading-relaxed">{memorySummary}</span>
+          </div>
+        )}
+
         {history.length === 0 && !busy && (
           <div className={`text-center mt-12 ${subCol} text-sm`}>
             <div className="text-3xl mb-3">🤖</div>
