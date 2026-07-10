@@ -80,7 +80,7 @@ export default function TutorView() {
     bottomRef,
   } = useChat(code, t, initialHistory)
 
-  const { output, loading: running, run } = useCodeRunner(t)
+  const { output, loading: running, run, clearOutput } = useCodeRunner(t)
 
   // Load sidebar and memory on mount
   useEffect(() => {
@@ -182,7 +182,7 @@ export default function TutorView() {
       {showCode && (
         <CodeModal
           code={code}
-          onChange={setCode}
+          onChange={(v) => { setCode(v); setReviewResult(null) }}
           dark={dark}
           running={running}
           analyzing={analyzing}
@@ -194,6 +194,7 @@ export default function TutorView() {
           onReview={handleReview}
           onClearReview={() => setReviewResult(null)}
           onClose={() => setShowCode(false)}
+          onReset={() => { setCode(DEFAULT_CODE); setReviewResult(null); clearOutput() }}
         />
       )}
 

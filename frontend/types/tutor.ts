@@ -236,6 +236,7 @@ export interface CodeReviewIssue {
   line: number
   severity: "error" | "warning" | "info"
   message: string
+  suggestion?: string
 }
 
 export interface CodeReviewSection {
@@ -250,11 +251,18 @@ export interface CodeReviewResult {
   total_issues: number
 }
 
+export interface LearningPlanTask {
+  type: "review" | "practice" | "challenge"
+  label: string
+  hours: number
+}
+
 export interface LearningPlanSkill {
   skill_key: string
   skill_label: string
   score: number
   hours: number
+  tasks?: LearningPlanTask[]
 }
 
 export interface LearningPlanWeek {

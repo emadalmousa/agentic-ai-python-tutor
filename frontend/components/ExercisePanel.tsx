@@ -4,10 +4,11 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/context/ThemeContext"
 import { useAuth } from "@/context/AuthContext"
-import { getExercises, submitExercise, getExerciseHint } from "@/lib/api"
-import type { SkillProgress, Exercise, SubmitExerciseResponse } from "@/types/tutor"
+import { getExercises, submitExercise, getExerciseHint, reviewCode } from "@/lib/api"
+import type { SkillProgress, Exercise, SubmitExerciseResponse, CodeReviewResult } from "@/types/tutor"
 import MarkdownMessage from "@/components/tutor/MarkdownMessage"
 import CodeEditor from "@/components/tutor/CodeEditor"
+import CodeReviewPanel from "@/components/tutor/CodeReviewPanel"
 
 function ResultPopup({
   result,
@@ -180,6 +181,8 @@ function ExerciseCard({
   const [hint, setHint] = useState<string | null>(null)
   const [hintLoading, setHintLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [reviewing, setReviewing] = useState(false)
+  const [reviewResult, setReviewResult] = useState<CodeReviewResult | null>(null)
 
   async function handleSubmit() {
     if (!code.trim() || submitting) return
@@ -213,6 +216,20 @@ function ExerciseCard({
 
   function handleGoToTutor() {
     router.push("/tutor")
+  }
+
+  async function handleReview() {
+    if (!code.trim() || reviewing) return
+    setReviewing(true)
+    setReviewResult(null)
+    try {
+      const res = await reviewCode(code, token)
+      setReviewResult(res)
+    } catch {
+      setErr("Code Review fehlgeschlagen.")
+    } finally {
+      setReviewing(false)
+    }
   }
 
   async function handleHint() {
@@ -267,7 +284,7 @@ function ExerciseCard({
               <CodeEditor code={code || "# Abgeschlossen"} onChange={() => {}} dark={dark} />
             </div>
           ) : (
-            <CodeEditor code={code} onChange={setCode} dark={dark} />
+            <CodeEditor code={code} onChange={(v) => { setCode(v); setReviewResult(null) }} dark={dark} />
           )}
         </div>
 
@@ -296,6 +313,26 @@ function ExerciseCard({
               />
             )}
 
+            {/* Code Review result */}
+            {reviewing && (
+              <div className={`flex items-center gap-2 py-3 px-4 rounded-xl border ${dark ? "border-[#1e2f45] bg-[#060e1c]" : "border-gray-200 bg-gray-50"}`}>
+                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  style={{ color: dark ? "#818cf8" : "#6366f1" }}>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                <span className={`text-xs ${dark ? "text-gray-400" : "text-gray-500"}`}>Code wird analysiert…</span>
+              </div>
+            )}
+            {!reviewing && reviewResult && (
+              <div className="rounded-xl overflow-hidden border border-[#1e2f45]">
+                <CodeReviewPanel
+                  result={reviewResult}
+                  dark={dark}
+                  onClose={() => setReviewResult(null)}
+                />
+              </div>
+            )}
+
             {/* Buttons */}
             <div className="flex items-center justify-between gap-3 pt-1">
               <button
@@ -307,13 +344,22 @@ function ExerciseCard({
               >
                 {hintLoading ? "Lädt..." : hintLevel > 3 ? "Kein weiterer Tipp" : `💡 Tipp ${hintLevel}`}
               </button>
-              <button
-                onClick={handleSubmit}
-                disabled={!code.trim() || submitting}
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {submitting ? "Prüfe..." : "▶ Ausführen"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleReview}
+                  disabled={!code.trim() || reviewing || submitting}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {reviewing ? "Prüfe..." : "Code Review"}
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!code.trim() || submitting}
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submitting ? "Prüfe..." : "▶ Ausführen"}
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -362,7 +408,7 @@ export default function ExercisePanel({ skill, onSkillScoreUpdate, onStartSkillT
   const allDone = exercises.length > 0 && exercises.every((ex) => ex.is_locked)
   const visibleExercises = exercises.filter((ex) => ex.is_locked || ex.is_unlocked)
 
-  if (loading) {
+  if (loading && exercises.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className={`w-6 h-6 border-2 border-t-transparent rounded-full animate-spin ${dark ? "border-blue-400" : "border-blue-600"}`} />

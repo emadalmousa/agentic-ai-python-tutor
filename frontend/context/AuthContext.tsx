@@ -107,6 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const resolved = await fetchMe(access_token)
       if (resolved) {
         setUser(resolved)
+        setIsGuest(false)
+        localStorage.removeItem(GUEST_KEY)
         return true
       }
       return false

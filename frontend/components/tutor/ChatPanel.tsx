@@ -190,7 +190,7 @@ export default function ChatPanel({
                 content={msg.content}
                 dark={dark}
                 isUser={msg.role === "user"}
-                onInsertCode={msg.role === "assistant" ? onInsertCode : undefined}
+                onInsertCode={msg.role === "assistant" && onInsertCode ? (code) => { onInsertCode(code); onOpenCode?.() } : undefined}
               />
             </div>
           </div>

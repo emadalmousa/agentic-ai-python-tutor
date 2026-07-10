@@ -40,3 +40,12 @@ backend/agent/rag/*.faiss
 backend/agent/rag/*.pkl
 backend/rag_stores/
 rag_stores/
+
+# Session files
+"KI Tutor .session.sql"
+
+# Presentation working files
+presentation/DEMO_VIDEO_SCRIPT.md
+presentation/DEMO_DAY_SCRIPT.md
+presentation/EXPORT_TO_PDF.md
+presentation/demoday_plan.md

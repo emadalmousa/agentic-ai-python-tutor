@@ -22,7 +22,7 @@ const LEVEL_COLOR: Record<string, string> = {
 
 
 export default function DashboardView() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isGuest } = useAuth()
   const { dark } = useTheme()
   const router = useRouter()
   const [showTransition, setShowTransition] = useState(false)
@@ -74,12 +74,12 @@ export default function DashboardView() {
         <div className={`w-16 border-t ${divider}`} />
 
         {/* Cards */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className={`w-full grid grid-cols-1 sm:grid-cols-2 gap-4`}>
 
           {/* KI Tutor */}
           <button
             onClick={() => setShowTutorTransition(true)}
-            className={`${cardBg} border ${
+            className={`${isGuest ? "sm:col-span-2 max-w-sm mx-auto w-full" : ""} ${cardBg} border ${
               dark ? "border-[#1e2f45] hover:border-blue-500/40" : "border-gray-200 hover:border-blue-400/60"
             } rounded-2xl p-8 flex flex-col items-center justify-between gap-6 shadow-lg ${
               dark ? "hover:shadow-blue-900/30" : "hover:shadow-blue-100"
@@ -106,8 +106,8 @@ export default function DashboardView() {
             </div>
           </button>
 
-          {/* Python Kurs */}
-          <button
+          {/* Python Kurs — nur für eingeloggte Nutzer */}
+          {!isGuest && <button
             onClick={() => setShowTransition(true)}
             className={`${cardBg} border ${
               dark ? "border-[#1e2f45] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-400/60"
@@ -134,7 +134,7 @@ export default function DashboardView() {
                 Kurs starten
               </div>
             </div>
-          </button>
+          </button>}
 
         </div>
 

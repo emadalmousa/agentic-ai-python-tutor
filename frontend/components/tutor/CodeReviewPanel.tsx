@@ -23,13 +23,25 @@ const SECTIONS = [
 function IssueRow({ issue, dark }: { issue: CodeReviewIssue; dark: boolean }) {
   const s = SEVERITY_STYLES[issue.severity] ?? SEVERITY_STYLES.info
   return (
-    <div className={`flex items-start gap-2.5 px-3 py-2 rounded-lg border ${s.badge}`}>
-      <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${s.dot}`} />
-      <div className="flex-1 min-w-0">
-        <span className={`text-xs font-mono ${s.text}`}>Zeile {issue.line}</span>
-        <span className={`ml-2 text-xs ${dark ? "text-gray-300" : "text-gray-700"}`}>{issue.message}</span>
+    <div className={`px-3 py-2 rounded-lg border ${s.badge}`}>
+      <div className="flex items-start gap-2.5">
+        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${s.dot}`} />
+        <div className="flex-1 min-w-0">
+          <span className={`text-xs font-mono ${s.text}`}>Zeile {issue.line}</span>
+          <span className={`ml-2 text-xs ${dark ? "text-gray-300" : "text-gray-700"}`}>{issue.message}</span>
+        </div>
+        <span className={`text-xs font-semibold shrink-0 ${s.text}`}>{s.label}</span>
       </div>
-      <span className={`text-xs font-semibold shrink-0 ${s.text}`}>{s.label}</span>
+      {issue.suggestion && (
+        <div className="mt-2 ml-4">
+          <div className={`text-xs font-semibold mb-1 ${dark ? "text-emerald-400" : "text-emerald-600"}`}>
+            ✓ Besser:
+          </div>
+          <pre className={`text-xs font-mono px-3 py-2 rounded-lg ${dark ? "bg-emerald-950/50 text-emerald-300 border border-emerald-800/40" : "bg-emerald-50 text-emerald-800 border border-emerald-200"}`}>
+            {issue.suggestion}
+          </pre>
+        </div>
+      )}
     </div>
   )
 }
@@ -49,11 +61,13 @@ function Section({
   return (
     <div className={`rounded-xl border ${border} overflow-hidden`}>
       {/* Section header */}
-      <div className={`flex items-center gap-2.5 px-4 py-2.5 ${sectionBg} border-b ${border}`}>
+      <div className={`flex items-center gap-2.5 px-4 py-2.5 ${sectionBg} ${data.issues.length > 0 ? `border-b ${border}` : ""}`}>
         <span className="text-base">{icon}</span>
         <div className="flex-1">
           <p className={`text-xs font-bold ${dark ? "text-white" : "text-gray-900"}`}>{title}</p>
-          <p className={`text-xs ${sub}`}>{data.summary}</p>
+          {data.summary && !data.summary.includes('"issues"') && (
+            <p className={`text-xs ${sub}`}>{data.summary}</p>
+          )}
         </div>
         <span className={`text-xs font-mono ${sub}`}>{step}</span>
         {ok && <span className="text-emerald-400 text-xs font-semibold">✓</span>}
@@ -90,9 +104,11 @@ export default function CodeReviewPanel({ result, dark, onClose }: Props) {
             <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
           </svg>
           <span className={`text-xs font-bold ${dark ? "text-white" : "text-gray-900"}`}>Code Review</span>
-          <span className={`text-xs font-mono font-bold ${totalColor}`}>
-            {result.total_issues === 0 ? "Kein Problem" : `${result.total_issues} Problem${result.total_issues !== 1 ? "e" : ""}`}
-          </span>
+          {result.total_issues > 0 && (
+            <span className={`text-xs font-mono font-bold ${totalColor}`}>
+              {result.total_issues} Problem{result.total_issues !== 1 ? "e" : ""}
+            </span>
+          )}
         </div>
         <button
           onClick={onClose}

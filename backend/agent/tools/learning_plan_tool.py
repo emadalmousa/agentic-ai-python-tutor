@@ -7,9 +7,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from agent.config import get_llm
 
 _SYSTEM_PROMPT = """Du bist ein erfahrener Python-Lerncoach.
-Du erhältst eine Liste von Python-Skills mit ihren aktuellen Scores (0-100) und dem Lernziel des Studenten.
+Du erhältst eine Liste von Python-Skills mit vorberechneten Lernschritten (tasks), Scores und Lock-Status.
 Erstelle einen strukturierten Wochenlernplan NUR für Skills mit Score < 80.
-Skills mit Score >= 80 gelten als abgeschlossen und kommen NICHT in den Plan.
+Übernimm die tasks GENAU wie angegeben — ändere sie NICHT.
 
 Antworte NUR mit validem JSON in diesem Format:
 {
@@ -21,7 +21,12 @@ Antworte NUR mit validem JSON in diesem Format:
           "skill_key": "for_loop",
           "skill_label": "For-Schleifen",
           "score": 35,
-          "hours": 2.0
+          "hours": 2.5,
+          "tasks": [
+            {"type": "review",    "label": "Thema wiederholen",   "hours": 0.5},
+            {"type": "practice",  "label": "Grundübungen lösen",  "hours": 1.5},
+            {"type": "challenge", "label": "Schwerpunktübungen",  "hours": 0.5}
+          ]
         }
       ]
     }
@@ -31,10 +36,29 @@ Antworte NUR mit validem JSON in diesem Format:
 
 Regeln:
 - Maximal 3 Skills pro Woche
-- Skills mit niedrigstem Score zuerst (dringendste Schwächen)
-- Zeitschätzung: score < 40 → 2-3h, score 40-79 → 1-2h
+- Reihenfolge: ZUERST freigeschaltete Skills (is_unlocked=true) mit HÖCHSTEM Score (fast fertig), dann freigeschaltete mit niedrigem Score, ZULETZT gesperrte Skills (is_unlocked=false) — nie in Woche 1
 - Maximal 4 Wochen
 - Kein Markdown, kein Text außerhalb des JSON"""
+
+
+def _make_tasks(score: int) -> list[dict]:
+    """Erstellt sinnvolle Lernschritte basierend auf dem aktuellen Score."""
+    if score < 30:
+        return [
+            {"type": "review",    "label": "Thema von Grund auf wiederholen", "hours": 1.0},
+            {"type": "practice",  "label": "Grundübungen lösen",              "hours": 1.5},
+            {"type": "challenge", "label": "Schwerpunktübungen",              "hours": 1.0},
+        ]
+    if score < 60:
+        return [
+            {"type": "review",   "label": "Thema wiederholen",  "hours": 0.5},
+            {"type": "practice", "label": "Gezielt üben",       "hours": 1.5},
+        ]
+    # score 60-79: fast fertig
+    return [
+        {"type": "review",   "label": "Konzept kurz auffrischen", "hours": 0.5},
+        {"type": "practice", "label": "Lücken schließen",         "hours": 1.0},
+    ]
 
 
 def generate_learning_plan(
@@ -51,17 +75,33 @@ def generate_learning_plan(
     if not todo:
         return {"weeks": [], "tip": "Super! Du hast alle Skills gemeistert."}
 
-    todo_sorted = sorted(todo, key=lambda s: s["score"])
+    # Reihenfolge: 1) freigeschaltet + hoher Score (fast fertig)  2) freigeschaltet + niedriger Score  3) gesperrt
+    todo_sorted = sorted(
+        todo,
+        key=lambda s: (
+            0 if s.get("is_unlocked", True) else 1,  # gesperrte zuletzt
+            -s["score"],                               # innerhalb: höchster Score zuerst
+        ),
+    )
+
+    # Tasks vorberechnen — deterministisch, nicht vom LLM
+    todo_with_tasks = [
+        {**s, "tasks": _make_tasks(s["score"]), "hours": sum(t["hours"] for t in _make_tasks(s["score"]))}
+        for s in todo_sorted
+    ]
 
     skills_text = "\n".join(
-        f"- {s['skill_label']} (key: {s['skill_key']}, score: {s['score']}, level: {s['level']})"
-        for s in todo_sorted
+        f"- {s['skill_label']} (key: {s['skill_key']}, score: {s['score']}, level: {s['level']}, "
+        f"is_unlocked: {s.get('is_unlocked', True)}, hours: {s['hours']}, "
+        f"tasks: {[t['label'] for t in s['tasks']]})"
+        for s in todo_with_tasks
     )
 
     prompt = (
         f"Lernziel des Studenten: {goal}\n\n"
-        f"Skills die noch nicht abgeschlossen sind (score < 80):\n{skills_text}\n\n"
-        "Erstelle jetzt den Wochenlernplan als JSON."
+        f"Skills die noch nicht abgeschlossen sind (score < 80), bereits mit Lernschritten:\n{skills_text}\n\n"
+        "Verteile diese Skills auf Wochen (max 3 Skills/Woche, max 4 Wochen). "
+        "Übernimm tasks und hours GENAU aus der Liste. Erstelle das JSON."
     )
 
     try:
@@ -71,12 +111,20 @@ def generate_learning_plan(
             HumanMessage(content=prompt),
         ])
         text = result.content.strip()
-        # JSON aus Markdown-Wrappern befreien
         text = re.sub(r"^```(?:json)?\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
-        return json.loads(text)
+        plan = json.loads(text)
+        # Sicherheitsnetz: tasks aus LLM-Antwort mit vorberechneten überschreiben
+        skill_lookup = {s["skill_key"]: s for s in todo_with_tasks}
+        for week in plan.get("weeks", []):
+            for skill in week.get("skills", []):
+                key = skill.get("skill_key")
+                if key in skill_lookup:
+                    skill["tasks"] = skill_lookup[key]["tasks"]
+                    skill["hours"] = skill_lookup[key]["hours"]
+        return plan
     except Exception:
-        # Fallback: ersten 3 schwächsten Skills in Woche 1
+        first_three = [s for s in todo_with_tasks if s.get("is_unlocked", True)][:3] or todo_with_tasks[:3]
         return {
             "weeks": [
                 {
@@ -86,11 +134,12 @@ def generate_learning_plan(
                             "skill_key":   s["skill_key"],
                             "skill_label": s["skill_label"],
                             "score":       s["score"],
-                            "hours":       2.0 if s["score"] < 40 else 1.5,
+                            "hours":       s["hours"],
+                            "tasks":       s["tasks"],
                         }
-                        for s in todo_sorted[:3]
+                        for s in first_three
                     ],
                 }
             ],
-            "tip": f"Starte mit {todo_sorted[0]['skill_label']} — dort besteht der größte Nachholbedarf.",
+            "tip": f"Starte mit {first_three[0]['skill_label']} — dort besteht der größte Nachholbedarf.",
         }

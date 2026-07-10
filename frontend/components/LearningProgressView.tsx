@@ -278,6 +278,7 @@ export default function LearningProgressView() {
   const [nudge, setNudge]                 = useState<WeaknessNudgeResponse | null>(null)
   const [plan, setPlan]                   = useState<LearningPlanResponse | null>(null)
   const [planLoading, setPlanLoading]     = useState(false)
+  const [planSavedAt, setPlanSavedAt]     = useState<number | null>(null)
 
   const refreshProgress = useCallback(() => setRefreshTick((t) => t + 1), [])
 
@@ -319,11 +320,49 @@ export default function LearningProgressView() {
     refreshProgress()
   }
 
+  const PLAN_MAX_AGE_MS = 28 * 24 * 60 * 60 * 1000
+
+  function planCacheKey() {
+    return user ? `ki_tutor_plan_${user.id}` : null
+  }
+
+  function loadCachedPlan(): { plan: LearningPlanResponse; savedAt: number } | null {
+    try {
+      const key = planCacheKey()
+      if (!key) return null
+      const raw = localStorage.getItem(key)
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      if (Date.now() - parsed.savedAt > PLAN_MAX_AGE_MS) return null
+      return parsed
+    } catch { return null }
+  }
+
+  function cachePlan(p: LearningPlanResponse) {
+    try {
+      const key = planCacheKey()
+      if (!key) return
+      const savedAt = Date.now()
+      localStorage.setItem(key, JSON.stringify({ plan: p, savedAt }))
+      setPlanSavedAt(savedAt)
+    } catch { /* ignore */ }
+  }
+
+  function handleOpenPlan() {
+    const cached = loadCachedPlan()
+    if (cached) {
+      setPlan(cached.plan)
+      setPlanSavedAt(cached.savedAt)
+    } else {
+      handleGeneratePlan()
+    }
+  }
+
   function handleGeneratePlan() {
     if (planLoading) return
     setPlanLoading(true)
     getLearningPlan(token)
-      .then(setPlan)
+      .then((p) => { setPlan(p); cachePlan(p) })
       .catch(() => {/* ignore — non-critical */})
       .finally(() => setPlanLoading(false))
   }
@@ -331,10 +370,9 @@ export default function LearningProgressView() {
   function handlePlanStartSkill(skillKey: string) {
     if (!progress) return
     const skill = progress.skills.find((s) => s.skill_key === skillKey)
-    if (skill) {
-      setActiveLevel(skill.level as LevelKey)
-      setSelectedSkill(skill)
-    }
+    if (!skill || !skill.is_unlocked) return
+    setActiveLevel(skill.level as LevelKey)
+    setSelectedSkill(skill)
     setPlan(null)
   }
 
@@ -388,7 +426,7 @@ export default function LearningProgressView() {
         {progress && (
           <div className="flex items-center gap-3">
             <button
-              onClick={handleGeneratePlan}
+              onClick={handleOpenPlan}
               disabled={planLoading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all active:scale-95"
             >
@@ -513,8 +551,11 @@ export default function LearningProgressView() {
       {plan && (
         <LearningPlanModal
           plan={plan}
+          progressSkills={progress?.skills ?? []}
+          savedAt={planSavedAt}
           onClose={() => setPlan(null)}
           onStartSkill={handlePlanStartSkill}
+          onRefresh={handleGeneratePlan}
         />
       )}
 

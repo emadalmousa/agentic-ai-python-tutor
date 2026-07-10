@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useRef, useCallback } from "react"
 import CodeEditor from "./CodeEditor"
 import CodeReviewPanel from "./CodeReviewPanel"
 import type { RunResponse, CodeReviewResult } from "@/types/tutor"
@@ -20,28 +19,16 @@ interface Props {
   onReview: () => void
   onClearReview: () => void
   onClose: () => void
+  onReset: () => void
 }
 
 export default function CodeModal({
   code, onChange, dark, running, analyzing, reviewing, output, reviewResult,
-  onRun, onAnalyze, onReview, onClearReview, onClose,
+  onRun, onAnalyze, onReview, onClearReview, onClose, onReset,
 }: Props) {
   const { t } = useLang()
   const busy = running || analyzing || reviewing
-  const overlayRef = useRef<HTMLDivElement>(null)
 
-  // Close on Escape
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [onClose])
-
-  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === overlayRef.current) onClose()
-  }, [onClose])
 
   const border = dark ? "border-[#1e2f45]" : "border-gray-200"
   const bg     = dark ? "bg-[#0a1628]"     : "bg-white"
@@ -49,8 +36,6 @@ export default function CodeModal({
 
   return (
     <div
-      ref={overlayRef}
-      onClick={handleOverlayClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
     >
       <div className={`${bg} rounded-2xl border ${border} shadow-2xl w-full max-w-5xl flex flex-col`}
@@ -114,7 +99,16 @@ export default function CodeModal({
         )}
 
         {/* Code Review Panel */}
-        {reviewResult && (
+        {reviewing && (
+          <div className={`border-t ${border} flex items-center justify-center gap-3 py-6 ${dark ? "bg-[#0a1628]" : "bg-white"}`}>
+            <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              style={{ color: dark ? "#818cf8" : "#6366f1" }}>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            <span className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}>Code wird analysiert…</span>
+          </div>
+        )}
+        {!reviewing && reviewResult && (
           <CodeReviewPanel
             result={reviewResult}
             dark={dark}
@@ -142,23 +136,6 @@ export default function CodeModal({
           </button>
 
           <button
-            onClick={onAnalyze}
-            disabled={busy || !code.trim()}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-indigo-600 hover:bg-indigo-500 text-white"
-          >
-            {analyzing ? (
-              <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-              </svg>
-            ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-            )}
-            {analyzing ? t("tutor.analyzeRunning") : t("tutor.analyze")}
-          </button>
-
-          <button
             onClick={onReview}
             disabled={busy || !code.trim()}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-violet-600 hover:bg-violet-500 text-white"
@@ -173,6 +150,19 @@ export default function CodeModal({
               </svg>
             )}
             {reviewing ? "Prüfe..." : "Code Review"}
+          </button>
+
+          <button
+            onClick={onReset}
+            disabled={busy}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+              dark ? "bg-[#1e2f45] hover:bg-red-900/40 hover:text-red-400 text-gray-400" : "bg-gray-100 hover:bg-red-50 hover:text-red-500 text-gray-500"
+            }`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
+            </svg>
+            Zurücksetzen
           </button>
 
           <button

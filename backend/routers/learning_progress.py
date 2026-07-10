@@ -258,7 +258,7 @@ def get_learning_plan(
     """Generiert einen personalisierten Wochenlernplan via LLM."""
     progress = _build_progress_response(current_user.id, db)
     skills_input = [
-        {"skill_key": s.skill_key, "skill_label": s.skill_label, "score": s.score, "level": s.level}
+        {"skill_key": s.skill_key, "skill_label": s.skill_label, "score": s.score, "level": s.level, "is_unlocked": s.is_unlocked}
         for s in progress.skills
     ]
     plan = generate_learning_plan(skills_input, goal=current_user.goal or "Python lernen")

@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Day — KI Python Tutor</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    /* ── Light Mode ─────────────────────────────────────────── */
+    body.light-mode {
+      --bg:      #f1f5f9;
+      --surface: #ffffff;
+      --card:    #f8fafc;
+      --border:  rgba(99,102,241,0.2);
+      --text:    #0f172a;
+      --muted:   #64748b;
+    }
+    body.light-mode .nav { background: rgba(241,245,249,0.95); }
+    body.light-mode .flow-node { color: #0f172a; }
+    body.light-mode .code-block, body.light-mode .code-card { background: #1e293b; }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 2 — PROBLEM & LÖSUNG
+    ══════════════════════════════════════════════════════ */
+    #slide-2 {
+      padding: clamp(24px,3.5vh,52px) clamp(32px,5vw,80px) clamp(24px,3.5vh,52px) clamp(40px,6vw,88px);
+      gap: clamp(16px,2.5vh,32px);
+    }
+    .prob-solution-grid {
+      flex: 1; min-height: 0;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: clamp(16px,2vw,28px);
+    }
+    .ps-col {
+      display: flex; flex-direction: column;
+      gap: clamp(10px,1.2vh,16px);
+    }
+    .ps-col-header {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-heading); font-weight: 800;
+      font-size: clamp(0.88rem,1.05vw,1.14rem);
+      letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .ps-col-header.problem { color: #f87171; }
+    .ps-col-header.solution { color: var(--success); }
+    .ps-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: clamp(12px,1.4vh,18px) clamp(14px,1.6vw,22px);
+      display: flex; align-items: flex-start; gap: 12px; flex: 1;
+    }
+    .ps-item.p-item { border-left: 3px solid rgba(248,113,113,0.6); }
+    .ps-item.s-item { border-left: 3px solid rgba(52,211,153,0.6); }
+    .ps-item-icon { font-size: clamp(1.4rem,1.8vw,2rem); flex-shrink: 0; margin-top: 2px; }
+    .ps-item-text { display: flex; flex-direction: column; gap: 4px; }
+    .ps-item-title {
+      font-family: var(--font-heading); font-weight: 700;
+      font-size: clamp(0.92rem,1.08vw,1.18rem);
+    }
+    .p-item .ps-item-title { color: #f87171; }
+    .s-item .ps-item-title { color: var(--success); }
+    .ps-item-desc {
+      font-size: clamp(0.82rem,0.96vw,1.04rem); color: var(--muted); line-height: 1.5;
+    }
+    .ps-item-desc em { color: var(--text); font-style: italic; }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 3 — FEATURES (6 Karten, 3×2)
+    ══════════════════════════════════════════════════════ */
+    #slide-3 {
+      padding: clamp(24px,3.5vh,52px) clamp(32px,5vw,80px) clamp(24px,3.5vh,52px) clamp(40px,6vw,88px);
+      gap: clamp(16px,2.5vh,28px);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 4 — ARCHITEKTUR
+    ══════════════════════════════════════════════════════ */
+    #slide-4 {
+      padding: clamp(24px,3.5vh,52px) clamp(32px,5vw,80px) clamp(24px,3.5vh,52px) clamp(40px,6vw,88px);
+      gap: clamp(16px,2.5vh,28px);
+    }
+    .arch-layout {
+      flex: 1; min-height: 0;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: clamp(16px,2vw,28px);
+    }
+    .arch-diagram {
+      display: flex; flex-direction: column; gap: clamp(8px,1vh,12px); justify-content: center;
+    }
+    .arch-row {
+      display: flex; align-items: center; gap: 0;
+    }
+    .arch-node {
+      flex: 1; border-radius: 10px; padding: clamp(8px,1vh,14px) clamp(10px,1.2vw,16px);
+      text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .arch-node .an-icon { font-size: clamp(1.4rem,1.8vw,2rem); }
+    .arch-node h4 {
+      font-family: var(--font-heading); font-weight: 800;
+      font-size: clamp(0.82rem,0.98vw,1.06rem); line-height: 1.2;
+    }
+    .arch-node p { font-size: clamp(0.72rem,0.84vw,0.9rem); color: var(--muted); line-height: 1.3; }
+
+    .an-frontend { background: rgba(56,189,248,0.1); border: 2px solid rgba(56,189,248,0.45); }
+    .an-frontend h4 { color: var(--accent3); }
+    .an-api      { background: rgba(99,102,241,0.1); border: 2px solid rgba(99,102,241,0.45); }
+    .an-api h4   { color: var(--accent); }
+    .an-agent    {
+      background: linear-gradient(135deg,rgba(99,102,241,0.15),rgba(167,139,250,0.12));
+      border: 2px solid rgba(167,139,250,0.55);
+    }
+    .an-agent h4 { color: var(--accent2); }
+    .an-db       { background: rgba(52,211,153,0.1); border: 2px solid rgba(52,211,153,0.4); }
+    .an-db h4    { color: var(--success); }
+
+    .arch-arrow {
+      display: flex; align-items: center; flex-shrink: 0; padding: 0 clamp(4px,0.5vw,8px);
+    }
+    .arch-arrow-line { height: 2px; width: clamp(16px,2vw,28px); }
+    .arch-arrow-head { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+    .arch-arrow.blue .arch-arrow-line { background: rgba(56,189,248,0.6); }
+    .arch-arrow.blue .arch-arrow-head { border-left: 7px solid rgba(56,189,248,0.6); }
+    .arch-arrow.indigo .arch-arrow-line { background: rgba(99,102,241,0.6); }
+    .arch-arrow.indigo .arch-arrow-head { border-left: 7px solid rgba(99,102,241,0.6); }
+    .arch-arrow.purple .arch-arrow-line { background: rgba(167,139,250,0.6); }
+    .arch-arrow.purple .arch-arrow-head { border-left: 7px solid rgba(167,139,250,0.6); }
+
+    .arch-tools-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: clamp(6px,0.8vw,10px);
+    }
+    .arch-tool {
+      border-radius: 8px; padding: clamp(6px,0.7vh,10px) clamp(6px,0.7vw,10px);
+      text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .arch-tool .at-icon { font-size: clamp(1.1rem,1.4vw,1.5rem); }
+    .arch-tool h5 {
+      font-family: var(--font-heading); font-weight: 700;
+      font-size: clamp(0.65rem,0.77vw,0.84rem); line-height: 1.2;
+    }
+    .arch-tool p { font-size: clamp(0.6rem,0.7vw,0.76rem); color: var(--muted); line-height: 1.2; }
+
+    .at-rag    { background: rgba(251,146,60,0.1);  border: 1px solid rgba(251,146,60,0.35); }
+    .at-rag h5 { color: var(--warn); }
+    .at-review { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.35); }
+    .at-review h5 { color: #f87171; }
+    .at-mem    { background: rgba(168,85,247,0.1);  border: 1px solid rgba(168,85,247,0.35); }
+    .at-mem h5 { color: #a855f7; }
+    .at-skill  { background: rgba(52,211,153,0.1);  border: 1px solid rgba(52,211,153,0.35); }
+    .at-skill h5 { color: var(--success); }
+    .at-plan   { background: rgba(56,189,248,0.1);  border: 1px solid rgba(56,189,248,0.35); }
+    .at-plan h5 { color: var(--accent3); }
+    .at-db     { background: rgba(99,102,241,0.1);  border: 1px solid rgba(99,102,241,0.35); }
+    .at-db h5  { color: var(--accent); }
+
+    .arch-down {
+      display: flex; flex-direction: column; align-items: center; gap: 0;
+    }
+    .arch-down .dl { width: 2px; height: clamp(8px,1vh,12px); background: rgba(99,102,241,0.5); }
+    .arch-down .dh { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid rgba(99,102,241,0.5); }
+
+    .arch-decisions {
+      display: flex; flex-direction: column; gap: clamp(8px,1vh,14px);
+    }
+    .arch-decision {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: clamp(10px,1.2vh,16px) clamp(12px,1.4vw,18px);
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .ad-bullet {
+      width: 24px; height: 24px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; flex-shrink: 0; font-weight: 800;
+      font-family: var(--font-heading);
+    }
+    .ad-body {}
+    .ad-title {
+      font-family: var(--font-heading); font-weight: 700;
+      font-size: clamp(0.82rem,0.96vw,1.04rem); margin-bottom: 2px;
+    }
+    .ad-desc {
+      font-size: clamp(0.74rem,0.86vw,0.92rem); color: var(--muted); line-height: 1.45;
+    }
+    .ad-desc em { color: var(--text); font-style: italic; }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 6 — DEMO
+    ══════════════════════════════════════════════════════ */
+    #slide-6 {
+      justify-content: center; align-items: center; text-align: center; padding: 4vh 8vw;
+      background:
+        radial-gradient(ellipse 55% 60% at 28% 40%, rgba(52,211,153,0.10) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 45% at 76% 65%, rgba(99,102,241,0.10) 0%, transparent 70%),
+        var(--surface);
+    }
+    .demo-steps {
+      display: flex; gap: clamp(12px,2vw,24px); margin-top: clamp(24px,3vh,40px);
+      justify-content: center;
+    }
+    .demo-step {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: clamp(10px,1.2vh,16px) clamp(12px,1.4vw,18px);
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      min-width: clamp(80px,8vw,110px);
+    }
+    .demo-step-icon { font-size: clamp(1.4rem,1.8vw,2rem); }
+    .demo-step-time {
+      font-family: var(--font-heading); font-size: clamp(0.56rem,0.66vw,0.72rem);
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+    }
+    .demo-step-label {
+      font-family: var(--font-heading); font-size: clamp(0.66rem,0.78vw,0.84rem);
+      font-weight: 700; color: var(--text); text-align: center; line-height: 1.2;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 5 — REFLEXION
+    ══════════════════════════════════════════════════════ */
+    #slide-5 {
+      padding: clamp(24px,3.5vh,52px) clamp(32px,5vw,80px) clamp(24px,3.5vh,52px) clamp(40px,6vw,88px);
+      gap: clamp(16px,2.5vh,32px);
+    }
+    .refl-grid {
+      flex: 1; min-height: 0;
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: clamp(14px,1.8vw,24px);
+    }
+    .refl-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: clamp(18px,2vh,28px) clamp(16px,1.8vw,24px);
+      display: flex; flex-direction: column; gap: clamp(10px,1.2vh,16px);
+      position: relative; overflow: hidden;
+    }
+    .refl-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .rc-1::before { background: linear-gradient(90deg, var(--accent2), #a855f7); }
+    .rc-2::before { background: linear-gradient(90deg, var(--warn), #fbbf24); }
+    .rc-3::before { background: linear-gradient(90deg, var(--success), #34d399); }
+    .refl-icon { font-size: clamp(1.8rem,2.4vw,2.8rem); }
+    .refl-label {
+      font-family: var(--font-heading); font-size: clamp(0.62rem,0.74vw,0.8rem);
+      font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .rc-1 .refl-label { color: var(--accent2); }
+    .rc-2 .refl-label { color: var(--warn); }
+    .rc-3 .refl-label { color: var(--success); }
+    .refl-title {
+      font-family: var(--font-heading); font-size: clamp(0.96rem,1.14vw,1.23rem);
+      font-weight: 800; color: var(--text); line-height: 1.25;
+    }
+    .refl-body {
+      font-size: clamp(0.82rem,0.96vw,1.04rem); color: var(--muted); line-height: 1.55; flex: 1;
+    }
+    .refl-body em { color: var(--text); font-style: italic; }
+    .refl-body strong { color: var(--text); }
+    .refl-tag {
+      align-self: flex-start; margin-top: auto;
+      font-family: var(--font-heading); font-size: clamp(0.58rem,0.68vw,0.74rem);
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 12px; border-radius: 100px;
+    }
+    .rc-1 .refl-tag { background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.25); color: var(--accent2); }
+    .rc-2 .refl-tag { background: rgba(251,146,60,0.1);  border: 1px solid rgba(251,146,60,0.25);  color: var(--warn); }
+    .rc-3 .refl-tag { background: rgba(52,211,153,0.1);  border: 1px solid rgba(52,211,153,0.25);  color: var(--success); }
+
+    .ps-item, .arch-decision, .refl-card {
+      transition: transform 0.3s, background 0.3s, box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <span class="slide-counter" id="counter">Slide 1 / 6</span>
+      <div class="dot-nav" id="dots">
+        <button class="dot active" data-target="1"></button>
+        <button class="dot" data-target="2"></button>
+        <button class="dot" data-target="3"></button>
+        <button class="dot" data-target="4"></button>
+        <button class="dot" data-target="5"></button>
+        <button class="dot" data-target="6"></button>
+      </div>
+      <button class="nav-btn" id="btn-prev" disabled>◀ Zurück</button>
+      <button class="nav-btn" id="btn-next">Weiter ▶</button>
+      <button class="nav-btn fs-btn" id="btn-fs" title="Vollbild">⛶</button>
+      <button class="nav-btn fs-btn" id="btn-theme" title="Dark/Light">☀️</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ══ SLIDE 1 — TITEL ═══════════════════════════════════════ -->
+    <section class="slide active" id="slide-1">
+      <div class="slide-accent-bar"></div>
+
+      <h1 class="title-main">KI Python Tutor</h1>
+      <p class="title-sub">Agentic AI · Demo Day · Juli 2026</p>
+      <p style="font-family:var(--font-heading); font-size:clamp(0.9rem,1.1vw,1.2rem); font-weight:600; color:var(--muted); margin-top:4px; letter-spacing:0.05em;">Emad Almousa</p>
+
+      <div class="title-tagline">
+        <i class="fa-solid fa-robot" style="color:var(--accent2);"></i>
+        Personalisiertes Python-Lernen mit KI-Agent
+      </div>
+
+      <div class="title-dots">
+        <div class="title-dot-item">
+          <div class="icon icon-agent">
+            <i class="fa-solid fa-comments"></i>
+          </div>
+          <span>KI-Tutor Chat</span>
+        </div>
+        <div class="title-dot-item">
+          <div class="icon" style="background:rgba(251,146,60,0.12); border-color:rgba(251,146,60,0.3);">
+            <i class="fa-solid fa-magnifying-glass-chart" style="color:var(--warn);"></i>
+          </div>
+          <span>Code Review</span>
+        </div>
+        <div class="title-dot-item">
+          <div class="icon icon-personal">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <span>Skill-Tracking</span>
+        </div>
+        <div class="title-dot-item">
+          <div class="icon" style="background:rgba(168,85,247,0.12); border-color:rgba(168,85,247,0.3);">
+            <i class="fa-solid fa-brain" style="color:#a855f7;"></i>
+          </div>
+          <span>Agent-Gedächtnis</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 2 — PROBLEM & LÖSUNG ═══════════════════════════ -->
+    <section class="slide" id="slide-2" data-num="02 / 06">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Das Problem — und die Lösung</span>
+        <h2 class="slide-title">Python lernen ist oft <em>frustrierend</em> — das muss nicht so sein</h2>
+      </div>
+
+      <div class="prob-solution-grid">
+
+        <!-- Problem-Seite -->
+        <div class="ps-col">
+          <div class="ps-col-header problem">
+            <i class="fa-solid fa-circle-xmark"></i> Das Problem
+          </div>
+
+          <div class="ps-item p-item feature-card">
+            <div class="ps-item-icon">🗺️</div>
+            <div class="ps-item-text">
+              <div class="ps-item-title">Kein Überblick über den eigenen Fortschritt</div>
+              <div class="ps-item-desc">Lernende wissen nicht, <em>wo sie stehen</em> und was als nächstes dran ist. Übungsblätter ohne Kontext.</div>
+            </div>
+          </div>
+
+          <div class="ps-item p-item feature-card">
+            <div class="ps-item-icon">🤷</div>
+            <div class="ps-item-text">
+              <div class="ps-item-title">Generisches, nicht-personalisiertes Feedback</div>
+              <div class="ps-item-desc">Compiler-Fehler auf Englisch, keine Erklärung <em>warum</em> der Code falsch ist oder wie man es besser macht.</div>
+            </div>
+          </div>
+
+          <div class="ps-item p-item feature-card">
+            <div class="ps-item-icon">🔄</div>
+            <div class="ps-item-text">
+              <div class="ps-item-title">Jede Lernsession beginnt bei Null</div>
+              <div class="ps-item-desc">KI-Chats kennen <em>keinen Lernverlauf</em> — man muss den Kontext bei jedem Gespräch neu erklären.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lösung-Seite -->
+        <div class="ps-col">
+          <div class="ps-col-header solution">
+            <i class="fa-solid fa-circle-check"></i> Die Lösung
+          </div>
+
+          <div class="ps-item s-item feature-card">
+            <div class="ps-item-icon">🎯</div>
+            <div class="ps-item-text">
+              <div class="ps-item-title">Skill-Tree mit 37 Skills & Lernplan</div>
+              <div class="ps-item-desc">3 Level (Beginner → Advanced), Fortschritt-Score pro Skill, <em>personalisierter Wochenlernplan</em> mit Zeitschätzung.</div>
+            </div>
+          </div>
+
+          <div class="ps-item s-item feature-card">
+            <div class="ps-item-icon">🔍</div>
+            <div class="ps-item-text">
+              <div class="ps-item-title">3-stufige Code-Review Chain</div>
+              <div class="ps-item-desc">Syntax-Fehler → PEP8-Stil → Best Practices — jede Ebene separat, mit Zeilennummer und Verbesserungsvorschlag <em>auf Deutsch</em>.</div>
+            </div>
+          </div>
+
+          <div class="ps-item s-item feature-card">
+            <div class="ps-item-icon">🧠</div>
+            <div class="ps-item-text">
+              <div class="ps-item-title">KI erinnert sich — sitzungsübergreifend</div>
+              <div class="ps-item-desc">ConversationSummaryMemory: <em>"Letzte Woche hatten wir Loops — da hattest du Schwierigkeiten mit dem Index."</em></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 3 — FEATURES ════════════════════════════════════ -->
+    <section class="slide" id="slide-3" data-num="03 / 06">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Was ich gleich live zeige</span>
+        <h2 class="slide-title">6 Features — <em>alle in der Demo</em></h2>
+      </div>
+
+      <div class="features-grid">
+
+        <div class="feature-card" style="border-top:3px solid var(--accent);">
+          <div class="feat-icon indigo">
+            <i class="fa-solid fa-robot" style="color:var(--accent);"></i>
+          </div>
+          <span class="feat-label">Chat-Tutor</span>
+          <div class="feat-title">ReAct-Agent mit Werkzeugauswahl</div>
+          <p class="feat-desc">Erklärt, debuggt, generiert Übungen — wählt selbst das richtige Tool.</p>
+        </div>
+
+        <div class="feature-card" style="border-top:3px solid var(--warn);">
+          <div class="feat-icon amber">
+            <i class="fa-solid fa-link" style="color:var(--warn);"></i>
+          </div>
+          <span class="feat-label">Code-Review Chain</span>
+          <div class="feat-title">3 Ebenen · 3 LLM-Aufrufe</div>
+          <p class="feat-desc">Syntax 🔴 → Stil 🟡 → Best Practices 🔵 — stufenweise, mit Kontext.</p>
+        </div>
+
+        <div class="feature-card" style="border-top:3px solid var(--success);">
+          <div class="feat-icon teal">
+            <i class="fa-solid fa-diagram-project" style="color:var(--success);"></i>
+          </div>
+          <span class="feat-label">Skill-Tree & Übungen</span>
+          <div class="feat-title">37 Skills · 3 Level · Hints</div>
+          <p class="feat-desc">Fortschritt pro Skill, bis zu 3 progressive Hints, KI-Bewertung.</p>
+        </div>
+
+        <div class="feature-card" style="border-top:3px solid var(--accent3);">
+          <div class="feat-icon blue">
+            <i class="fa-solid fa-book-open" style="color:var(--accent3);"></i>
+          </div>
+          <span class="feat-label">RAG-System</span>
+          <div class="feat-title">PDF hochladen → Tutor nutzt es</div>
+          <p class="feat-desc">FAISS-Index lokal — Tutor antwortet mit Bezug auf eigene Unterlagen.</p>
+        </div>
+
+        <div class="feature-card" style="border-top:3px solid #a855f7;">
+          <div class="feat-icon" style="background:rgba(168,85,247,0.12);">
+            <i class="fa-solid fa-brain" style="color:#a855f7;"></i>
+          </div>
+          <span class="feat-label">Agent-Gedächtnis</span>
+          <div class="feat-title">ConversationSummaryMemory</div>
+          <p class="feat-desc">KI fasst Gespräche zusammen — erinnert sich beim nächsten Login.</p>
+        </div>
+
+        <div class="feature-card" style="border-top:3px solid var(--accent2);">
+          <div class="feat-icon" style="background:rgba(99,102,241,0.12);">
+            <i class="fa-solid fa-calendar-check" style="color:var(--accent2);"></i>
+          </div>
+          <span class="feat-label">Lernplan-Generator</span>
+          <div class="feat-title">Personalisiert · gecacht · wöchentlich</div>
+          <p class="feat-desc">Schwache Skills zuerst, max. 3 Skills/Woche, 28-Tage-Cache.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 4 — ARCHITEKTUR ═════════════════════════════════ -->
+    <section class="slide" id="slide-4" data-num="04 / 06">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Architektur & Technische Entscheidungen</span>
+        <h2 class="slide-title">Wie es <em>zusammenspielt</em></h2>
+      </div>
+
+      <div class="arch-layout">
+
+        <!-- Linke Seite: Diagramm -->
+        <div class="arch-diagram">
+
+          <!-- Row 1: Frontend -->
+          <div class="arch-row">
+            <div class="arch-node an-frontend" style="flex:2;">
+              <div class="an-icon">💻</div>
+              <h4>Next.js 14 Frontend</h4>
+              <p>React · Tailwind · App Router</p>
+            </div>
+          </div>
+
+          <div class="arch-down"><div class="dl"></div><div class="dh"></div></div>
+
+          <!-- Row 2: FastAPI -->
+          <div class="arch-row">
+            <div class="arch-node an-api" style="flex:2;">
+              <div class="an-icon">⚡</div>
+              <h4>FastAPI Backend</h4>
+              <p>8 Router · JWT Auth · SQLite</p>
+            </div>
+          </div>
+
+          <div class="arch-down"><div class="dl"></div><div class="dh"></div></div>
+
+          <!-- Row 3: LangChain Agent -->
+          <div class="arch-row">
+            <div class="arch-node an-agent" style="flex:2;">
+              <div class="an-icon">🤖</div>
+              <h4>LangChain ReAct-Agent</h4>
+              <p>OpenAI gpt-4o / Ollama llama3.2</p>
+            </div>
+          </div>
+
+          <div class="arch-down"><div class="dl"></div><div class="dh"></div></div>
+
+          <!-- Row 4: Tools -->
+          <div class="arch-tools-row">
+            <div class="arch-tool at-rag">
+              <div class="at-icon">📚</div>
+              <h5>RAG / FAISS</h5>
+              <p>lokaler Vektorindex</p>
+            </div>
+            <div class="arch-tool at-review">
+              <div class="at-icon">🔗</div>
+              <h5>Code-Review Chain</h5>
+              <p>3× RunnableLambda</p>
+            </div>
+            <div class="arch-tool at-mem">
+              <div class="at-icon">🧠</div>
+              <h5>Memory Service</h5>
+              <p>Summary → DB</p>
+            </div>
+            <div class="arch-tool at-skill">
+              <div class="at-icon">📝</div>
+              <h5>Exercise Eval</h5>
+              <p>KI-Bewertung</p>
+            </div>
+            <div class="arch-tool at-plan">
+              <div class="at-icon">📅</div>
+              <h5>Lernplan Tool</h5>
+              <p>Wochenplan LLM</p>
+            </div>
+            <div class="arch-tool at-db">
+              <div class="at-icon">🗄️</div>
+              <h5>SQLite DB</h5>
+              <p>User · Skills · Memory</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Rechte Seite: Key Decisions -->
+        <div class="arch-decisions">
+
+          <div style="font-family:var(--font-heading); font-size:clamp(0.78rem,0.92vw,1rem); font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:4px;">
+            Key Decisions
+          </div>
+
+          <div class="arch-decision feature-card">
+            <div class="ad-bullet" style="background:rgba(99,102,241,0.12); color:var(--accent);">1</div>
+            <div class="ad-body">
+              <div class="ad-title" style="color:var(--accent);">ReAct-Agent statt hardcoded Flows</div>
+              <div class="ad-desc">Der Agent wählt <em>selbst</em> das richtige Tool je nach Frage — keine starren if/else-Flows. Neue Tools lassen sich ohne Code-Änderung am Router hinzufügen.</div>
+            </div>
+          </div>
+
+          <div class="arch-decision feature-card">
+            <div class="ad-bullet" style="background:rgba(248,113,113,0.12); color:#f87171;">2</div>
+            <div class="ad-body">
+              <div class="ad-title" style="color:#f87171;">RunnableSequence für Code-Review</div>
+              <div class="ad-desc">LangChain-Pipe-Syntax (<code style="color:var(--accent3); font-size:.88em;">step1 | step2 | step3</code>): Jeder Schritt bekommt den Summary des vorherigen als Kontext. <em>Chain-of-Thought für Code-Qualität.</em></div>
+            </div>
+          </div>
+
+          <div class="arch-decision feature-card">
+            <div class="ad-bullet" style="background:rgba(251,146,60,0.12); color:var(--warn);">3</div>
+            <div class="ad-body">
+              <div class="ad-title" style="color:var(--warn);">FAISS lokal statt Cloud-Vektordatenbank</div>
+              <div class="ad-desc">Kein externer Service nötig — PDF-Dateien werden lokal indexiert. <em>Setup in unter 30 Sekunden</em>, keine API-Kosten, kein Datenschutzproblem.</div>
+            </div>
+          </div>
+
+          <div class="arch-decision feature-card">
+            <div class="ad-bullet" style="background:rgba(168,85,247,0.12); color:#a855f7;">4</div>
+            <div class="ad-body">
+              <div class="ad-title" style="color:#a855f7;">Eigene Memory-Implementierung</div>
+              <div class="ad-desc">ConversationSummaryMemory: LLM komprimiert Chat-Verlauf zu <em>max. 40 Wörtern</em> pro Turn. Kein wachsendes Kontext-Fenster, kein Token-Overflow.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 5 — REFLEXION ═══════════════════════════════════ -->
+    <section class="slide" id="slide-5" data-num="05 / 06">
+      <div class="slide-accent-bar"></div>
+      <div class="slide-header">
+        <span class="slide-label">Reflexion</span>
+        <h2 class="slide-title">Was ich <em>gelernt</em> habe — und was ich <em>anders machen</em> würde</h2>
+      </div>
+
+      <div class="refl-grid">
+
+        <div class="refl-card rc-1">
+          <div class="refl-icon">🧠</div>
+          <div class="refl-label">Größtes Learning</div>
+          <div class="refl-title">Prompt Engineering ist der eigentliche Engpass</div>
+          <div class="refl-body">
+            Nicht der Code — der <em>Prompt</em> entscheidet über die Qualität der Antworten. Strikte Output-Formate, Rollenbeschreibung und Kontext-Management kosten mehr Zeit als alle anderen Aufgaben zusammen.
+          </div>
+          <div class="refl-tag">Prompt Engineering</div>
+        </div>
+
+        <div class="refl-card rc-2">
+          <div class="refl-icon">⏪</div>
+          <div class="refl-label">Was ich anders machen würde</div>
+          <div class="refl-title">Streaming früher — und pgvector statt FAISS</div>
+          <div class="refl-body">
+            Token-Streaming von Anfang an einplanen: Antworten kommen sonst erst nach 3–8 Sekunden. FAISS ist gut für Prototypen — für Produktion würde ich <em>pgvector</em> nehmen: persistenter, skalierbarer.
+          </div>
+          <div class="refl-tag">Architektur</div>
+        </div>
+
+        <div class="refl-card rc-3">
+          <div class="refl-icon">🚀</div>
+          <div class="refl-label">Nächste Schritte</div>
+          <div class="refl-title">Adaptiver, schneller, besser</div>
+          <div class="refl-body">
+            <strong>Streaming via SSE</strong> — keine Wartezeit mehr. <strong>Adaptive Übungen</strong> — Schwierigkeit automatisch am Score ausrichten. <strong>Bessere UX</strong> — Fortschritts-Feedback in Echtzeit.
+          </div>
+          <div class="refl-tag">Ausblick</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ SLIDE 6 — LIVE DEMO ═══════════════════════════════════ -->
+    <section class="slide" id="slide-6" data-num="06 / 06">
+      <div class="slide-accent-bar"></div>
+
+      <a href="http://localhost:3000/" target="_blank"
+         style="font-family:var(--font-heading); font-size:clamp(2.4rem,5vw,5rem); font-weight:900; color:var(--accent2); text-decoration:underline; text-underline-offset:10px; text-decoration-color:rgba(99,102,241,0.5); letter-spacing:-0.01em; transition:color 0.2s;"
+         onmouseover="this.style.color='var(--accent3)'"
+         onmouseout="this.style.color='var(--accent2)'">
+        Live Demo
+      </a>
+
+      <p style="font-family:var(--font-heading); font-size:clamp(0.85rem,1.1vw,1.15rem); color:var(--muted); margin-top:8px; max-width:700px; line-height:1.5;">
+        Ich zeige jetzt den Tutor in Aktion: Chat, Memory, Code Review, Skill-Tracking und Lernplan.
+      </p>
+
+      <div class="demo-steps">
+        <div class="demo-step">
+          <div class="demo-step-icon">🏠</div>
+          <div class="demo-step-time">~20s</div>
+          <div class="demo-step-label">Login & Dashboard</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-icon">💬</div>
+          <div class="demo-step-time">~60s</div>
+          <div class="demo-step-label">Chat & Gedächtnis</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-icon">🔍</div>
+          <div class="demo-step-time">~60s</div>
+          <div class="demo-step-label">Code Review</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-icon">📊</div>
+          <div class="demo-step-time">~45s</div>
+          <div class="demo-step-label">Skills & Übung</div>
+        </div>
+        <div class="demo-step">
+          <div class="demo-step-icon">📅</div>
+          <div class="demo-step-time">~30s</div>
+          <div class="demo-step-label">Lernplan</div>
+        </div>
+      </div>
+      <p style="font-size:clamp(0.7rem,0.82vw,0.88rem); color:var(--muted); margin-top:12px; letter-spacing:0.04em;">
+        Gesamt: ~3:55 min Live-Demo
+      </p>
+    </section>
+
+  </main>
+
+  <script>
+    const slides  = document.querySelectorAll('.slide');
+    const dots    = document.querySelectorAll('.dot');
+    const counter = document.getElementById('counter');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnFS   = document.getElementById('btn-fs');
+
+    const CARD_SEL = '.feature-card, .ps-item, .arch-decision, .refl-card';
+
+    let current   = 0;
+    let stepIndex = 0;
+
+    function getCards() {
+      return Array.from(slides[current].querySelectorAll(CARD_SEL));
+    }
+
+    function setStep(idx) {
+      const cards = getCards();
+      stepIndex = idx;
+      if (idx === 0 || cards.length === 0) {
+        slides[current].classList.remove('has-focus');
+        cards.forEach(c => c.classList.remove('card-focus'));
+      } else {
+        slides[current].classList.add('has-focus');
+        cards.forEach((c, i) => c.classList.toggle('card-focus', i === idx - 1));
+      }
+    }
+
+    function clearStep() {
+      stepIndex = 0;
+      slides[current].classList.remove('has-focus');
+      getCards().forEach(c => c.classList.remove('card-focus'));
+    }
+
+    function goTo(n) {
+      clearStep();
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+      current = Math.max(0, Math.min(n, slides.length - 1));
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+      counter.textContent = `Slide ${current + 1} / ${slides.length}`;
+      btnPrev.disabled = current === 0;
+      btnNext.disabled = current === slides.length - 1;
+      document.documentElement.style.fontSize = current === 0 ? '130%' : '149.5%';
+    }
+
+    btnPrev.addEventListener('click', () => goTo(current - 1));
+    btnNext.addEventListener('click', () => goTo(current + 1));
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => goTo(Number(dot.dataset.target) - 1));
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        const cards = getCards();
+        if (cards.length > 0 && stepIndex < cards.length) {
+          setStep(stepIndex + 1);
+        } else {
+          goTo(current + 1);
+        }
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        if (stepIndex > 0) setStep(stepIndex - 1);
+        else goTo(current - 1);
+      }
+      if (event.key === 'Escape') {
+        if (stepIndex > 0) clearStep();
+        else if (document.fullscreenElement) document.exitFullscreen();
+      }
+      if (event.key === 'f' || event.key === 'F') toggleFS();
+    });
+
+    function toggleFS() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        btnFS.textContent = '✕';
+        btnFS.title = 'Vollbild beenden';
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        btnFS.textContent = '⛶';
+        btnFS.title = 'Vollbild';
+      }
+    });
+
+    btnFS.addEventListener('click', toggleFS);
+
+    const btnTheme = document.getElementById('btn-theme');
+    btnTheme.addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+      btnTheme.textContent = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
+    });
+  </script>
+
+</body>
+</html>

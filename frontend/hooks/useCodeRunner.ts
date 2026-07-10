@@ -25,5 +25,5 @@ export function useCodeRunner(t: TFn) {
     }
   }
 
-  return { output, loading, run }
+  return { output, loading, run, clearOutput: () => setOutput(null) }
 }
