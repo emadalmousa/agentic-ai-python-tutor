@@ -3,6 +3,8 @@
 Ein intelligenter KI-gestützter Python-Tutor, der Schüler beim Lernen, Debuggen und Üben unterstützt.
 
 **Projektwebsite:** https://ki-tutor.syria-projects.com  
+**Portfolio-Website:** https://emadalmousa.github.io/agentic-ai-python-tutor/  
+**Code-Repository:** https://github.com/emadalmousa/agentic-ai-python-tutor  
 **Backend API:** https://agentic-ai-python-tutor.onrender.com/docs  
 **Pitch Deck:** [presentation/demoday.pdf](presentation/demoday.pdf)
 
