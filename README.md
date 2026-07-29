@@ -10,7 +10,7 @@ Ein intelligenter KI-gestützter Python-Tutor, der Schüler beim Lernen, Debugge
 
 ## Produktvideo
 
-https://github.com/emadalmousa/agentic-ai-python-tutor/raw/main/Emad.Almousa.mp4
+https://youtu.be/DtI_6gy8KQM
 
 > 2–3 Min. Demo: Login, Chat mit Gedächtnis, Code Review, Skill-Tracking und Lernplan.
 
