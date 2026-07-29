@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KI Python Tutor — Agentic AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    :root {
+      --bg:      #0a0e1a;
+      --surface: #111827;
+      --card:    #161d2e;
+      --border:  rgba(99,102,241,0.18);
+      --accent:  #6366f1;
+      --accent2: #a78bfa;
+      --accent3: #38bdf8;
+      --text:    #f1f5f9;
+      --muted:   #94a3b8;
+      --success: #34d399;
+      --warn:    #fb923c;
+      --font-h:  'Space Grotesk', sans-serif;
+      --font-b:  'Inter', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-b); background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    /* ── Nav ─────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,14,26,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 clamp(16px,4vw,80px);
+      height: 60px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-brand { font-family: var(--font-h); font-weight: 800; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+    .nav-brand span { color: var(--accent2); }
+    .nav-links { display: flex; gap: 28px; list-style: none; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent); color: #fff; font-family: var(--font-h); font-weight: 700;
+      font-size: 0.85rem; padding: 8px 18px; border-radius: 8px; text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .nav-cta:hover { background: #818cf8; transform: translateY(-1px); }
+
+    /* ── Sections ────────────────────────────────────── */
+    section { padding: clamp(60px,8vh,100px) clamp(16px,5vw,80px); max-width: 1200px; margin: 0 auto; width: 100%; }
+
+    /* ── Hero ────────────────────────────────────────── */
+    .hero {
+      max-width: 100%; padding: clamp(80px,12vh,140px) clamp(16px,5vw,80px) clamp(60px,8vh,100px);
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 60% at 20% 30%, rgba(99,102,241,0.13) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 55% at 80% 70%, rgba(167,139,250,0.09) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 55% 10%, rgba(56,189,248,0.08) 0%, transparent 60%);
+    }
+    .hero > * { position: relative; z-index: 1; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 100px; padding: 6px 16px; margin-bottom: 24px;
+      font-family: var(--font-h); font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent2);
+    }
+    .hero h1 {
+      font-family: var(--font-h); font-size: clamp(2.8rem,6vw,5.2rem); font-weight: 900;
+      line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 24px;
+      background: linear-gradient(135deg, #f1f5f9 0%, var(--accent2) 50%, var(--accent3) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(1rem,1.8vw,1.25rem); color: var(--muted); max-width: 600px;
+      margin: 0 auto 40px; line-height: 1.6;
+    }
+    .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--accent); color: #fff; font-family: var(--font-h); font-weight: 700;
+      font-size: 1rem; padding: 14px 28px; border-radius: 10px; text-decoration: none;
+      transition: background 0.2s, transform 0.15s; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover { background: #818cf8; transform: translateY(-2px); }
+    .btn-secondary {
+      background: transparent; color: var(--text); font-family: var(--font-h); font-weight: 700;
+      font-size: 1rem; padding: 14px 28px; border-radius: 10px; text-decoration: none;
+      border: 1.5px solid var(--border); transition: border-color 0.2s, transform 0.15s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-secondary:hover { border-color: rgba(99,102,241,0.6); transform: translateY(-2px); }
+
+    /* ── Stats ───────────────────────────────────────── */
+    .stats-bar {
+      display: flex; gap: 0; justify-content: center; flex-wrap: wrap;
+      border: 1px solid var(--border); border-radius: 16px;
+      background: var(--surface); overflow: hidden; margin-top: 60px;
+      max-width: 900px; margin-left: auto; margin-right: auto;
+    }
+    .stat-item {
+      flex: 1; min-width: 160px; padding: 28px 20px; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-num {
+      font-family: var(--font-h); font-size: 2.2rem; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, var(--accent2), var(--accent3));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .stat-label { font-size: 0.85rem; color: var(--muted); margin-top: 6px; font-weight: 500; }
+
+    /* ── Section Header ──────────────────────────────── */
+    .sec-label {
+      font-family: var(--font-h); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent2);
+      margin-bottom: 12px; display: block;
+    }
+    .sec-title {
+      font-family: var(--font-h); font-size: clamp(1.8rem,3.5vw,2.6rem); font-weight: 800;
+      line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 16px;
+    }
+    .sec-title em { color: var(--accent2); font-style: normal; }
+    .sec-desc { color: var(--muted); font-size: 1.05rem; max-width: 560px; line-height: 1.65; margin-bottom: 48px; }
+
+    /* ── Video ───────────────────────────────────────── */
+    #video { padding-top: 0; }
+    .video-wrapper {
+      border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+      background: #000; max-width: 900px; margin: 0 auto;
+    }
+    .video-wrapper video { width: 100%; display: block; }
+    .video-placeholder {
+      width: 100%; aspect-ratio: 16/9;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; background: var(--card); color: var(--muted);
+    }
+    .video-placeholder i { font-size: 3rem; color: var(--accent); }
+    .video-placeholder p { font-size: 1rem; }
+
+    /* ── Problem/Solution ────────────────────────────── */
+    .ps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 700px) { .ps-grid { grid-template-columns: 1fr; } }
+    .ps-col-header {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-h); font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 16px;
+    }
+    .ps-col-header.prob { color: #f87171; }
+    .ps-col-header.sol  { color: var(--success); }
+    .ps-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px 22px; display: flex; gap: 14px; align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .ps-card.p { border-left: 3px solid rgba(248,113,113,0.6); }
+    .ps-card.s { border-left: 3px solid rgba(52,211,153,0.6); }
+    .ps-card-icon { font-size: 1.6rem; flex-shrink: 0; margin-top: 2px; }
+    .ps-card-title { font-family: var(--font-h); font-weight: 700; font-size: 0.98rem; margin-bottom: 4px; }
+    .p .ps-card-title { color: #f87171; }
+    .s .ps-card-title { color: var(--success); }
+    .ps-card-desc { font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Features ────────────────────────────────────── */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;
+    }
+    .feat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px 26px; display: flex; flex-direction: column; gap: 10px;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .feat-card:hover { transform: translateY(-4px); border-color: rgba(99,102,241,0.4); box-shadow: 0 16px 48px rgba(0,0,0,0.3); }
+    .feat-icon-wrap {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    }
+    .feat-tag {
+      font-family: var(--font-h); font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    }
+    .feat-title { font-family: var(--font-h); font-weight: 800; font-size: 1.05rem; line-height: 1.25; }
+    .feat-desc { font-size: 0.88rem; color: var(--muted); line-height: 1.55; flex: 1; }
+
+    /* ── Architecture ────────────────────────────────── */
+    .arch-stack {
+      display: flex; flex-direction: column; align-items: center; gap: 0;
+      max-width: 740px; margin: 0 auto;
+    }
+    .arch-node {
+      width: 100%; border-radius: 14px; padding: 22px 28px;
+      display: flex; align-items: center; gap: 18px;
+    }
+    .arch-node .an-icon { font-size: 2.2rem; flex-shrink: 0; }
+    .arch-node h4 { font-family: var(--font-h); font-weight: 800; font-size: 1.1rem; margin-bottom: 3px; }
+    .arch-node p  { font-size: 0.88rem; color: var(--muted); }
+    .an-fe  { background: rgba(56,189,248,0.08);  border: 2px solid rgba(56,189,248,0.4); }
+    .an-fe h4 { color: var(--accent3); }
+    .an-be  { background: rgba(99,102,241,0.08);  border: 2px solid rgba(99,102,241,0.4); }
+    .an-be h4 { color: var(--accent); }
+    .an-ag  { background: rgba(167,139,250,0.08); border: 2px solid rgba(167,139,250,0.4); }
+    .an-ag h4 { color: var(--accent2); }
+    .an-llm { background: rgba(251,146,60,0.08);  border: 2px solid rgba(251,146,60,0.4); }
+    .an-llm h4 { color: var(--warn); }
+    .arch-arrow {
+      display: flex; align-items: center; gap: 16px;
+      padding: 8px 28px; width: 68%; align-self: center;
+    }
+    .arch-arrow .a-label {
+      font-family: var(--font-h); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+      white-space: nowrap;
+    }
+    .arch-arrow .a-line { flex: 1; height: 2px; background: var(--border); }
+    .arch-arrow .a-down::after {
+      content: '▼'; font-size: 0.7rem; display: block; text-align: center;
+      color: var(--muted); margin-top: -4px;
+    }
+    .tools-strip {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px;
+      justify-content: center;
+    }
+    .tool-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 100px;
+      padding: 8px 16px; font-size: 0.84rem; font-family: var(--font-h); font-weight: 600; color: var(--muted);
+    }
+
+    /* ── Setup ───────────────────────────────────────── */
+    .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    @media (max-width: 700px) { .setup-grid { grid-template-columns: 1fr; } }
+    .setup-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px;
+    }
+    .setup-card h3 { font-family: var(--font-h); font-weight: 800; font-size: 1.05rem; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+    pre {
+      background: #0d1117; border-radius: 10px; padding: 18px 20px; overflow-x: auto;
+      font-size: 0.84rem; line-height: 1.6; border: 1px solid rgba(255,255,255,0.06);
+    }
+    code { font-family: 'Fira Mono', 'Cascadia Code', monospace; color: #e2e8f0; }
+    .code-comment { color: #6b7280; }
+
+    /* ── Tech ────────────────────────────────────────── */
+    .tech-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+    .tech-badge {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 16px; font-size: 0.88rem; font-family: var(--font-h); font-weight: 600;
+    }
+    .tech-badge .tb-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Footer ──────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px clamp(16px,5vw,80px);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+      max-width: 1200px; margin: 0 auto; width: 100%;
+    }
+    .footer-left { font-family: var(--font-h); font-size: 0.9rem; color: var(--muted); }
+    .footer-left strong { color: var(--text); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a {
+      color: var(--muted); text-decoration: none; font-size: 0.88rem;
+      display: flex; align-items: center; gap: 6px; transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+
+    @media (max-width: 900px) {
+      .nav-links { display: none; }
+      .ps-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────── -->
+<nav>
+  <a class="nav-brand" href="#">KI<span> Python Tutor</span></a>
+  <ul class="nav-links">
+    <li><a href="#video">Demo</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#architecture">Architektur</a></li>
+    <li><a href="#setup">Setup</a></li>
+  </ul>
+  <a class="nav-cta" href="https://github.com/emadalmousa/agentic-ai-python-tutor" target="_blank">
+    <i class="fa-brands fa-github"></i> GitHub
+  </a>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────── -->
+<div class="hero">
+  <div class="hero-badge">
+    <i class="fa-solid fa-robot"></i>
+    Agentic AI · Demo Day · Juli 2026
+  </div>
+  <h1>Der KI-Tutor,<br>der Python beibringt</h1>
+  <p class="hero-sub">
+    Ein personalisiertes Lernsystem mit ReAct-Agent, Skill-Tracking und Gedächtnis —
+    erklärt, debuggt, übt und bewertet. Entwickelt von Emad Almousa.
+  </p>
+  <div class="hero-actions">
+    <a class="btn-primary" href="https://github.com/emadalmousa/agentic-ai-python-tutor" target="_blank">
+      <i class="fa-brands fa-github"></i> Code ansehen
+    </a>
+    <a class="btn-secondary" href="#video">
+      <i class="fa-solid fa-play"></i> Demo ansehen
+    </a>
+    <a class="btn-secondary" href="demoday.pdf" target="_blank">
+      <i class="fa-solid fa-file-pdf"></i> Pitch Deck
+    </a>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-num">37</div>
+      <div class="stat-label">Skills im Lernbaum</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">3</div>
+      <div class="stat-label">Level (Beginner → Advanced)</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">8</div>
+      <div class="stat-label">API-Router</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">6</div>
+      <div class="stat-label">Agent-Tools</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Video ─────────────────────────────────────────── -->
+<section id="video" style="padding-top:80px;">
+  <div style="text-align:center; margin-bottom:32px;">
+    <span class="sec-label">Produktvideo</span>
+    <h2 class="sec-title" style="margin-bottom:8px;">Sieh den Tutor <em>in Aktion</em></h2>
+    <p style="color:var(--muted); font-size:1rem; max-width:500px; margin:0 auto;">
+      2–3 Minuten Demo: Login, Chat mit Gedächtnis, Code Review, Skill-Tracking und Lernplan.
+    </p>
+  </div>
+  <div class="video-wrapper">
+    <!-- Wenn das Video im Repo liegt, wird es direkt eingebettet -->
+    <video controls poster="">
+      <source src="../Emad.Almousa.mp4" type="video/mp4" />
+      <!-- Fallback-Text wenn kein Video-Support -->
+      Dein Browser unterstützt kein Video. <a href="../Emad.Almousa.mp4">Direkt downloaden</a>.
+    </video>
+  </div>
+</section>
+
+<!-- ── Problem / Solution ────────────────────────────── -->
+<section id="problem">
+  <span class="sec-label">Das Problem — und die Lösung</span>
+  <h2 class="sec-title">Python lernen ist oft <em>frustrierend</em></h2>
+  <p class="sec-desc">
+    Klassische Tools bieten weder Personalisierung noch Kontext. Dieser Tutor löst das mit KI.
+  </p>
+
+  <div class="ps-grid">
+    <div>
+      <div class="ps-col-header prob"><i class="fa-solid fa-circle-xmark"></i> Das Problem</div>
+      <div class="ps-card p">
+        <div class="ps-card-icon">🗺️</div>
+        <div>
+          <div class="ps-card-title">Kein Überblick über den eigenen Fortschritt</div>
+          <div class="ps-card-desc">Lernende wissen nicht, wo sie stehen und was als nächstes kommt.</div>
+        </div>
+      </div>
+      <div class="ps-card p">
+        <div class="ps-card-icon">🤷</div>
+        <div>
+          <div class="ps-card-title">Generisches, nicht-personalisiertes Feedback</div>
+          <div class="ps-card-desc">Compiler-Fehler auf Englisch, keine Erklärung warum der Code falsch ist.</div>
+        </div>
+      </div>
+      <div class="ps-card p">
+        <div class="ps-card-icon">🔄</div>
+        <div>
+          <div class="ps-card-title">Jede Lernsession beginnt bei Null</div>
+          <div class="ps-card-desc">KI-Chats kennen keinen Lernverlauf — der Kontext muss jedes Mal neu erklärt werden.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="ps-col-header sol"><i class="fa-solid fa-circle-check"></i> Die Lösung</div>
+      <div class="ps-card s">
+        <div class="ps-card-icon">🎯</div>
+        <div>
+          <div class="ps-card-title">Skill-Tree mit 37 Skills &amp; Lernplan</div>
+          <div class="ps-card-desc">3 Level (Beginner → Advanced), Fortschritt-Score pro Skill, personalisierter Wochenlernplan.</div>
+        </div>
+      </div>
+      <div class="ps-card s">
+        <div class="ps-card-icon">🔍</div>
+        <div>
+          <div class="ps-card-title">3-stufige Code-Review Chain</div>
+          <div class="ps-card-desc">Syntax 🔴 → PEP8-Stil 🟡 → Best Practices 🔵 — stufenweise, mit Zeilennummer, auf Deutsch.</div>
+        </div>
+      </div>
+      <div class="ps-card s">
+        <div class="ps-card-icon">🧠</div>
+        <div>
+          <div class="ps-card-title">KI erinnert sich — sitzungsübergreifend</div>
+          <div class="ps-card-desc">ConversationSummaryMemory: der Tutor weiß beim nächsten Login, wo man aufgehört hat.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ──────────────────────────────────────── -->
+<section id="features">
+  <span class="sec-label">Features</span>
+  <h2 class="sec-title">Alles, was ein guter Tutor <em>können muss</em></h2>
+  <p class="sec-desc">Sechs Kernfunktionen — alle durch LLM-gestützte Agenten angetrieben.</p>
+
+  <div class="features-grid">
+
+    <div class="feat-card" style="border-top:3px solid var(--accent);">
+      <div class="feat-icon-wrap" style="background:rgba(99,102,241,0.12);">
+        <i class="fa-solid fa-robot" style="color:var(--accent);"></i>
+      </div>
+      <div class="feat-tag">Chat-Tutor</div>
+      <div class="feat-title">ReAct-Agent mit Werkzeugauswahl</div>
+      <div class="feat-desc">Erklärt Konzepte, debuggt Code und generiert Übungen — wählt selbst das passende Tool basierend auf der Frage.</div>
+    </div>
+
+    <div class="feat-card" style="border-top:3px solid var(--warn);">
+      <div class="feat-icon-wrap" style="background:rgba(251,146,60,0.12);">
+        <i class="fa-solid fa-link" style="color:var(--warn);"></i>
+      </div>
+      <div class="feat-tag">Code-Review Chain</div>
+      <div class="feat-title">3 Ebenen · 3 LLM-Aufrufe</div>
+      <div class="feat-desc">Syntax-Fehler → PEP8-Stil → Best Practices. Jede Ebene separat bewertet, mit Zeilennummer und Verbesserungsvorschlag.</div>
+    </div>
+
+    <div class="feat-card" style="border-top:3px solid var(--success);">
+      <div class="feat-icon-wrap" style="background:rgba(52,211,153,0.12);">
+        <i class="fa-solid fa-diagram-project" style="color:var(--success);"></i>
+      </div>
+      <div class="feat-tag">Skill-Tree &amp; Übungen</div>
+      <div class="feat-title">37 Skills · 3 Level · Hints</div>
+      <div class="feat-desc">Fortschritt-Score pro Skill, bis zu 3 progressive Hints, LLM-gestützte Bewertung mit erklärtem Feedback.</div>
+    </div>
+
+    <div class="feat-card" style="border-top:3px solid var(--accent3);">
+      <div class="feat-icon-wrap" style="background:rgba(56,189,248,0.12);">
+        <i class="fa-solid fa-book-open" style="color:var(--accent3);"></i>
+      </div>
+      <div class="feat-tag">RAG-System</div>
+      <div class="feat-title">PDF hochladen → Tutor nutzt es</div>
+      <div class="feat-desc">FAISS-Vektorindex lokal. Der Tutor antwortet mit Bezug auf hochgeladene Unterlagen und zitiert Seiten.</div>
+    </div>
+
+    <div class="feat-card" style="border-top:3px solid #a855f7;">
+      <div class="feat-icon-wrap" style="background:rgba(168,85,247,0.12);">
+        <i class="fa-solid fa-brain" style="color:#a855f7;"></i>
+      </div>
+      <div class="feat-tag">Agent-Gedächtnis</div>
+      <div class="feat-title">ConversationSummaryMemory</div>
+      <div class="feat-desc">KI fasst Gespräche zusammen und erinnert sich beim nächsten Login — kein manuelles Eintippen des Kontexts.</div>
+    </div>
+
+    <div class="feat-card" style="border-top:3px solid var(--accent2);">
+      <div class="feat-icon-wrap" style="background:rgba(167,139,250,0.12);">
+        <i class="fa-solid fa-calendar-check" style="color:var(--accent2);"></i>
+      </div>
+      <div class="feat-tag">Lernplan-Generator</div>
+      <div class="feat-title">Personalisiert · gecacht · wöchentlich</div>
+      <div class="feat-desc">Schwache Skills zuerst, max. 3 Skills/Woche, Zeitschätzung, 28-Tage-Cache pro Nutzer.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Architecture ──────────────────────────────────── -->
+<section id="architecture">
+  <span class="sec-label">Systemarchitektur</span>
+  <h2 class="sec-title">Von der Anfrage bis zur <em>KI-Antwort</em></h2>
+  <p class="sec-desc">Vier Schichten — Frontend, Backend, Agent, LLM — verbunden durch klare Schnittstellen.</p>
+
+  <div class="arch-stack">
+    <div class="arch-node an-fe">
+      <div class="an-icon">💻</div>
+      <div>
+        <h4>Next.js 14 Frontend</h4>
+        <p>React · Tailwind CSS · App Router · JWT Cookie</p>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:60px;padding:12px 0;width:68%;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <span style="font-size:0.7rem;font-family:var(--font-h);color:var(--accent3);font-weight:700;letter-spacing:0.06em;">HTTP-Anfrage</span>
+        <div style="width:2px;height:28px;background:rgba(56,189,248,0.5);"></div>
+        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid rgba(56,189,248,0.7);"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid rgba(52,211,153,0.7);"></div>
+        <div style="width:2px;height:28px;background:rgba(52,211,153,0.5);"></div>
+        <span style="font-size:0.7rem;font-family:var(--font-h);color:var(--success);font-weight:700;letter-spacing:0.06em;">JSON-Antwort</span>
+      </div>
+    </div>
+
+    <div class="arch-node an-be">
+      <div class="an-icon">⚡</div>
+      <div>
+        <h4>FastAPI Backend</h4>
+        <p>8 Router · JWT-Auth · SQLite · Pydantic</p>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:60px;padding:12px 0;width:68%;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <span style="font-size:0.7rem;font-family:var(--font-h);color:var(--accent2);font-weight:700;letter-spacing:0.06em;">Auftrag</span>
+        <div style="width:2px;height:28px;background:rgba(167,139,250,0.5);"></div>
+        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid rgba(167,139,250,0.7);"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid rgba(167,139,250,0.7);"></div>
+        <div style="width:2px;height:28px;background:rgba(167,139,250,0.5);"></div>
+        <span style="font-size:0.7rem;font-family:var(--font-h);color:var(--accent2);font-weight:700;letter-spacing:0.06em;">Ergebnis</span>
+      </div>
+    </div>
+
+    <div class="arch-node an-ag">
+      <div class="an-icon">🤖</div>
+      <div>
+        <h4>LangChain ReAct-Agent</h4>
+        <p>Werkzeugauswahl · ConversationSummaryMemory · Fallback-Logik</p>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:60px;padding:12px 0;width:68%;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <span style="font-size:0.7rem;font-family:var(--font-h);color:var(--warn);font-weight:700;letter-spacing:0.06em;">Prompt</span>
+        <div style="width:2px;height:28px;background:rgba(251,146,60,0.5);"></div>
+        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid rgba(251,146,60,0.7);"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid rgba(251,146,60,0.7);"></div>
+        <div style="width:2px;height:28px;background:rgba(251,146,60,0.5);"></div>
+        <span style="font-size:0.7rem;font-family:var(--font-h);color:var(--warn);font-weight:700;letter-spacing:0.06em;">Completion</span>
+      </div>
+    </div>
+
+    <div class="arch-node an-llm">
+      <div class="an-icon">✨</div>
+      <div>
+        <h4>LLM</h4>
+        <p>gpt-4o (OpenAI) · llama3.2 (Ollama, lokal)</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tools-strip">
+    <div class="tool-chip"><span>📚</span> RAG / FAISS</div>
+    <div class="tool-chip"><span>🔗</span> Code-Review Chain</div>
+    <div class="tool-chip"><span>🧠</span> Gedächtnis</div>
+    <div class="tool-chip"><span>📝</span> Aufgaben-KI</div>
+    <div class="tool-chip"><span>📅</span> Lernplan</div>
+    <div class="tool-chip"><span>🗄️</span> SQLite DB</div>
+    <div class="tool-chip"><span>🔐</span> JWT Auth</div>
+    <div class="tool-chip"><span>🐍</span> Code Runner</div>
+  </div>
+</section>
+
+<!-- ── Tech Stack ─────────────────────────────────────── -->
+<section id="tech">
+  <span class="sec-label">Tech Stack</span>
+  <h2 class="sec-title">Technologien</h2>
+  <div class="tech-grid">
+    <div class="tech-badge"><div class="tb-dot" style="background:#38bdf8;"></div>Next.js 14</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#38bdf8;"></div>React + Tailwind CSS</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#6366f1;"></div>FastAPI</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#6366f1;"></div>SQLAlchemy + SQLite</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#a78bfa;"></div>LangChain</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#a78bfa;"></div>ReAct Agent</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#fb923c;"></div>OpenAI gpt-4o</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#fb923c;"></div>Ollama llama3.2</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#34d399;"></div>FAISS Vector Store</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#34d399;"></div>PyMuPDF (RAG)</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#f87171;"></div>JWT Auth</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#f87171;"></div>Pydantic v2</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#94a3b8;"></div>Docker Compose</div>
+    <div class="tech-badge"><div class="tb-dot" style="background:#94a3b8;"></div>GitHub Actions</div>
+  </div>
+</section>
+
+<!-- ── Setup ──────────────────────────────────────────── -->
+<section id="setup">
+  <span class="sec-label">Schnellstart</span>
+  <h2 class="sec-title">In 3 Minuten <em>zum laufenden Tutor</em></h2>
+  <p class="sec-desc">Zwei Wege: mit Docker (empfohlen) oder manuell.</p>
+
+  <div class="setup-grid">
+    <div class="setup-card">
+      <h3><i class="fa-brands fa-docker" style="color:var(--accent3);"></i> Option A — Docker (empfohlen)</h3>
+      <pre><code><span class="code-comment"># 1. Repo klonen</span>
+git clone https://github.com/emadalmousa/agentic-ai-python-tutor.git
+cd agentic-ai-python-tutor
+
+<span class="code-comment"># 2. API-Key setzen</span>
+cp backend/.env.example backend/.env
+<span class="code-comment"># OPENAI_API_KEY=sk-... in backend/.env eintragen</span>
+
+<span class="code-comment"># 3. Starten</span>
+docker compose up --build
+
+<span class="code-comment"># Frontend: http://localhost:3000</span>
+<span class="code-comment"># Backend:  http://localhost:8000/docs</span></code></pre>
+    </div>
+
+    <div class="setup-card">
+      <h3><i class="fa-solid fa-terminal" style="color:var(--success);"></i> Option B — Manuell</h3>
+      <pre><code><span class="code-comment"># Backend</span>
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+<span class="code-comment"># OPENAI_API_KEY in .env eintragen</span>
+uvicorn main:app --reload
+
+<span class="code-comment"># Frontend (neues Terminal)</span>
+cd frontend
+npm install
+npm run dev
+
+<span class="code-comment"># Oder beides mit:</span>
+./start.sh</code></pre>
+    </div>
+  </div>
+
+  <div class="setup-card" style="margin-top:20px; padding:20px 28px;">
+    <h3 style="font-size:0.95rem; margin-bottom:12px;"><i class="fa-solid fa-key" style="color:var(--warn);"></i> Ohne OpenAI-Key — mit Ollama (lokal)</h3>
+    <pre><code><span class="code-comment"># Ollama installieren: https://ollama.com</span>
+ollama pull llama3.2
+<span class="code-comment"># Kein API-Key nötig — automatisch erkannt</span>
+./start.sh</code></pre>
+  </div>
+</section>
+
+<!-- ── CTA ────────────────────────────────────────────── -->
+<section style="text-align:center; padding-bottom:80px;">
+  <div style="background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(167,139,250,0.08),rgba(56,189,248,0.06)); border:1px solid var(--border); border-radius:20px; padding:clamp(40px,6vh,72px) clamp(24px,5vw,80px);">
+    <h2 style="font-family:var(--font-h); font-size:clamp(1.8rem,3.5vw,2.6rem); font-weight:900; margin-bottom:16px; letter-spacing:-0.01em;">
+      Bereit zum Ausprobieren?
+    </h2>
+    <p style="color:var(--muted); font-size:1.05rem; max-width:480px; margin:0 auto 32px; line-height:1.6;">
+      Das gesamte Projekt ist Open Source auf GitHub. Setup in 3 Minuten.
+    </p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="https://github.com/emadalmousa/agentic-ai-python-tutor" target="_blank">
+        <i class="fa-brands fa-github"></i> GitHub öffnen
+      </a>
+      <a class="btn-secondary" href="demoday.pdf" target="_blank">
+        <i class="fa-solid fa-file-pdf"></i> Pitch Deck (PDF)
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────────── -->
+<footer>
+  <div class="footer-left">
+    <strong>KI Python Tutor</strong> · Agentic AI · Demo Day Juli 2026<br>
+    Entwickelt von <strong>Emad Almousa</strong>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/emadalmousa/agentic-ai-python-tutor" target="_blank">
+      <i class="fa-brands fa-github"></i> GitHub
+    </a>
+    <a href="demoday.pdf" target="_blank">
+      <i class="fa-solid fa-file-pdf"></i> Pitch Deck
+    </a>
+    <a href="#setup">
+      <i class="fa-solid fa-terminal"></i> Setup
+    </a>
+  </div>
+</footer>
+
+</body>
+</html>

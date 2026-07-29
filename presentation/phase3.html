@@ -686,10 +686,19 @@
 
         <div class="feature-card" style="border-left:3px solid var(--warn); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
           <p style="font-size:clamp(0.88rem,1.05vw,1.14rem); color:var(--muted); margin-bottom:clamp(6px,0.8vh,10px); font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">
+            <span style="color:var(--warn);">⚡ Beim Seitenaufruf</span> — Summary sofort sichtbar
+          </p>
+          <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
+            Schon <em>bevor</em> Lisa etwas schreibt: <code style="color:var(--accent3);">GET /tutor/memory</code> lädt den Summary aus der DB und zeigt ihn als <strong style="color:#a855f7;">🧠-Karte</strong> oben im Chat. Kein Warten, kein Klick — Lisa sieht sofort, was der Tutor über sie weiß.
+          </p>
+        </div>
+
+        <div class="feature-card" style="border-left:3px solid var(--warn); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
+          <p style="font-size:clamp(0.88rem,1.05vw,1.14rem); color:var(--muted); margin-bottom:clamp(6px,0.8vh,10px); font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">
             <span style="color:var(--warn);">⚡ LLM-Aufruf 1</span> — Antwort mit Kontext
           </p>
           <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Wenn Lisa eine Nachricht schickt, holt <code style="color:var(--accent3);">load_memory()</code> ihren Summary aus der Datenbank und packt ihn als Kontext in den System-Prompt. Dann antwortet <code style="color:var(--accent3);">run_chat()</code> — mit dem Wissen über vergangene Sessions.
+            Erst wenn Lisa eine Nachricht <em>schickt</em>: <code style="color:var(--accent3);">load_memory()</code> packt den Summary als Kontext in den System-Prompt. <code style="color:var(--accent3);">run_chat()</code> antwortet — mit Wissen über vergangene Sessions.
           </p>
         </div>
 
@@ -698,14 +707,33 @@
             <span style="color:#a855f7;">⚡ LLM-Aufruf 2</span> — Memory aktualisieren
           </p>
           <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Nach der Antwort ruft <code style="color:var(--accent3);">update_memory()</code> das LLM ein zweites Mal auf: alter Summary plus neue Nachrichten rein — neuer, kompakter Summary raus. Der wird direkt in der DB gespeichert.
+            Nach der Antwort ruft <code style="color:var(--accent3);">update_memory()</code> das LLM ein zweites Mal auf: alter Summary plus neue Nachrichten rein — neuer Summary raus. Format: <strong style="color:#a855f7;">max. 2 Sätze · max. 40 Wörter · nur Schlüsselwörter</strong>. Direkt in DB gespeichert.
           </p>
         </div>
 
-        <div class="feature-card" style="border-left:3px solid var(--success); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
-          <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            <strong>Wichtig:</strong> Wir speichern <em style="color:var(--accent3);">nicht</em> den rohen Chat-Verlauf — nur den Summary. Das skaliert viel besser, und jeder User hat seinen eigenen Eintrag in der DB. Pro Nachricht also <strong style="color:var(--warn);">zwei LLM-Aufrufe</strong> — einer für die Antwort, einer für das Gedächtnis-Update.
-          </p>
+        <!-- Vergleich: ohne vs. mit Gedächtnis -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:clamp(10px,1.2vw,18px);">
+
+          <div class="feature-card" style="border-left:3px solid #f87171; padding:clamp(10px,1.2vh,16px) clamp(14px,1.6vw,22px);">
+            <p style="font-size:clamp(0.78rem,0.9vw,0.96rem); color:#f87171; font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:clamp(5px,0.6vh,8px);">
+              ❌ Ohne Gedächtnis
+            </p>
+            <p style="font-size:clamp(0.82rem,0.96vw,1.04rem); color:var(--muted); margin-bottom:6px;">Lisa schreibt: <em style="color:var(--text);">"Ich hab Probleme mit Loops"</em></p>
+            <p style="font-size:clamp(0.82rem,0.96vw,1.04rem); color:var(--muted); line-height:1.55; border-left:2px solid rgba(248,113,113,0.3); padding-left:10px;">
+              <em>"Hallo! Schön, dass du hier bist. Was möchtest du heute lernen? Bist du Anfänger oder hast du schon Erfahrung?"</em>
+            </p>
+          </div>
+
+          <div class="feature-card" style="border-left:3px solid var(--success); padding:clamp(10px,1.2vh,16px) clamp(14px,1.6vw,22px);">
+            <p style="font-size:clamp(0.78rem,0.9vw,0.96rem); color:var(--success); font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:clamp(5px,0.6vh,8px);">
+              ✓ Mit Gedächtnis
+            </p>
+            <p style="font-size:clamp(0.82rem,0.96vw,1.04rem); color:var(--muted); margin-bottom:6px;">Lisa schreibt: <em style="color:var(--text);">"Ich hab Probleme mit Loops"</em></p>
+            <p style="font-size:clamp(0.82rem,0.96vw,1.04rem); color:var(--muted); line-height:1.55; border-left:2px solid rgba(52,211,153,0.3); padding-left:10px;">
+              <em>"Letzte Woche hatten wir schon For-Schleifen angeschaut — da hattest du Schwierigkeiten mit dem Index. Wollen wir genau da weitermachen?"</em>
+            </p>
+          </div>
+
         </div>
 
       </div>
@@ -716,14 +744,14 @@
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">Wie funktioniert's? — Code-Review Chain</span>
-        <h2 class="slide-title">Code-Review Chain — <em>3 Schritte · 3 LLM-Aufrufe</em></h2>
+        <h2 class="slide-title">code_review_chain.py — <em>3 Schritte · 3 LLM-Aufrufe</em></h2>
       </div>
 
       <div style="flex:1; min-height:0; display:flex; flex-direction:column; gap:clamp(12px,1.6vh,22px);">
 
         <div class="feature-card" style="border-left:3px solid var(--accent); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
           <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Lisa schickt ihren Code rein, und dann läuft eine <code style="color:var(--accent3);">RunnableSequence</code> durch — <strong style="color:var(--warn);">drei Schritte, drei separate LLM-Aufrufe.</strong>
+            Lisa schickt Code rein — eine <code style="color:var(--accent3);">RunnableSequence</code> mit <strong style="color:var(--warn);">drei Schritten und drei separaten LLM-Aufrufen</strong> läuft durch. Jeder Schritt hat einen eigenen System-Prompt und fokussiert auf genau eine Dimension. Verfügbar <strong>direkt in jeder Übungskarte</strong> per "Code Review"-Button.
           </p>
         </div>
 
@@ -732,16 +760,16 @@
             <span style="color:#f87171;">🔴 Schritt 1 — Syntax</span>
           </p>
           <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Das LLM sucht nur nach echten Fehlern — <code style="color:var(--accent3);">SyntaxError</code>, <code style="color:var(--accent3);">NameError</code>, mit Zeilennummer.
+            Nur echte Fehler: fehlende Doppelpunkte, falsche Einrückung, undefinierte Variablen — mit Zeilennummer und Schweregrad <code style="color:var(--accent3);">error/warning</code>.
           </p>
         </div>
 
         <div class="feature-card" style="border-left:3px solid var(--warn); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
           <p style="font-size:clamp(0.88rem,1.05vw,1.14rem); color:var(--muted); margin-bottom:clamp(6px,0.8vh,10px); font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">
-            <span style="color:var(--warn);">🟡 Schritt 2 — Stil</span>
+            <span style="color:var(--warn);">🟡 Schritt 2 — Stil / PEP8</span>
           </p>
           <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Anderer Prompt, anderes LLM — schaut nur auf PEP8, Naming, Lesbarkeit.
+            Anderer Prompt — PEP8, Naming (snake_case), Zeilenlänge, Magic Numbers, fehlende Docstrings. Bekommt den Syntax-Summary als Kontext aus Schritt 1.
           </p>
         </div>
 
@@ -749,15 +777,16 @@
           <p style="font-size:clamp(0.88rem,1.05vw,1.14rem); color:var(--muted); margin-bottom:clamp(6px,0.8vh,10px); font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">
             <span style="color:var(--accent3);">🔵 Schritt 3 — Best Practices</span>
           </p>
-          <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Architektur, Effizienz, ob der Code pythonisch ist.
-          </p>
-        </div>
-
-        <div class="feature-card" style="border-left:3px solid var(--success); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
-          <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Der Output von Schritt 1 geht als Input in Schritt 2 — <strong>echte Chain</strong>, nicht nur drei separate Aufrufe hintereinander. Im Frontend sieht Lisa dann drei aufklappbare Bereiche — <strong style="color:#f87171;">rot</strong> für Fehler, <strong style="color:var(--warn);">gelb</strong> für Stil, <strong style="color:var(--accent3);">blau</strong> für Best Practices.
-          </p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:clamp(8px,1vw,14px); margin-top:4px;">
+            <div>
+              <p style="font-size:clamp(0.72rem,0.82vw,0.88rem); color:#f87171; font-family:var(--font-heading); font-weight:700; margin-bottom:4px;">❌ Schlecht</p>
+              <pre style="font-size:clamp(0.78rem,0.9vw,0.98rem); background:rgba(248,113,113,0.07); border:1px solid rgba(248,113,113,0.25); border-radius:8px; padding:8px 12px; color:#fca5a5; margin:0; line-height:1.6;">if is_valid == True:</pre>
+            </div>
+            <div>
+              <p style="font-size:clamp(0.72rem,0.82vw,0.88rem); color:#34d399; font-family:var(--font-heading); font-weight:700; margin-bottom:4px;">✓ Besser</p>
+              <pre style="font-size:clamp(0.78rem,0.9vw,0.98rem); background:rgba(52,211,153,0.07); border:1px solid rgba(52,211,153,0.25); border-radius:8px; padding:8px 12px; color:#6ee7b7; margin:0; line-height:1.6;">if is_valid:</pre>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -768,26 +797,35 @@
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
         <span class="slide-label">Wie funktioniert's? — Lernplan-Generator</span>
-        <h2 class="slide-title">Personalisierter Lernplan — <em>Basierend auf echten Schwächen</em></h2>
+        <h2 class="slide-title">learning_plan_tool.py — <em>Intelligent sortiert, gecacht, mit Lernschritten</em></h2>
       </div>
 
       <div style="flex:1; min-height:0; display:flex; flex-direction:column; gap:clamp(12px,1.6vh,22px);">
 
         <div class="feature-card" style="border-left:3px solid var(--success); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
+          <p style="font-size:clamp(0.88rem,1.05vw,1.14rem); color:var(--muted); margin-bottom:clamp(6px,0.8vh,10px); font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">
+            <span style="color:var(--success);">📊 Sortierreihenfolge</span>
+          </p>
           <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Lisa fragt nach einem Lernplan — und kriegt keinen generischen Wochenplan, sondern einen der auf ihren <strong>echten Skill-Scores</strong> basiert. Schwache Themen kommen zuerst, max. drei Skills pro Woche.
+            <strong>1.</strong> Freigeschaltete Skills mit <em style="color:var(--success);">hohem Score zuerst</em> — fast fertig, leicht auf 100% zu bringen. <strong>2.</strong> Freigeschaltete Skills mit niedrigem Score. <strong>3.</strong> Gesperrte Skills <em>immer am Ende</em> — nie in Woche 1. Max. 3 Skills/Woche, max. 4 Wochen.
           </p>
         </div>
 
         <div class="feature-card" style="border-left:3px solid var(--accent3); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
+          <p style="font-size:clamp(0.88rem,1.05vw,1.14rem); color:var(--muted); margin-bottom:clamp(6px,0.8vh,10px); font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">
+            <span style="color:var(--accent3);">📖 Lernschritte pro Skill</span>
+          </p>
           <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Der Endpunkt <code style="color:var(--accent3);">POST /learning-plan</code> liest die gespeicherten Scores aus der DB und übergibt sie dem LLM — das LLM entscheidet dann, in welcher Reihenfolge und welchem Tempo Lisa die Themen angehen soll.
+            Jeder Skill wird in <strong>2–3 konkrete Schritte</strong> aufgeteilt — deterministisch nach Score: Score &lt; 30 → Wiederholen + Grundübungen + Schwerpunkt · Score 30–59 → Wiederholen + Üben · Score 60–79 → Auffrischen + Lücken schließen. Mit Zeitschätzung pro Schritt.
           </p>
         </div>
 
         <div class="feature-card" style="border-left:3px solid var(--accent2); padding:clamp(12px,1.4vh,18px) clamp(16px,1.8vw,24px);">
+          <p style="font-size:clamp(0.88rem,1.05vw,1.14rem); color:var(--muted); margin-bottom:clamp(6px,0.8vh,10px); font-family:var(--font-heading); font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">
+            <span style="color:var(--accent2);">💾 Gespeichert im Browser</span>
+          </p>
           <p style="font-size:clamp(0.92rem,1.08vw,1.18rem); color:var(--text); line-height:1.65;">
-            Der Plan ist kein statisches Dokument — er ändert sich, wenn Lisa neue Themen bearbeitet und ihre Scores sich verbessern. Nächste Woche sieht der Plan automatisch anders aus.
+            Der generierte Plan wird im <code style="color:var(--accent3);">localStorage</code> gecacht (<code style="color:var(--accent3);">ki_tutor_plan_&lt;userId&gt;</code>) — beim nächsten Öffnen erscheint er sofort, kein LLM-Call. Datum der letzten Generierung sichtbar, Refresh-Button für neuen Plan nach Fortschritt. Cache-Ablauf nach <strong>4 Wochen</strong>.
           </p>
         </div>
 

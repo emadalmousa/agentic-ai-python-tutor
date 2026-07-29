@@ -34,30 +34,32 @@
 
 ## Slide 4 — Agent-Gedächtnis (technisch)
 
-> 1. "Kurz wie das technisch funktioniert — wir haben das komplett selbst gebaut, kein LangChain-Memory-Modul. Das steckt in unserem eigenen `memory_service.py`."
+> 1. "Kurz wie das technisch funktioniert — komplett selbst gebaut, kein LangChain-Memory-Modul. Das steckt in `memory_service.py`."
 > 2. "Wenn Lisa eine Nachricht schickt, passieren zwei Sachen."
-> 3. "Erstens: `load_memory()` holt ihren Summary aus der Datenbank und packt ihn als Kontext in den System-Prompt. Das ist LLM-Aufruf Nummer eins — `run_chat()` antwortet mit dem Wissen über vergangene Sessions."
-> 4. "Zweitens, nach der Antwort: `update_memory()` wird aufgerufen. Alter Summary plus neue Nachricht rein, LLM macht draus einen neuen, kompakten Summary. Das ist Aufruf Nummer zwei."
-> 5. "Wichtig: wir speichern nicht den rohen Chat-Verlauf. Nur den Summary. Das skaliert viel besser, und jeder User hat seinen eigenen Eintrag in der DB."
+> 3. "Schon bevor Lisa etwas schreibt: GET /tutor/memory lädt den Summary aus der DB und zeigt ihn als lila 🧠-Karte oben im Chat. Kein Warten — sie sieht sofort, was der Tutor über sie weiß."
+> 4. "Erst wenn Lisa eine Nachricht schickt: `load_memory()` packt den Summary als Kontext in den System-Prompt. Das ist LLM-Aufruf Nummer eins — `run_chat()` antwortet mit dem Wissen über vergangene Sessions."
+> 5. "Nach der Antwort: `update_memory()` wird aufgerufen. Alter Summary plus neue Nachricht rein — neuer, kompakter Summary raus. Format: max. 2 Sätze, max. 40 Wörter, nur Schlüsselwörter. Das ist Aufruf Nummer zwei."
+> 6. "Wir speichern nicht den rohen Chat-Verlauf — nur den Summary. Jeder User hat seinen eigenen Eintrag in der DB."
 
 ---
 
 ## Slide 5 — Code-Review Chain (technisch)
 
-> 1. "Die Code-Review Chain. Lisa schickt ihren Code rein, und dann läuft eine RunnableSequence durch — drei Schritte, drei separate LLM-Aufrufe."
-> 2. "Schritt eins: Syntax. Das LLM sucht nur nach echten Fehlern — SyntaxError, NameError, mit Zeilennummer."
-> 3. "Schritt zwei: Stil. Anderer Prompt, anderes LLM — schaut nur auf PEP8, Naming, Lesbarkeit."
-> 4. "Schritt drei: Best Practices. Architektur, Effizienz, ob der Code pythonisch ist."
-> 5. "Der Output von Schritt eins geht als Input in Schritt zwei — echte Chain, nicht nur drei separate Aufrufe hintereinander."
-> 6. "Im Frontend sieht Lisa dann drei aufklappbare Bereiche — rot für Fehler, gelb für Stil, blau für Best Practices. Sie weiß sofort was sie zuerst fixen muss."
+> 1. "Die Code-Review Chain — steckt in `code_review_chain.py`. Lisa schickt Code rein, eine `RunnableSequence` läuft durch — drei Schritte, drei separate LLM-Aufrufe."
+> 2. "Jeder Schritt hat einen eigenen System-Prompt und fokussiert auf genau eine Dimension. Der Button ist direkt in jeder Übungskarte verfügbar — kein Wechsel zur Tutor-Seite nötig."
+> 3. "Schritt 1 — Syntax: Nur echte Fehler — fehlende Doppelpunkte, falsche Einrückung, undefinierte Variablen — mit Zeilennummer und Schweregrad error/warning."
+> 4. "Schritt 2 — Stil / PEP8: Anderer Prompt — Naming, Zeilenlänge, Magic Numbers, fehlende Docstrings. Bekommt den Syntax-Summary als Kontext aus Schritt 1."
+> 5. "Schritt 3 — Best Practices: Pythonische Muster — range(len()) statt enumerate, redundante Vergleiche wie == True, bare except. Jedes Issue bekommt ein 'Besser:'-Feld mit verbessertem Code-Snippet."
+> 6. "Im Frontend: drei aufklappbare Bereiche — rot, gelb, blau. Lisa weiß sofort was zuerst zu fixen ist."
 
 ---
 
 ## Slide 6 — Lernplan-Generator (technisch)
 
-> 1. "Der Lernplan-Generator. Lisa fragt nach einem Lernplan — und kriegt keinen generischen Wochenplan, sondern einen der auf ihren echten Skill-Scores basiert. Schwache Themen kommen zuerst, max. drei Skills pro Woche."
-> 2. "Der Endpunkt POST /learning-plan liest die gespeicherten Scores aus der DB und übergibt sie dem LLM — das LLM entscheidet dann, in welcher Reihenfolge und welchem Tempo Lisa die Themen angehen soll."
-> 3. "Der Plan ist kein statisches Dokument — er ändert sich, wenn Lisa neue Themen bearbeitet und ihre Scores sich verbessern. Nächste Woche sieht der Plan automatisch anders aus."
+> 1. "Der Lernplan-Generator — `learning_plan_tool.py`. Lisa klickt auf 'Lernplan' und sieht ihren personalisierten Plan, basierend auf echten Skill-Scores."
+> 2. "Sortierreihenfolge ist fest: Erstens freigeschaltete Skills mit hohem Score — die sind fast fertig, leicht auf 100% zu bringen. Zweitens freigeschaltete mit niedrigem Score. Drittens gesperrte Skills — die kommen nie in Woche 1."
+> 3. "Jeder Skill wird in 2–3 konkrete Lernschritte aufgeteilt — deterministisch nach Score. Score unter 30: Wiederholen plus Grundübungen plus Schwerpunkt. Score 30 bis 59: Wiederholen plus Üben. Score 60 bis 79: Auffrischen plus Lücken schließen. Mit Zeitschätzung pro Schritt."
+> 4. "Der Plan wird im localStorage gecacht — ki_tutor_plan_userId. Beim nächsten Öffnen erscheint er sofort, kein LLM-Call. Datum der letzten Generierung ist sichtbar, ein Refresh-Button erlaubt einen neuen Plan nach Fortschritt. Cache-Ablauf nach 4 Wochen."
 
 ---
 

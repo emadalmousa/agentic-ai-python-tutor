@@ -8,6 +8,17 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
+    /* ── Print / PDF fix ────────────────────────────────────── */
+    @media print {
+      .title-main {
+        background: none !important;
+        -webkit-background-clip: unset !important;
+        -webkit-text-fill-color: #ffffff !important;
+        background-clip: unset !important;
+        color: #ffffff !important;
+      }
+    }
+
     /* ── Light Mode ─────────────────────────────────────────── */
     body.light-mode {
       --bg:      #f1f5f9;
@@ -74,114 +85,234 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       SLIDE 4 — ARCHITEKTUR
+       SLIDE 4 — ARCHITEKTUR VOLLBILD FLOWCHART
     ══════════════════════════════════════════════════════ */
     #slide-4 {
-      padding: clamp(24px,3.5vh,52px) clamp(32px,5vw,80px) clamp(24px,3.5vh,52px) clamp(40px,6vw,88px);
-      gap: clamp(16px,2.5vh,28px);
+      padding: clamp(10px,1.2vh,18px) clamp(28px,4vw,64px) clamp(10px,1.2vh,18px) clamp(36px,5vw,72px);
+      gap: 0;
     }
-    .arch-layout {
-      flex: 1; min-height: 0;
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: clamp(16px,2vw,28px);
+    #slide-4 .slide-header {
+      padding-bottom: clamp(4px,0.6vh,10px);
+      gap: 4px;
     }
-    .arch-diagram {
-      display: flex; flex-direction: column; gap: clamp(8px,1vh,12px); justify-content: center;
-    }
-    .arch-row {
-      display: flex; align-items: center; gap: 0;
-    }
-    .arch-node {
-      flex: 1; border-radius: 10px; padding: clamp(8px,1vh,14px) clamp(10px,1.2vw,16px);
-      text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px;
-    }
-    .arch-node .an-icon { font-size: clamp(1.4rem,1.8vw,2rem); }
-    .arch-node h4 {
-      font-family: var(--font-heading); font-weight: 800;
-      font-size: clamp(0.82rem,0.98vw,1.06rem); line-height: 1.2;
-    }
-    .arch-node p { font-size: clamp(0.72rem,0.84vw,0.9rem); color: var(--muted); line-height: 1.3; }
+    #slide-4 .slide-title { font-size: clamp(1.1rem,1.5vw,1.6rem); }
 
-    .an-frontend { background: rgba(56,189,248,0.1); border: 2px solid rgba(56,189,248,0.45); }
+    /* ─── Diagramm-Container ─────────────────────── */
+    .arch-full {
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: space-evenly;
+      width: 100%;
+    }
+
+    /* ─── Haupt-Knoten ───────────────────────────── */
+    .arch-node-wide {
+      width: 68%;
+      border-radius: 14px;
+      padding: clamp(14px,2.2vh,28px) clamp(24px,3vw,44px);
+      display: flex; align-items: center; gap: clamp(16px,2vw,30px);
+    }
+    .arch-node-wide .an-icon {
+      font-size: clamp(2rem,3vw,3.4rem); flex-shrink: 0;
+    }
+    .arch-node-wide h4 {
+      font-family: var(--font-heading); font-weight: 800;
+      font-size: clamp(1.05rem,1.5vw,1.7rem); line-height: 1.2;
+      margin-bottom: 3px;
+    }
+    .arch-node-wide p {
+      font-size: clamp(0.82rem,1vw,1.08rem); color: var(--muted); line-height: 1.4;
+    }
+
+    .an-frontend { background: rgba(56,189,248,0.1);  border: 2.5px solid rgba(56,189,248,0.55); }
     .an-frontend h4 { color: var(--accent3); }
-    .an-api      { background: rgba(99,102,241,0.1); border: 2px solid rgba(99,102,241,0.45); }
+    .an-api      { background: rgba(99,102,241,0.1);  border: 2.5px solid rgba(99,102,241,0.55); }
     .an-api h4   { color: var(--accent); }
     .an-agent    {
-      background: linear-gradient(135deg,rgba(99,102,241,0.15),rgba(167,139,250,0.12));
-      border: 2px solid rgba(167,139,250,0.55);
+      background: linear-gradient(135deg,rgba(99,102,241,0.12),rgba(167,139,250,0.10));
+      border: 2.5px solid rgba(167,139,250,0.65);
     }
     .an-agent h4 { color: var(--accent2); }
-    .an-db       { background: rgba(52,211,153,0.1); border: 2px solid rgba(52,211,153,0.4); }
-    .an-db h4    { color: var(--success); }
 
-    .arch-arrow {
-      display: flex; align-items: center; flex-shrink: 0; padding: 0 clamp(4px,0.5vw,8px);
+    /* ─── Agent + LLM Loop Row ───────────────────── */
+    .arch-llm-row {
+      width: 68%;
+      display: flex; align-items: stretch; gap: 0;
     }
-    .arch-arrow-line { height: 2px; width: clamp(16px,2vw,28px); }
-    .arch-arrow-head { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
-    .arch-arrow.blue .arch-arrow-line { background: rgba(56,189,248,0.6); }
-    .arch-arrow.blue .arch-arrow-head { border-left: 7px solid rgba(56,189,248,0.6); }
-    .arch-arrow.indigo .arch-arrow-line { background: rgba(99,102,241,0.6); }
-    .arch-arrow.indigo .arch-arrow-head { border-left: 7px solid rgba(99,102,241,0.6); }
-    .arch-arrow.purple .arch-arrow-line { background: rgba(167,139,250,0.6); }
-    .arch-arrow.purple .arch-arrow-head { border-left: 7px solid rgba(167,139,250,0.6); }
+    .arch-node-box {
+      flex: 1;
+      border-radius: 14px;
+      padding: clamp(12px,1.8vh,22px) clamp(12px,1.4vw,20px);
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; gap: 5px;
+    }
+    .arch-node-box .an-icon { font-size: clamp(1.8rem,2.4vw,3rem); }
+    .arch-node-box h4 {
+      font-family: var(--font-heading); font-weight: 800;
+      font-size: clamp(0.9rem,1.2vw,1.4rem); line-height: 1.2;
+      margin-bottom: 2px;
+    }
+    .arch-node-box p { font-size: clamp(0.74rem,0.88vw,0.96rem); color: var(--muted); line-height: 1.35; }
 
-    .arch-tools-row {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: clamp(6px,0.8vw,10px);
+    .an-llm {
+      background: linear-gradient(135deg,rgba(251,146,60,0.10),rgba(251,191,36,0.08));
+      border: 2.5px solid rgba(251,146,60,0.55);
     }
+    .an-llm h4 { color: var(--warn); }
+
+    /* ─── Loop-Verbinder Mitte ───────────────────── */
+    .llm-loop {
+      flex-shrink: 0;
+      width: clamp(70px,11vw,130px);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: clamp(4px,0.6vh,8px);
+      padding: 0 4px;
+    }
+    .ll-arrow {
+      display: flex; align-items: center; width: 100%;
+    }
+    .ll-line {
+      flex: 1; height: 2.5px;
+    }
+    .ll-head-r {
+      width: 0; height: 0;
+      border-top: 6px solid transparent; border-bottom: 6px solid transparent;
+    }
+    .ll-head-l {
+      width: 0; height: 0;
+      border-top: 6px solid transparent; border-bottom: 6px solid transparent;
+    }
+    /* Anfrage → LLM: orange */
+    .ll-req .ll-line  { background: rgba(251,146,60,0.7); }
+    .ll-req .ll-head-r { border-left: 9px solid rgba(251,146,60,0.85); }
+    /* Antwort ← LLM: lila */
+    .ll-res .ll-line  { background: rgba(167,139,250,0.7); }
+    .ll-res .ll-head-l { border-right: 9px solid rgba(167,139,250,0.85); }
+    .ll-label {
+      font-family: var(--font-heading); font-size: clamp(0.54rem,0.65vw,0.72rem);
+      font-weight: 600; color: var(--muted); white-space: nowrap; text-align: center;
+    }
+    .ll-badge {
+      font-family: var(--font-heading); font-weight: 800;
+      font-size: clamp(0.58rem,0.7vw,0.78rem);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 100px;
+      background: rgba(167,139,250,0.12);
+      border: 1px solid rgba(167,139,250,0.35);
+      color: var(--accent2);
+      white-space: nowrap;
+    }
+
+    /* ─── Flowchart-Pfeil ────────────────────────── */
+    .fc-arrow {
+      display: flex; align-items: center; gap: 0;
+      width: 68%;
+      position: relative;
+    }
+    /* linker Pfeil: Anfrage ↓ */
+    .fc-arrow-req {
+      display: flex; flex-direction: column; align-items: center;
+      position: absolute; left: 30%;
+    }
+    .fc-arrow-res {
+      display: flex; flex-direction: column; align-items: center;
+      position: absolute; right: 30%;
+    }
+    .fc-line-down { width: 3px; height: clamp(18px,2.8vh,36px); }
+    .fc-line-up   { width: 3px; height: clamp(18px,2.8vh,36px); }
+    .fc-head-down {
+      width: 0; height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+    }
+    .fc-head-up {
+      width: 0; height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+    }
+    /* Labels als Badges */
+    .fc-badge {
+      font-family: var(--font-heading); font-weight: 700;
+      font-size: clamp(0.62rem,0.8vw,0.88rem);
+      letter-spacing: 0.04em; white-space: nowrap;
+      padding: 3px 10px; border-radius: 100px;
+    }
+    /* Request — blau */
+    .fc-arrow-req .fc-line-down  { background: rgba(56,189,248,0.7); }
+    .fc-arrow-req .fc-head-down  { border-top: 10px solid rgba(56,189,248,0.8); }
+    .fc-arrow-req .fc-badge {
+      background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.4);
+      color: var(--accent3);
+    }
+    /* Response — grün */
+    .fc-arrow-res .fc-line-up   { background: rgba(52,211,153,0.7); }
+    .fc-arrow-res .fc-head-up   { border-bottom: 10px solid rgba(52,211,153,0.8); }
+    .fc-arrow-res .fc-badge {
+      background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.4);
+      color: var(--success);
+    }
+    /* Invoke-Pfeil — lila (Backend → Agent) */
+    .fc-arrow.fc-purple .fc-arrow-req .fc-line-down  { background: rgba(167,139,250,0.7); }
+    .fc-arrow.fc-purple .fc-arrow-req .fc-head-down  { border-top: 10px solid rgba(167,139,250,0.85); }
+    .fc-arrow.fc-purple .fc-arrow-req .fc-badge {
+      background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.4);
+      color: var(--accent2);
+    }
+    .fc-arrow.fc-purple .fc-arrow-res .fc-line-up   { background: rgba(167,139,250,0.55); }
+    .fc-arrow.fc-purple .fc-arrow-res .fc-head-up   { border-bottom: 10px solid rgba(167,139,250,0.7); }
+    .fc-arrow.fc-purple .fc-arrow-res .fc-badge {
+      background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3);
+      color: var(--accent2);
+    }
+    /* Spacer damit die absolute-Elemente eine Höhe erzwingen */
+    .fc-arrow-spacer { height: clamp(44px,6.5vh,72px); width: 100%; }
+
+    /* ─── Tools-Bereich ──────────────────────────── */
+    .arch-tools-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 0;
+      width: 90%;
+    }
+    .atw-line {
+      width: 3px; height: clamp(10px,1.4vh,18px);
+      background: linear-gradient(to bottom, rgba(167,139,250,0.6), rgba(167,139,250,0.2));
+    }
+    .atw-bar {
+      width: 68%; height: 2px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(167,139,250,0.4) 20%,
+        rgba(167,139,250,0.4) 80%,
+        transparent 100%);
+      margin-bottom: clamp(6px,0.8vh,10px);
+    }
+    .arch-tools-strip {
+      display: flex; gap: clamp(6px,0.8vw,12px); width: 100%;
+    }
+    .arch-tools-strip .arch-tool { flex: 1; }
     .arch-tool {
-      border-radius: 8px; padding: clamp(6px,0.7vh,10px) clamp(6px,0.7vw,10px);
-      text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      border-radius: 10px; padding: clamp(8px,1.1vh,14px) clamp(8px,0.9vw,14px);
+      text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px;
     }
-    .arch-tool .at-icon { font-size: clamp(1.1rem,1.4vw,1.5rem); }
+    .arch-tool .at-icon { font-size: clamp(1.3rem,1.7vw,2rem); }
     .arch-tool h5 {
       font-family: var(--font-heading); font-weight: 700;
-      font-size: clamp(0.65rem,0.77vw,0.84rem); line-height: 1.2;
+      font-size: clamp(0.7rem,0.85vw,0.96rem); line-height: 1.2;
     }
-    .arch-tool p { font-size: clamp(0.6rem,0.7vw,0.76rem); color: var(--muted); line-height: 1.2; }
+    .arch-tool p { font-size: clamp(0.62rem,0.74vw,0.82rem); color: var(--muted); line-height: 1.2; }
 
-    .at-rag    { background: rgba(251,146,60,0.1);  border: 1px solid rgba(251,146,60,0.35); }
+    .at-rag    { background: rgba(251,146,60,0.1);  border: 1px solid rgba(251,146,60,0.4); }
     .at-rag h5 { color: var(--warn); }
-    .at-review { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.35); }
+    .at-review { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.4); }
     .at-review h5 { color: #f87171; }
-    .at-mem    { background: rgba(168,85,247,0.1);  border: 1px solid rgba(168,85,247,0.35); }
+    .at-mem    { background: rgba(168,85,247,0.1);  border: 1px solid rgba(168,85,247,0.4); }
     .at-mem h5 { color: #a855f7; }
-    .at-skill  { background: rgba(52,211,153,0.1);  border: 1px solid rgba(52,211,153,0.35); }
+    .at-skill  { background: rgba(52,211,153,0.1);  border: 1px solid rgba(52,211,153,0.4); }
     .at-skill h5 { color: var(--success); }
-    .at-plan   { background: rgba(56,189,248,0.1);  border: 1px solid rgba(56,189,248,0.35); }
+    .at-plan   { background: rgba(56,189,248,0.1);  border: 1px solid rgba(56,189,248,0.4); }
     .at-plan h5 { color: var(--accent3); }
-    .at-db     { background: rgba(99,102,241,0.1);  border: 1px solid rgba(99,102,241,0.35); }
+    .at-db     { background: rgba(99,102,241,0.1);  border: 1px solid rgba(99,102,241,0.4); }
     .at-db h5  { color: var(--accent); }
-
-    .arch-down {
-      display: flex; flex-direction: column; align-items: center; gap: 0;
-    }
-    .arch-down .dl { width: 2px; height: clamp(8px,1vh,12px); background: rgba(99,102,241,0.5); }
-    .arch-down .dh { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid rgba(99,102,241,0.5); }
-
-    .arch-decisions {
-      display: flex; flex-direction: column; gap: clamp(8px,1vh,14px);
-    }
-    .arch-decision {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: clamp(10px,1.2vh,16px) clamp(12px,1.4vw,18px);
-      display: flex; align-items: flex-start; gap: 10px;
-    }
-    .ad-bullet {
-      width: 24px; height: 24px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem; flex-shrink: 0; font-weight: 800;
-      font-family: var(--font-heading);
-    }
-    .ad-body {}
-    .ad-title {
-      font-family: var(--font-heading); font-weight: 700;
-      font-size: clamp(0.82rem,0.96vw,1.04rem); margin-bottom: 2px;
-    }
-    .ad-desc {
-      font-size: clamp(0.74rem,0.86vw,0.92rem); color: var(--muted); line-height: 1.45;
-    }
-    .ad-desc em { color: var(--text); font-style: italic; }
 
     /* ══════════════════════════════════════════════════════
        SLIDE 6 — DEMO
@@ -480,124 +611,132 @@
     <section class="slide" id="slide-4" data-num="04 / 06">
       <div class="slide-accent-bar"></div>
       <div class="slide-header">
-        <span class="slide-label">Architektur & Technische Entscheidungen</span>
-        <h2 class="slide-title">Wie es <em>zusammenspielt</em></h2>
+        <span class="slide-label">Systemarchitektur</span>
+        <h2 class="slide-title">Von der Anfrage bis zur <em>KI-Antwort</em></h2>
       </div>
 
-      <div class="arch-layout">
+      <div class="arch-full">
 
-        <!-- Linke Seite: Diagramm -->
-        <div class="arch-diagram">
+        <!-- ① Frontend -->
+        <div class="arch-node-wide an-frontend">
+          <div class="an-icon">💻</div>
+          <div>
+            <h4>Next.js 14 Frontend</h4>
+            <p>React · Tailwind · App Router · JWT Cookie</p>
+          </div>
+        </div>
 
-          <!-- Row 1: Frontend -->
-          <div class="arch-row">
-            <div class="arch-node an-frontend" style="flex:2;">
-              <div class="an-icon">💻</div>
-              <h4>Next.js 14 Frontend</h4>
-              <p>React · Tailwind · App Router</p>
-            </div>
+        <!-- Pfeil Frontend → Backend -->
+        <div class="fc-arrow">
+          <div class="fc-arrow-spacer"></div>
+          <div class="fc-arrow-req">
+            <div class="fc-badge">HTTP-Anfrage</div>
+            <div class="fc-line-down"></div>
+            <div class="fc-head-down"></div>
+          </div>
+          <div class="fc-arrow-res">
+            <div class="fc-head-up"></div>
+            <div class="fc-line-up"></div>
+            <div class="fc-badge">JSON-Antwort</div>
+          </div>
+        </div>
+
+        <!-- ② FastAPI Backend -->
+        <div class="arch-node-wide an-api">
+          <div class="an-icon">⚡</div>
+          <div>
+            <h4>FastAPI Backend</h4>
+            <p>8 Router · JWT-Authentifizierung · SQLite · Pydantic Validierung</p>
+          </div>
+        </div>
+
+        <!-- Pfeil Backend → Agent -->
+        <div class="fc-arrow fc-purple">
+          <div class="fc-arrow-spacer"></div>
+          <div class="fc-arrow-req">
+            <div class="fc-badge">Auftrag senden</div>
+            <div class="fc-line-down"></div>
+            <div class="fc-head-down"></div>
+          </div>
+          <div class="fc-arrow-res">
+            <div class="fc-head-up"></div>
+            <div class="fc-line-up"></div>
+            <div class="fc-badge">Ergebnis zurück</div>
+          </div>
+        </div>
+
+        <!-- ③ LangChain ReAct Agent + LLM Loop -->
+        <div class="arch-llm-row">
+
+          <!-- Agent-Knoten links -->
+          <div class="arch-node-box an-agent">
+            <div class="an-icon">🤖</div>
+            <h4>LangChain<br>ReAct-Agent</h4>
+            <p>Werkzeugauswahl<br>Gesprächsgedächtnis</p>
           </div>
 
-          <div class="arch-down"><div class="dl"></div><div class="dh"></div></div>
-
-          <!-- Row 2: FastAPI -->
-          <div class="arch-row">
-            <div class="arch-node an-api" style="flex:2;">
-              <div class="an-icon">⚡</div>
-              <h4>FastAPI Backend</h4>
-              <p>8 Router · JWT Auth · SQLite</p>
+          <!-- Loop-Verbinder -->
+          <div class="llm-loop">
+            <div class="ll-label">Prompt</div>
+            <div class="ll-arrow ll-req">
+              <div class="ll-line"></div>
+              <div class="ll-head-r"></div>
             </div>
+            <div class="ll-badge">ReAct Loop</div>
+            <div class="ll-arrow ll-res">
+              <div class="ll-head-l"></div>
+              <div class="ll-line"></div>
+            </div>
+            <div class="ll-label">Antwort</div>
           </div>
 
-          <div class="arch-down"><div class="dl"></div><div class="dh"></div></div>
-
-          <!-- Row 3: LangChain Agent -->
-          <div class="arch-row">
-            <div class="arch-node an-agent" style="flex:2;">
-              <div class="an-icon">🤖</div>
-              <h4>LangChain ReAct-Agent</h4>
-              <p>OpenAI gpt-4o / Ollama llama3.2</p>
-            </div>
+          <!-- LLM-Knoten rechts -->
+          <div class="arch-node-box an-llm">
+            <div class="an-icon">✨</div>
+            <h4>LLM</h4>
+            <p>gpt-4o<br>Ollama llama3.2</p>
           </div>
 
-          <div class="arch-down"><div class="dl"></div><div class="dh"></div></div>
+        </div>
 
-          <!-- Row 4: Tools -->
-          <div class="arch-tools-row">
+        <!-- Pfeil Agent → Tools -->
+        <div class="arch-tools-wrap">
+          <div class="atw-line"></div>
+          <div class="atw-bar"></div>
+          <div class="arch-tools-strip">
             <div class="arch-tool at-rag">
               <div class="at-icon">📚</div>
               <h5>RAG / FAISS</h5>
-              <p>lokaler Vektorindex</p>
+              <p>Vektorsuche lokal</p>
             </div>
             <div class="arch-tool at-review">
               <div class="at-icon">🔗</div>
-              <h5>Code-Review Chain</h5>
-              <p>3× RunnableLambda</p>
+              <h5>Code-Review</h5>
+              <p>3 Prüfschritte</p>
             </div>
             <div class="arch-tool at-mem">
               <div class="at-icon">🧠</div>
-              <h5>Memory Service</h5>
-              <p>Summary → DB</p>
+              <h5>Gedächtnis</h5>
+              <p>Zusammenfassung</p>
             </div>
             <div class="arch-tool at-skill">
               <div class="at-icon">📝</div>
-              <h5>Exercise Eval</h5>
-              <p>KI-Bewertung</p>
+              <h5>Aufgaben-KI</h5>
+              <p>Bewertung</p>
             </div>
             <div class="arch-tool at-plan">
               <div class="at-icon">📅</div>
-              <h5>Lernplan Tool</h5>
-              <p>Wochenplan LLM</p>
+              <h5>Lernplan</h5>
+              <p>Wochenplan</p>
             </div>
             <div class="arch-tool at-db">
               <div class="at-icon">🗄️</div>
               <h5>SQLite DB</h5>
-              <p>User · Skills · Memory</p>
+              <p>Nutzer · Skills</p>
             </div>
           </div>
-
         </div>
 
-        <!-- Rechte Seite: Key Decisions -->
-        <div class="arch-decisions">
-
-          <div style="font-family:var(--font-heading); font-size:clamp(0.78rem,0.92vw,1rem); font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:4px;">
-            Key Decisions
-          </div>
-
-          <div class="arch-decision feature-card">
-            <div class="ad-bullet" style="background:rgba(99,102,241,0.12); color:var(--accent);">1</div>
-            <div class="ad-body">
-              <div class="ad-title" style="color:var(--accent);">ReAct-Agent statt hardcoded Flows</div>
-              <div class="ad-desc">Der Agent wählt <em>selbst</em> das richtige Tool je nach Frage — keine starren if/else-Flows. Neue Tools lassen sich ohne Code-Änderung am Router hinzufügen.</div>
-            </div>
-          </div>
-
-          <div class="arch-decision feature-card">
-            <div class="ad-bullet" style="background:rgba(248,113,113,0.12); color:#f87171;">2</div>
-            <div class="ad-body">
-              <div class="ad-title" style="color:#f87171;">RunnableSequence für Code-Review</div>
-              <div class="ad-desc">LangChain-Pipe-Syntax (<code style="color:var(--accent3); font-size:.88em;">step1 | step2 | step3</code>): Jeder Schritt bekommt den Summary des vorherigen als Kontext. <em>Chain-of-Thought für Code-Qualität.</em></div>
-            </div>
-          </div>
-
-          <div class="arch-decision feature-card">
-            <div class="ad-bullet" style="background:rgba(251,146,60,0.12); color:var(--warn);">3</div>
-            <div class="ad-body">
-              <div class="ad-title" style="color:var(--warn);">FAISS lokal statt Cloud-Vektordatenbank</div>
-              <div class="ad-desc">Kein externer Service nötig — PDF-Dateien werden lokal indexiert. <em>Setup in unter 30 Sekunden</em>, keine API-Kosten, kein Datenschutzproblem.</div>
-            </div>
-          </div>
-
-          <div class="arch-decision feature-card">
-            <div class="ad-bullet" style="background:rgba(168,85,247,0.12); color:#a855f7;">4</div>
-            <div class="ad-body">
-              <div class="ad-title" style="color:#a855f7;">Eigene Memory-Implementierung</div>
-              <div class="ad-desc">ConversationSummaryMemory: LLM komprimiert Chat-Verlauf zu <em>max. 40 Wörtern</em> pro Turn. Kein wachsendes Kontext-Fenster, kein Token-Overflow.</div>
-            </div>
-          </div>
-
-        </div>
       </div>
     </section>
 

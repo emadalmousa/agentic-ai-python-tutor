@@ -2,6 +2,39 @@
 
 Ein intelligenter KI-gestützter Python-Tutor, der Schüler beim Lernen, Debuggen und Üben unterstützt.
 
+**Projektwebsite:** https://emadalmousa.github.io/agentic-ai-python-tutor/  
+**Pitch Deck:** [presentation/demoday.pdf](presentation/demoday.pdf)
+
+---
+
+## Produktvideo
+
+https://github.com/user-attachments/assets/PLACEHOLDER_VIDEO_ID
+
+> 2–3 Min. Demo: Login, Chat mit Gedächtnis, Code Review, Skill-Tracking und Lernplan.
+
+---
+
+## Schnellstart (Docker)
+
+```bash
+git clone https://github.com/emadalmousa/agentic-ai-python-tutor.git
+cd agentic-ai-python-tutor
+cp backend/.env.example backend/.env
+# OPENAI_API_KEY=sk-... in backend/.env eintragen (oder Ollama nutzen, s.u.)
+docker compose up --build
+```
+
+- Frontend: http://localhost:3000
+- Backend API Docs: http://localhost:8000/docs
+
+**Ohne OpenAI-Key — mit Ollama (lokal, kostenlos):**
+
+```bash
+ollama pull llama3.2
+./start.sh
+```
+
 ---
 
 ## Inhaltsverzeichnis
